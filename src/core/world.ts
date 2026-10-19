@@ -3,6 +3,8 @@ import type { GameData } from '../data/schema.js';
 import { decide, endActivity, followComfort, onToilet, runActivity } from './actions.js';
 import type { Ctx } from './context.js';
 import { drainNeeds } from './needs.js';
+import { socialRound } from './social.js';
+import { expireThoughts } from './thoughts.js';
 import { createRng } from './rng.js';
 import { runSchedule } from './schedule.js';
 import { station } from './station.js';
@@ -60,8 +62,13 @@ function tick(ctx: Ctx): void {
       decide(ctx, c);
       runActivity(ctx, c);
     }
-    if (tenth) followComfort(ctx, c, 10); // comfort moves slowly; every ten minutes is plenty
+    if (tenth) {
+      followComfort(ctx, c, 10); // comfort moves slowly; every ten minutes is plenty
+      expireThoughts(ctx, c);
+      c.health = Math.min(100, c.health + ctx.data.social.health.recoverPerHour / 6);
+    }
   }
+  if (ctx.w.t % ctx.data.social.every === 0) socialRound(ctx);
 }
 
 export function save(world: World): string {

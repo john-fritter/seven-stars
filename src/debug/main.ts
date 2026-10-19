@@ -139,6 +139,7 @@ function renderSheet(): void {
       ${row('health', c.health.toFixed(0))}
       ${row('doing', esc(doingText(c)))}
       ${row('bed', esc(c.bed ?? 'none yet'))}
+      ${c.guest ? row('guest of', `${esc(who(c.guest.host))} in the ${esc(roomName(c.guest.room))}`) : ''}
       ${row('arrived', esc(clockText(c.arrivedAt)))}
     </table>
     <h4>Needs</h4><table>${needs}</table>
@@ -154,14 +155,47 @@ function renderSheet(): void {
       ${row('drinking / modesty', `${c.drinking} / ${c.modesty}`)}
       ${row('quirk', esc(c.quirk))}
     </table>
-    <h4>Thoughts</h4><p class="hint">Not in the sim yet.</p>
-    <h4>Ledger</h4><p class="hint">Not in the sim yet.</p>`;
+    <h4>Thoughts</h4>${thoughtsHtml(c)}
+    <h4>Ledger</h4>${ledgerHtml(c)}`;
+}
+
+function thoughtsHtml(c: Contestant): string {
+  if (!c.thoughts.length) return '<p class="hint">Nothing on their mind but the show.</p>';
+  const rows = [...c.thoughts]
+    .sort((a, b) => a.value - b.value)
+    .map((x) => {
+      const def = data.thoughts.thoughts[x.id];
+      const text = (def?.label ?? x.id).replace('{who}', x.about ? who(x.about) : '');
+      const left = Math.max(0, Math.round((x.until - world.t) / 60));
+      return row(text, `${x.value > 0 ? '+' : ''}${x.value.toFixed(1)} <small>(${left}h left)</small>`);
+    });
+  return `<table>${rows.join('')}</table>`;
+}
+
+function ledgerHtml(c: Contestant): string {
+  const l = data.social.ledger;
+  const entries = Object.entries(c.ledger).sort((a, b) => b[1].affection - a[1].affection);
+  if (!entries.length) return '<p class="hint">Hasn\'t met anyone yet.</p>';
+  return entries
+    .map(([id, r]) => {
+      const tags = [r.affection >= l.friendAt ? 'friend' : '', r.affection <= l.rivalAt ? 'rival' : '', r.attraction >= l.crushAt ? '♥ crush' : ''].filter(Boolean).join(', ');
+      const gone = world.contestants.some((o) => o.id === id) ? '' : ' (gone)';
+      const reasons = r.reasons
+        .slice(-4)
+        .reverse()
+        .map((x) => `${label(x.why)}${x.times > 1 ? ` ×${x.times}` : ''} ${x.dim} ${x.amount > 0 ? '+' : ''}${x.amount.toFixed(1)}`)
+        .join('; ');
+      return `<div class="rel"><b>${esc(who(id))}${gone}</b> ${tags ? `<small>${esc(tags)}</small>` : ''}<br>
+        affection ${r.affection.toFixed(0)}, attraction ${r.attraction.toFixed(1)}, trust ${r.trust.toFixed(0)}, fear ${r.fear.toFixed(0)}, knows ${(r.knows * 100).toFixed(0)}%<br>
+        <small>${esc(reasons)}</small></div>`;
+    })
+    .join('');
 }
 
 // ---------------------------------------------------------------------------------------------
 // The ticker
 
-const ROUTINE = new Set(['act.start', 'act.end', 'meal', 'wake']);
+const ROUTINE = new Set(['act.start', 'act.end', 'meal', 'wake', 'meet', 'chitchat', 'guest_leave']);
 
 function who(id: string): string {
   return names.get(id) ?? id;
@@ -200,6 +234,34 @@ function describe(e: SimEvent): string | null {
       return `${a[0]} eats ${d.food} at ${d.meal}`;
     case 'wake':
       return `${a[0]} wakes up (rest ${d.rest})`;
+    case 'meet':
+      return `${a[0]} and ${a[1]} size each other up`;
+    case 'chitchat':
+      return `${a[0]} chats with ${a[1]}`;
+    case 'deep_talk':
+      return `${a[0]} and ${a[1]} have a real heart-to-heart`;
+    case 'kind_words':
+      return `${a[0]} says something kind to ${a[1]}`;
+    case 'slight':
+      return `${a[0]} throws shade at ${a[1]}`;
+    case 'insult':
+      return `${a[0]} insults ${a[1]}. Ooh!`;
+    case 'flirt':
+      return `${a[0]} flirts with ${a[1]}, and it lands`;
+    case 'rebuff':
+      return `${a[0]} flirts with ${a[1]} and gets shot down`;
+    case 'fight': {
+      const how = d.after === 'cathartic' ? 'They hug it out after.' : 'Nobody is over it.';
+      return `FIGHT in the ${roomName(e.room)}! ${a[0]} swings at ${a[1]}. ${who(String(d.winner))} wins; ${who(String(d.loser))} takes ${d.damage} damage${d.serious ? ', badly hurt' : ''}. ${how}`;
+    }
+    case 'knock': {
+      if (d.hosting) return `${a[0]} knocks for ${a[1]} at the ${roomName(e.room)}: no, ${a[1]} already has company${d.saw ? ` (${who(String(d.saw))})` : ''}`;
+      return `${a[0]} knocks for ${a[1]} at the ${roomName(e.room)}${d.asleep ? ' (asleep)' : ''}: ${d.answer === 'yes' ? 'come on in' : 'go away'}${d.pestering ? ', and that was pestering' : ''}`;
+    }
+    case 'guest_leave':
+      return `${a[0]} leaves ${a[1]}'s ${roomName(e.room)}`;
+    case 'guest_out':
+      return `Morning: robots show ${a[0]} out of ${a[1]}'s ${roomName(e.room)}`;
     default:
       return `${e.type} ${a.join(', ')} ${e.room ?? ''} ${JSON.stringify(d)}`;
   }

@@ -80,6 +80,15 @@ function printReport(r: Report, ms: number): void {
   console.log(top(r.mealsPerContestantDay, 10, (v) => v.toFixed(2)));
   console.log('\nAverage needs at the end of each day');
   console.log(top(r.needsAtNight, 10, (v) => v.toFixed(0)));
+  console.log(`  ${'(mood)'.padEnd(16)} ${r.moodAtNight.toFixed(0)}`);
+  if (r.relations) {
+    console.log('\nRelationships at the end of each day (share of who-feels-what-about-whom)');
+    console.log(`  ${'friends'.padEnd(16)} ${pct(r.relations.friends)}`);
+    console.log(`  ${'rivals'.padEnd(16)} ${pct(r.relations.rivals)}`);
+    console.log(`  ${'crushes'.padEnd(16)} ${pct(r.relations.crushes)}`);
+    console.log(`  ${'avg affection'.padEnd(16)} ${r.relations.affection.toFixed(1)}`);
+  }
+  if (r.knockYesShare !== null) console.log(`\nKnocks answered yes: ${pct(r.knockYesShare)}`);
 }
 
 async function main(): Promise<void> {

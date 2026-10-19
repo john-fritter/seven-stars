@@ -23,6 +23,9 @@ src/core/        the pure simulation (no I/O, no clock, one seeded RNG)
   world.ts         createWorld, step, save, load
   schedule.ts      arrivals, wake chime, meals, the ceremony
   actions.ts       choosing, running and ending actions
+  social.ts        interactions, flirts, fights, knocking
+  ledger.ts        relationships and attraction
+  thoughts.ts      thoughts and mood
   needs.ts, temperature.ts, generator.ts, station.ts (derived indexes), derived.ts (per-contestant caches)
 src/data/        loading and validating the YAML
 src/harness/     the `sim` CLI; seeds run in parallel worker threads
@@ -31,6 +34,8 @@ test/            vitest
 
 ## Built so far
 
-Slice one milestones 1 and 2: the skeleton and the life sim (clock, schedule, rooms, objects,
-needs, temperature, bladder, action scoring, rank assignment at the ceremony). Next: the debug
-view, then social interactions.
+Slice one milestones 1–4: the skeleton and the life sim (clock, schedule, rooms, objects, needs,
+temperature, bladder, action scoring, rank assignment at the ceremony), the debug view, and the
+social layer (interactions, the relationship ledger, attraction, flirts, fights, knocking to be let
+into bedrooms, and the thoughts those produce). Next: the show (meter, scoring, infractions and
+sentences at the ceremony).

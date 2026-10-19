@@ -53,10 +53,18 @@ export function canEnter(ctx: Ctx, c: Contestant, roomId: string): boolean {
       return r >= room.ranks![0] && r <= room.ranks![1];
     }
     case 'occupants':
-      return c.bed !== null && ctx.st.object.get(c.bed)!.room === roomId;
+      return (c.bed !== null && ctx.st.object.get(c.bed)!.room === roomId) || validGuest(ctx, c, roomId);
     case 'robots':
       return false;
   }
+}
+
+/** Let in by someone who still has a bed in that room. */
+export function validGuest(ctx: Ctx, c: Contestant, roomId: string): boolean {
+  const g = c.guest;
+  if (!g || g.room !== roomId) return false;
+  const host = ctx.w.contestants.find((o) => o.id === g.host);
+  return !!host && host.bed !== null && ctx.st.object.get(host.bed)!.room === roomId;
 }
 
 export function inRanks(r: number, ranks: readonly [number, number] | undefined): boolean {

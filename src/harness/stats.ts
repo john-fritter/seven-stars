@@ -19,6 +19,9 @@ export interface SeedStats {
   ceremonies: number;
   ceremoniesWithRankChange: number;
   needsAtNight: Record<string, number>; // summed at each day's end, averaged in the report
+  moodAtNight: number;
+  knocks: Record<string, number>; // by answer
+  relations: Record<string, number>; // directed pairs at each day's end: pairs, friends, rivals, crushes, affection
 }
 
 function add(m: Record<string, number>, k: string, v = 1): void {
@@ -42,6 +45,9 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
     ceremonies: 0,
     ceremoniesWithRankChange: 0,
     needsAtNight: {},
+    moodAtNight: 0,
+    knocks: {},
+    relations: {},
   };
   const notable = new Set(data.targets.notable);
   const world = createWorld(data, seed);
@@ -57,7 +63,7 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
     }
     if (isNotable) s.notableDays++;
     if (sentenced) s.sentenceDays++;
-    endOfDay(s, world);
+    endOfDay(s, world, data);
   }
   return s;
 }
@@ -73,6 +79,9 @@ function tally(s: SeedStats, e: SimEvent): void {
     case 'meal':
       add(s.meals, d.food as string);
       break;
+    case 'knock':
+      add(s.knocks, d.answer as string);
+      break;
     case 'ceremony':
       s.ceremonies++;
       if ((d.changes as { from: number | null }[]).some((c) => c.from !== null)) s.ceremoniesWithRankChange++;
@@ -84,9 +93,20 @@ function tally(s: SeedStats, e: SimEvent): void {
   }
 }
 
-function endOfDay(s: SeedStats, w: World): void {
+function endOfDay(s: SeedStats, w: World, data: GameData): void {
   s.contestantDays += w.contestants.length;
-  for (const c of w.contestants) for (const [k, v] of Object.entries(c.needs)) add(s.needsAtNight, k, v);
+  const l = data.social.ledger;
+  for (const c of w.contestants) {
+    for (const [k, v] of Object.entries(c.needs)) add(s.needsAtNight, k, v);
+    s.moodAtNight += c.mood;
+    for (const r of Object.values(c.ledger)) {
+      add(s.relations, 'pairs');
+      add(s.relations, 'affection', r.affection);
+      if (r.affection >= l.friendAt) add(s.relations, 'friends');
+      if (r.affection <= l.rivalAt) add(s.relations, 'rivals');
+      if (r.attraction >= l.crushAt) add(s.relations, 'crushes');
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -112,6 +132,10 @@ export interface Report {
   walkingShare: number;
   mealsPerContestantDay: Record<string, number>;
   needsAtNight: Record<string, number>;
+  moodAtNight: number;
+  knockYesShare: number | null;
+  /** Shares of directed relationships at the end of each day, and the average affection. */
+  relations: { friends: number; rivals: number; crushes: number; affection: number } | null;
 }
 
 export function report(data: GameData, seeds: SeedStats[]): Report {
@@ -148,6 +172,8 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
   const total = cDays * MINUTES_PER_DAY;
   const share = (m: Record<string, number>) => sortDesc(Object.fromEntries(Object.entries(m).map(([k, v]) => [k, v / total])));
   const needs = sum((s) => s.needsAtNight);
+  const knocks = sum((s) => s.knocks);
+  const rel = sum((s) => s.relations);
 
   return {
     seeds: seeds.length,
@@ -160,6 +186,9 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
     walkingShare: walking / total,
     mealsPerContestantDay: Object.fromEntries(Object.entries(sum((s) => s.meals)).map(([k, v]) => [k, v / cDays])),
     needsAtNight: Object.fromEntries(Object.entries(needs).map(([k, v]) => [k, v / cDays])),
+    moodAtNight: seeds.reduce((a, s) => a + s.moodAtNight, 0) / cDays,
+    knockYesShare: ratio(knocks.yes ?? 0, (knocks.yes ?? 0) + (knocks.no ?? 0)),
+    relations: rel.pairs ? { friends: (rel.friends ?? 0) / rel.pairs, rivals: (rel.rivals ?? 0) / rel.pairs, crushes: (rel.crushes ?? 0) / rel.pairs, affection: (rel.affection ?? 0) / rel.pairs } : null,
   };
 }
 

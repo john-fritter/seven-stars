@@ -1,0 +1,23 @@
+# Thoughts and mood. DESIGN.md Part two, Thoughts, mood and breaks.
+# Mood = personality.yaml mood.base + every active thought. Only the rows the social layer
+# needs so far; the rest of the table arrives with breaks.
+#
+# Each thought: value, hours it lasts, stack (how many can be active at once about the same
+# person; a new one replaces the oldest), and a source category (used later to pick breaks).
+
+# Every thought hits × 1 + volatileK × (calm − 5) ÷ 5: up to 1.4× when volatile.
+volatileK: -0.4
+
+# Species multipliers by source. Reptilians are less bothered by social hits.
+species:
+  reptilian: { person: 0.7, rejection: 0.7 }
+
+thoughts:
+  insulted:    { label: "Insulted by {who}", value: -6, hours: 48, stack: 3, source: person }
+  slighted:    { label: "Slighted by {who}", value: -3, hours: 24, stack: 3, source: person }      # proposal
+  kind_words:  { label: "Kind words from {who}", value: 5, hours: 12, stack: 2, source: person } # hours: proposal
+  rebuffed:    { label: "Rebuffed by {who}", value: -8, hours: 48, stack: 2, source: rejection }
+  awkward:     { label: "Awkward flirt from {who}", value: -3, hours: 12, stack: 1, source: rejection } # proposal
+  turned_away: { label: "Turned away at the door by {who}", value: -5, hours: 24, stack: 2, source: rejection }
+  lost_fight:  { label: "Lost a fight to {who}", value: -8, hours: 24, stack: 2, source: person }  # proposal
+  won_fight:   { label: "Won a fight against {who}", value: 3, hours: 12, stack: 2, source: person } # proposal

@@ -122,6 +122,7 @@ export const temperatureSchema = z.object({
   clamp: range,
   driftPerTenMinutes: num.positive(),
   comfortPerDegree: num,
+  botheredAffection: num,
 });
 
 export const AXES = ['outgoing', 'kind', 'honest', 'calm', 'loyal', 'brave', 'vain', 'playful'] as const;
@@ -175,6 +176,98 @@ export const targetsSchema = z.object({
 
 export const meterSchema = z.object({ start: num, max: num });
 
+export const DIMS = ['affection', 'trust', 'fear', 'attraction'] as const;
+export type Dim = (typeof DIMS)[number];
+const dimMap = z.partialRecord(z.enum(DIMS), num);
+const unit = num.min(0).max(1);
+
+const scaleBy = z.union([axisEnum, z.enum(['affection', 'attraction', 'chemistry', 'privacy'])]);
+
+export const interactionSchema = z.object({
+  id: z.string(),
+  weight: num.nonnegative(),
+  scale: z.array(z.object({ by: scaleBy, k: num.optional() })).default([]),
+  needs: z.partialRecord(z.enum(['attraction', 'affection']), num).default({}),
+  social: num.default(0),
+  knows: num.default(0),
+  actor: dimMap.default({}),
+  target: dimMap.default({}),
+  thought: z.string().optional(),
+  fight: z.boolean().default(false),
+});
+
+export const socialSchema = z.object({
+  every: z.number().int().positive(),
+  base: num,
+  absorbed: z.object({ kinds: z.array(z.string()), tags: z.array(z.string()), actions: z.array(z.string()) }),
+  partner: z.object({ affection: num, attraction: num, min: num.positive() }),
+  factorRange: range,
+  interactions: z.array(interactionSchema).min(1),
+  flirt: z.object({
+    successScale: num,
+    success: z.object({ affection: num, attraction: num }),
+    rebuffed: z.string(),
+    awkward: z.string(),
+  }),
+  fight: z.object({
+    chance: unit,
+    calmK: num,
+    minutes: z.number().int().positive(),
+    power: z.object({ strength: num, stamina: num, die: num.nonnegative() }),
+    damage: range,
+    serious: z.object({ chance: unit, extra: num }),
+    healthFloor: num,
+    cathartic: unit,
+    affection: num,
+    loserFear: num,
+    won: z.string(),
+    lost: z.string(),
+    cageRoom: z.string(),
+  }),
+  health: z.object({ recoverPerHour: num.nonnegative() }),
+  ledger: z.object({
+    keepReasons: z.number().int().positive(),
+    fadePerDay: z.object({ affection: unit, trust: unit, fear: unit }),
+    loyalK: num,
+    friendAt: num,
+    rivalAt: num,
+    crushAt: num,
+  }),
+  attraction: z.object({
+    looks: num,
+    personality: num,
+    chemistrySd: num.nonnegative(),
+    fitScale: num.positive(),
+    deception: unit,
+    firstImpression: unit,
+    approach: unit,
+  }),
+  companyPull: z.object({ affection: num, attraction: num, fear: num }),
+  knock: z.object({
+    actions: z.array(z.string()),
+    base: num,
+    affection: num,
+    attraction: num,
+    kindK: num,
+    asleep: unit,
+    pesterHours: num.nonnegative(),
+    pesterAffection: num,
+    turnedAway: z.string(),
+    waitMinutes: z.number().int().positive(),
+    cost: num,
+    repeat: num.nonnegative(),
+  }),
+});
+
+export const thoughtsSchema = z.object({
+  volatileK: num,
+  species: z.record(z.string(), z.record(z.string(), num)).default({}),
+  thoughts: z.record(
+    z.string(),
+    z.object({ label: z.string(), value: num, hours: num.positive(), stack: z.number().int().positive(), source: z.string() }),
+  ),
+});
+
 /** Every data file, by file name (without .yaml). */
 export const fileSchemas = {
   schedule: scheduleSchema,
@@ -190,9 +283,12 @@ export const fileSchemas = {
   generator: generatorSchema,
   targets: targetsSchema,
   meter: meterSchema,
+  social: socialSchema,
+  thoughts: thoughtsSchema,
 } as const;
 
 export type GameData = { [K in keyof typeof fileSchemas]: z.output<(typeof fileSchemas)[K]> };
 export type ActionDef = z.output<typeof actionSchema>;
 export type RoomDef = GameData['rooms']['rooms'][number];
 export type MealDef = GameData['schedule']['meals'][number];
+export type InteractionDef = z.output<typeof interactionSchema>;

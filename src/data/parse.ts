@@ -91,5 +91,18 @@ function crossCheck(d: GameData, dir: string): void {
     if (!d.clothing.byRank[r]) errors.push(`${dir}/clothing.yaml: byRank.${r}: missing`);
   }
 
+  const thoughts = d.thoughts.thoughts;
+  const thought = (id: string | undefined, at: string) => {
+    if (id !== undefined && !thoughts[id]) errors.push(`${dir}/${at}: no thought "${id}" in thoughts.yaml`);
+  };
+  d.social.interactions.forEach((x, i) => thought(x.thought, `social.yaml: interactions.${i}.thought`));
+  thought(d.social.flirt.rebuffed, 'social.yaml: flirt.rebuffed');
+  thought(d.social.flirt.awkward, 'social.yaml: flirt.awkward');
+  thought(d.social.fight.won, 'social.yaml: fight.won');
+  thought(d.social.fight.lost, 'social.yaml: fight.lost');
+  thought(d.social.knock.turnedAway, 'social.yaml: knock.turnedAway');
+  if (!rooms.has(d.social.fight.cageRoom)) errors.push(`${dir}/social.yaml: fight.cageRoom: no room "${d.social.fight.cageRoom}"`);
+  for (const s of Object.keys(d.thoughts.species)) if (!species.has(s)) errors.push(`${dir}/thoughts.yaml: species.${s}: no such species`);
+
   if (errors.length) throw new DataError(`Bad data:\n${errors.map((e) => `  ${e}`).join('\n')}`);
 }

@@ -2,3 +2,4 @@
 clamp: [60, 85]              # rooms always stay in a range that harms no one
 driftPerTenMinutes: 2        # rooms move toward their setting by this much every 10 minutes
 comfortPerDegree: 3          # proposal: comfort lost per °F felt outside your comfort range
+botheredAffection: -3       # affection toward whoever changed a thermostat, for anyone it made less comfortable
