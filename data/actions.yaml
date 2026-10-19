@@ -1,0 +1,13 @@
+# Choosing actions. DESIGN.md Part two, Choosing actions.
+noise: [0.85, 1.15]
+topChoices: 3                 # a weighted pick among the best few
+walkCostPerMinute: 0.05       # proposal
+modestyCost: 1.0              # proposal: × modesty / 10, for exposed actions with others in the room
+recreationTaste:              # proposal: fun gains × this
+  favorite: 1.5
+  other: 0.8
+mealPull: 3                   # proposal: the pull of a scheduled meal on top of hunger
+nightSleepPull: 3             # proposal: the pull of a bed between lights-dim and the wake chime, × bed quality
+idle:                         # proposal: the fallback when nothing scores
+  minutes: 15
+  score: 0.05

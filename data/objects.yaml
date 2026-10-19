@@ -1,0 +1,122 @@
+# Objects advertise actions. DESIGN.md Part two, Rooms, objects and access.
+#
+# Each action:
+#   kind:        timed (default) | sleep | toilet | thermostat
+#   minutes:     how long it takes (sleep runs until rested; see needs.yaml sleep)
+#   gains:       need -> total refill over the action (spread evenly over the minutes)
+#   speciesGains: species -> gains that replace the default for that species
+#   comfort:     comfort of the situation while doing it (defaults to the room's comfort)
+#   quality:     sleep quality (rest per hour is multiplied by this)
+#   recreation:  recreation type; fun gains are scaled by the contestant's taste for it
+#   company:     social gains only count when someone else is in the room
+#   private:     believed private (a lockable stall): modesty doesn't apply
+#   assigned:    only whoever is assigned this object at the ceremony can use it (beds)
+#   cost / speciesCost: a flat cost when scoring (a cold shower)
+#   tags:        drive the personality grid and the mood modifier (personality.yaml)
+#   onlySpecies / notSpecies / ranks: who can use it
+#
+# Numbers marked "proposal" aren't in DESIGN.md yet.
+
+types:
+  bed_suite:
+    capacity: 2
+    actions:
+      - { id: sleep, label: sleeps in the suite, kind: sleep, quality: 1.2, comfort: 85, assigned: true, tags: [solitary, comforting] }
+  bed_good:
+    capacity: 1
+    actions:
+      - { id: sleep, label: sleeps, kind: sleep, quality: 1.0, comfort: 70, assigned: true, tags: [solitary, comforting] }
+  bed_dorm:
+    capacity: 1
+    actions:
+      - { id: sleep, label: sleeps in a bunk, kind: sleep, quality: 0.8, comfort: 50, assigned: true, tags: [solitary, comforting] }
+  couch:
+    capacity: 1
+    actions:
+      - { id: sleep, label: sleeps on the couch, kind: sleep, quality: 0.6, comfort: 40, tags: [solitary, comforting] }
+      # proposal: sitting is a cheap comfort fallback
+      - { id: sit, label: lounges on a couch, minutes: 30, comfort: 55, tags: [comforting] }
+
+  toilet:
+    capacity: 1
+    actions:
+      - { id: toilet, label: uses the toilet, kind: toilet, minutes: 3, tags: [exposed] }
+  stall_toilet:
+    capacity: 1
+    actions:
+      - { id: toilet, label: uses a stall, kind: toilet, minutes: 3, private: true, tags: [] }
+  sink:
+    capacity: 1
+    actions:
+      # proposal: washing up is a small hygiene top-up
+      - { id: wash_up, label: washes up, minutes: 2, gains: { hygiene: 5 }, tags: [] }
+      - { id: sink_bath, label: takes a sink bath, minutes: 15, gains: { hygiene: 15 }, ranks: [7, 7],
+          speciesGains: { aquatic: { hygiene: 40 } },  # proposal: "any water refills" aquatics
+          notSpecies: [feline], comfort: 25, tags: [exposed] }
+  shower_hot:
+    capacity: 1
+    actions:
+      - { id: shower, label: takes a hot shower, minutes: 15, gains: { hygiene: 60 }, comfort: 85,
+          notSpecies: [feline], tags: [solitary, exposed, comforting] }
+  shower_cold:
+    capacity: 1
+    actions:
+      - { id: cold_shower, label: takes a cold shower, minutes: 10, gains: { hygiene: 40 }, comfort: 25,
+          speciesGains: { aquatic: { hygiene: 60 } },
+          cost: 0.5, speciesCost: { aquatic: 0 },  # proposal
+          notSpecies: [feline], tags: [solitary, exposed] }
+  thermostat:
+    capacity: 1
+    actions:
+      - { id: set_thermostat, label: changes the thermostat, kind: thermostat, minutes: 1, tags: [] }
+
+  dance_floor:
+    capacity: 8
+    actions:
+      - { id: dance, label: dances, minutes: 30, gains: { fun: 15, social: 6 }, recreation: dancing,
+          company: true, tags: [social, crowd, game] }
+  karaoke_stage:
+    capacity: 1
+    actions:
+      - { id: karaoke, label: sings karaoke, minutes: 10, gains: { fun: 15 }, recreation: music,
+          tags: [performing] }
+  window_seat:
+    capacity: 2
+    actions:
+      - { id: gaze, label: stares out the window, minutes: 30, gains: { fun: 8 }, comfort: 75,
+          recreation: views, tags: [quiet, comforting] }
+  arcade:
+    capacity: 2
+    actions:
+      - { id: arcade, label: plays the arcade, minutes: 30, gains: { fun: 15, social: 4 }, recreation: games,
+          company: true, tags: [game] }
+  bowling_lane:
+    capacity: 2
+    actions:
+      - { id: bowl, label: bowls, minutes: 30, gains: { fun: 15, social: 4 }, recreation: games,
+          company: true, tags: [game, social] }
+  vending_snacks:
+    capacity: 1
+    actions:
+      - { id: snack, label: gets a snack, minutes: 5, gains: { hunger: 20, fun: 3 }, tags: [] }
+  hot_tub:
+    capacity: 4
+    actions:
+      - { id: soak, label: soaks in the hot tub, minutes: 30, gains: { fun: 12, social: 4 }, comfort: 90,
+          speciesGains: { aquatic: { fun: 12, social: 4, hygiene: 30 } },
+          recreation: spa, company: true, tags: [comforting, social, status] }
+  garden_bench:
+    capacity: 2
+    actions:
+      - { id: bench, label: sits in the garden, minutes: 30, gains: { fun: 5 }, comfort: 65,
+          recreation: nature, tags: [quiet, comforting] }
+  plants:
+    capacity: 2
+    actions:
+      # proposal: the garden's plants as a quiet hobby
+      - { id: tend_plants, label: fusses over the plants, minutes: 20, gains: { fun: 10 }, recreation: nature,
+          tags: [quiet, solitary] }
+
+# Actions that need no object.
+personal:
+  - { id: groom, label: grooms, minutes: 15, gains: { hygiene: 20 }, onlySpecies: [feline], tags: [solitary] }

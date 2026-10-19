@@ -1,0 +1,18 @@
+# Rank decides where you sleep, what you eat and what you drink. DESIGN.md Part two,
+# Rank, privileges, rules and punishments. Beds are object ids: room:type:number.
+
+newcomerRank: 4          # proposal (DECISIONS Open): newcomers count as rank 4 until their first ceremony
+
+ranks:
+  1: { bed: "suite:bed_suite:1", food: gourmet }
+  2: { bed: "good:bed_good:1", food: gourmet }
+  3: { bed: "good:bed_good:2", food: gourmet }
+  4: { bed: "dorm:bed_dorm:1", food: plain }
+  5: { bed: "dorm:bed_dorm:2", food: plain }
+  6: { bed: "dorm:bed_dorm:3", food: plain }
+  7: { bed: "common:couch:1", food: leftovers }
+
+food:
+  gourmet:   { hunger: 70 }
+  plain:     { hunger: 70 }
+  leftovers: { hunger: 50 }

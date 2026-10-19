@@ -1,0 +1,198 @@
+// Zod schemas for every data file. Times written "HH:MM" become minutes after midnight.
+import { z } from 'zod';
+
+const clock = z
+  .string()
+  .regex(/^\d{2}:\d{2}$/, 'expected a time like "07:30"')
+  .transform((s) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5)));
+
+const num = z.number();
+const range = z.tuple([num, num]);
+const rankRange = z.tuple([z.number().int().min(1).max(7), z.number().int().min(1).max(7)]);
+
+export const NEEDS = ['hunger', 'rest', 'hygiene', 'bladder', 'social', 'fun', 'comfort'] as const;
+export type Need = (typeof NEEDS)[number];
+const needEnum = z.enum(NEEDS);
+const needMap = z.partialRecord(needEnum, num);
+
+export const scheduleSchema = z.object({
+  wakeChime: z.object({ at: clock, minRest: num }),
+  arrivals: clock,
+  arrivalRoom: z.string(),
+  lightsDim: clock,
+  meals: z.array(
+    z.object({
+      id: z.string(),
+      group: z.string(),
+      from: clock,
+      to: clock,
+      room: z.string(),
+      ranks: rankRange.optional(),
+    }),
+  ),
+  mealMinutes: z.number().int().positive(),
+  ceremony: z.object({
+    at: clock,
+    minutes: z.number().int().positive(),
+    resolveAfter: z.number().int().nonnegative(),
+    room: z.string(),
+  }),
+});
+
+export const roomsSchema = z.object({
+  rooms: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      access: z.enum(['all', 'ranks', 'occupants', 'robots']),
+      ranks: rankRange.optional(),
+      privacy: num.min(0).max(1),
+      temperature: num,
+      comfort: num.min(0).max(100),
+      objects: z.record(z.string(), z.number().int().positive()),
+    }),
+  ),
+  links: z.array(z.tuple([z.string(), z.string(), z.number().positive()])),
+});
+
+export const actionSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  kind: z.enum(['timed', 'sleep', 'toilet', 'thermostat']).default('timed'),
+  minutes: z.number().int().positive().optional(),
+  gains: needMap.default({}),
+  speciesGains: z.record(z.string(), needMap).default({}),
+  comfort: num.optional(),
+  quality: num.optional(),
+  recreation: z.string().optional(),
+  company: z.boolean().default(false),
+  private: z.boolean().default(false),
+  assigned: z.boolean().default(false),
+  cost: num.default(0),
+  speciesCost: z.record(z.string(), num).default({}),
+  tags: z.array(z.string()).default([]),
+  onlySpecies: z.array(z.string()).optional(),
+  notSpecies: z.array(z.string()).optional(),
+  ranks: rankRange.optional(),
+});
+
+export const objectsSchema = z.object({
+  types: z.record(
+    z.string(),
+    z.object({ capacity: z.number().int().positive(), actions: z.array(actionSchema) }),
+  ),
+  personal: z.array(actionSchema),
+});
+
+export const needsSchema = z.object({
+  needs: z.record(needEnum, z.object({ drainPerHour: num.min(0), weight: num, start: range })),
+  asleepDrain: z.record(needEnum, num),
+  sleep: z.object({ restPerHour: num }),
+  bladder: z.object({ criticalBelow: num, waitMinutes: z.number().int().positive() }),
+  comfortFollowPerHour: num,
+});
+
+export const speciesSchema = z.object({
+  species: z.record(
+    z.string(),
+    z.object({
+      weight: num.positive(),
+      comfort: range,
+      size: num.positive(),
+      statMean: z.record(z.string(), num).default({}),
+      statShift: z.record(z.string(), num).default({}),
+      drain: needMap.default({}),
+    }),
+  ),
+});
+
+const rankKey = z.enum(['1', '2', '3', '4', '5', '6', '7']);
+
+export const clothingSchema = z.object({
+  byRank: z.record(rankKey, z.object({ warmth: num, beauty: num })),
+});
+
+export const ranksSchema = z.object({
+  newcomerRank: z.number().int().min(1).max(7),
+  ranks: z.record(rankKey, z.object({ bed: z.string(), food: z.string() })),
+  food: z.record(z.string(), z.object({ hunger: num })),
+});
+
+export const temperatureSchema = z.object({
+  clamp: range,
+  driftPerTenMinutes: num.positive(),
+  comfortPerDegree: num,
+});
+
+export const AXES = ['outgoing', 'kind', 'honest', 'calm', 'loyal', 'brave', 'vain', 'playful'] as const;
+export type Axis = (typeof AXES)[number];
+const axisEnum = z.enum(AXES);
+
+export const personalitySchema = z.object({
+  axes: z.array(axisEnum),
+  k: num,
+  needDrain: z.partialRecord(needEnum, axisEnum),
+  tags: z.record(z.string(), z.array(z.object({ axis: axisEnum, k: num.optional() }))),
+  mood: z.object({ base: num, lowBelow: num, multipliers: z.record(z.string(), num) }),
+});
+
+export const actionsSchema = z.object({
+  noise: range,
+  topChoices: z.number().int().positive(),
+  walkCostPerMinute: num,
+  modestyCost: num,
+  recreationTaste: z.object({ favorite: num, other: num }),
+  mealPull: num,
+  nightSleepPull: num,
+  idle: z.object({ minutes: z.number().int().positive(), score: num }),
+});
+
+const bell = z.object({ mean: num, sd: num.nonnegative() });
+
+export const generatorSchema = z.object({
+  stat: bell,
+  candidatesPerSlot: z.number().int().positive(),
+  gender: z.array(bell.extend({ weight: num.positive() })).min(1),
+  attraction: bell,
+  pronouns: z.object({
+    sheBelow: num,
+    heAbove: num,
+    randomChance: num.min(0).max(1),
+    options: z.array(z.string()).length(3),
+  }),
+  recreation: z.array(z.string()).min(1),
+  favoriteRecreations: z.number().int().nonnegative(),
+  quirks: z.array(z.string()).min(1),
+  names: z.array(z.string()).min(14),
+});
+
+export const targetsSchema = z.object({
+  targets: z.array(
+    z.object({ id: z.string(), label: z.string(), min: num.optional(), max: num.optional() }),
+  ),
+  notable: z.array(z.string()),
+});
+
+export const meterSchema = z.object({ start: num, max: num });
+
+/** Every data file, by file name (without .yaml). */
+export const fileSchemas = {
+  schedule: scheduleSchema,
+  rooms: roomsSchema,
+  objects: objectsSchema,
+  needs: needsSchema,
+  species: speciesSchema,
+  clothing: clothingSchema,
+  ranks: ranksSchema,
+  temperature: temperatureSchema,
+  personality: personalitySchema,
+  actions: actionsSchema,
+  generator: generatorSchema,
+  targets: targetsSchema,
+  meter: meterSchema,
+} as const;
+
+export type GameData = { [K in keyof typeof fileSchemas]: z.output<(typeof fileSchemas)[K]> };
+export type ActionDef = z.output<typeof actionSchema>;
+export type RoomDef = GameData['rooms']['rooms'][number];
+export type MealDef = GameData['schedule']['meals'][number];

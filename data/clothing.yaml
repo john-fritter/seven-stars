@@ -1,0 +1,11 @@
+# Clothing in slice one is a tier by rank. DESIGN.md Part two, Clothing in slice one.
+# Newcomers wear the tier of ranks.yaml newcomerRank until their first ceremony.
+
+byRank:
+  1: { warmth: 3, beauty: 1 }
+  2: { warmth: 2, beauty: 0.5 }
+  3: { warmth: 2, beauty: 0.5 }
+  4: { warmth: 1, beauty: 0 }
+  5: { warmth: 1, beauty: 0 }
+  6: { warmth: 1, beauty: 0 }
+  7: { warmth: -1, beauty: -0.5 }   # the paper jumpsuit

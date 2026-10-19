@@ -1,0 +1,4 @@
+# The ratings meter. DESIGN.md Part two, The meter and scoring.
+# Drain and awards arrive with the show milestone; for now it only orders the ceremony.
+start: 60        # proposal (DECISIONS Open): newcomers start here
+max: 100
