@@ -860,7 +860,7 @@ sim sweep --param meter.drain --from 0.8 --to 1.4 --step 0.1 --days 30 --seeds 1
 
 The sweep mode tries a range of values for one setting and shows which lands the targets.
 
-**The debug view** is a plain web page running the core directly: rooms as labeled boxes, contestants as colored dots with names and tiny need bars, an event ticker, and speed controls (pause, 1×, 60×, 3600×). Clicking a contestant shows their sheet, thoughts, mood, meter and ledger.
+**The debug view** is a plain web page running the core directly: rooms as labeled boxes, contestants as colored dots with names and tiny need bars, an event ticker, and speed controls (pause, 1×, 60×, 3600×). Clicking a contestant shows their sheet, thoughts, mood, meter and ledger. Speeds are multiples of real time, so 60× is one station minute a second and 3600× is one station hour a second. Run it with `npm run debug`; it reads `data/` directly and swaps edited YAML into the running station.
 
 ## Out of scope and open choices
 

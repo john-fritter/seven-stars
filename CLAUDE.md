@@ -71,7 +71,7 @@ sim sweep --param meter.drain --from 0.8 --to 1.4 --step 0.1 --days 30 --seeds 1
 
 ## Debug view
 
-A plain web page running the core in the browser: rooms as labeled boxes, contestants as colored dots with names and tiny need bars, an event ticker, speed controls (pause, 1×, 60×, 3600×), and click a contestant for their sheet, thoughts, mood, meter and ledger. Crude is fine; it's for John to watch, not to ship.
+A plain web page running the core in the browser: rooms as labeled boxes, contestants as colored dots with names and tiny need bars, an event ticker, speed controls (pause, 1×, 60×, 3600×), and click a contestant for their sheet, thoughts, mood, meter and ledger. Crude is fine; it's for John to watch, not to ship. Run it with `npm run debug` (vite; the code is in `src/debug/`).
 
 ## Testing
 
