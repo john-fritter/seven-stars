@@ -1,0 +1,36 @@
+# Seven Stars
+
+A death-game reality show on a space station, simulated RimWorld/Sims-style. Start with
+CONCEPT.md, then DECISIONS.md, then DESIGN.md. CLAUDE.md has the build rules.
+
+## Running it
+
+```
+npm install
+npm run sim -- run --days 30 --seeds 200          # summary against the success targets, full JSON in results/
+npm run sim -- sweep --param actions.mealPull --from 1 --to 5 --step 1 --days 30 --seeds 50
+npm test
+npm run typecheck
+```
+
+`--param` names any number in the data: the file name, then the path inside it.
+
+## Layout
+
+```
+data/            every tunable number, as YAML, validated with zod on load
+src/core/        the pure simulation (no I/O, no clock, one seeded RNG)
+  world.ts         createWorld, step, save, load
+  schedule.ts      arrivals, wake chime, meals, the ceremony
+  actions.ts       choosing, running and ending actions
+  needs.ts, temperature.ts, generator.ts, station.ts (derived indexes), derived.ts (per-contestant caches)
+src/data/        loading and validating the YAML
+src/harness/     the `sim` CLI; seeds run in parallel worker threads
+test/            vitest
+```
+
+## Built so far
+
+Slice one milestones 1 and 2: the skeleton and the life sim (clock, schedule, rooms, objects,
+needs, temperature, bladder, action scoring, rank assignment at the ceremony). Next: the debug
+view, then social interactions.

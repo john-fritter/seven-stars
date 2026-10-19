@@ -95,8 +95,8 @@ The social order is visible at a glance: who sleeps where, who eats what, who sh
 | Rank | Sleeps | Washes | Eats | Booze |
 | --- | --- | --- | --- | --- |
 | 1 | The suite | Private bathroom, hot shower | Gourmet plates, plus treats | Fancy |
-| 2–3 | The good room | Shared bathroom, hot shower | Gourmet plates, while they last | Good |
-| 4–6 | The basic dorm | Shared bathroom, cold shower | Plain plates | Cheap |
+| 2–3 | The good room | The room's own bathroom, hot shower | Gourmet plates, while they last | Good |
+| 4–6 | The basic dorm | The room's own bathroom (shared by three), cold shower | Plain plates | Cheap |
 | 7 | A common-room couch | Sink baths in the public restroom | Leftovers | Rotgut |
 
 **Getting let in (decided; odds proposed).** Bedrooms belong to their occupants. Anyone else can knock and ask to be let in; the occupant may say yes if they like the asker enough, or be annoyed by it. A guest who was let in is there legally and can use the bathroom and stay the night. Being inside without an invitation is entering above your rank.

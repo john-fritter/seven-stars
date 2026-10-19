@@ -1,0 +1,25 @@
+# The daily schedule, in station time (one tick = one station minute).
+# DESIGN.md Part two, Clock and daily schedule.
+
+wakeChime:
+  at: "07:00"
+  minRest: 40            # sleepers with rest above this wake; the rest sleep on until rested
+arrivals: "07:30"        # empty slots refill to seven
+arrivalRoom: common      # where newcomers wake up
+lightsDim: "23:00"       # bedtime isn't forced; sleeping is pulled harder until the wake chime
+
+# Meals. Each contestant can eat once per meal `group`. `ranks` limits who is served there
+# (newcomers count as ranks.yaml newcomerRank). What they're served depends on rank (ranks.yaml).
+meals:
+  - { id: breakfast, group: breakfast, from: "09:00", to: "10:00", room: cafe }
+  - { id: lunch, group: lunch, from: "13:00", to: "14:00", room: cafe }
+  - { id: dinner, group: dinner, from: "19:00", to: "20:30", room: lounge, ranks: [1, 6] }
+  - { id: leftovers, group: dinner, from: "20:30", to: "21:00", room: common, ranks: [7, 7] }
+mealMinutes: 30          # proposal: how long eating takes
+
+# Everyone awake attends. Ranks are assigned `resolveAfter` minutes in, once people have walked over.
+ceremony:
+  at: "21:00"
+  minutes: 30            # proposal
+  resolveAfter: 20       # proposal
+  room: common

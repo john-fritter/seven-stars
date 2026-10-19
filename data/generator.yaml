@@ -1,0 +1,29 @@
+# Building contestants. DESIGN.md Part two, Contestants, species and the generator.
+# Stats roll from a bell curve (most near the mean, some extremes) and are clamped to 0..10.
+
+stat: { mean: 5, sd: 2 }
+candidatesPerSlot: 5         # casting keeps the one furthest from the cast's average personality
+
+# Proposal: gender is bimodal with some people in between.
+gender:
+  - { weight: 45, mean: 2, sd: 1.5 }
+  - { weight: 45, mean: 8, sd: 1.5 }
+  - { weight: 10, mean: 5, sd: 1.5 }
+attraction: { mean: 5, sd: 3 }  # proposal: drawn to femininity / masculinity
+
+pronouns:
+  sheBelow: 3.5
+  heAbove: 6.5
+  randomChance: 0.15         # "pronouns follow gender with some randomness"
+  options: [she/her, he/him, they/them]
+
+recreation: [dancing, music, views, games, spa, nature]
+favoriteRecreations: 2
+
+quirks: [snores, hums, hoards, sleepwalks]
+
+names: [Aldo, Astra, Bix, Cassio, Cleo, Dax, Delphine, Ezra, Faye, Gideon, Halo, Ines, Jax, Juno,
+  Kasimir, Lark, Leo, Lyra, Mars, Mina, Nico, Nova, Odile, Orion, Pax, Quinn, Rhea, Rook, Sola,
+  Soren, Tamsin, Teo, Una, Vale, Vesper, Wren, Xan, Yara, Zara, Zephyr, Bastian, Cosima, Dorian,
+  Elio, Flint, Gaia, Hollis, Ione, Jonas, Kit, Lumi, Milo, Nyx, Opal, Pim, Ravi, Sable, Tycho,
+  Ulla, Vito]

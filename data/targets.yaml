@@ -1,0 +1,15 @@
+# Success targets for a tuned run. DESIGN.md Part two, Scope and success (first guesses).
+# per: week | day | contestantDay | share (a share of days or ceremonies)
+
+targets:
+  - { id: deathsPerWeek, label: "Deaths per week, all causes", min: 2, max: 3 }
+  - { id: averageStayWeeks, label: "Average stay (weeks)", min: 2, max: 4 }
+  - { id: breaksPerDay, label: "Mental breaks per day, whole station", min: 1 }
+  - { id: fightsPerWeek, label: "Fights per week", min: 3 }
+  - { id: hookupsPerWeek, label: "Hookups per week", min: 2 }
+  - { id: sentenceDayShare, label: "Days with an infraction sentenced", min: 0.5 }
+  - { id: rankChangeShare, label: "Ceremonies with a rank change", min: 0.5 }
+  - { id: quietDayShare, label: "Days with nothing notable", max: 0.1 }
+
+# Event types that make a day notable.
+notable: [death, break, fight, lovin, kiss, betrayal, breakup, sentence, trial]

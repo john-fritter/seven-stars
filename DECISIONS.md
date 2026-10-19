@@ -144,3 +144,20 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Top-down versus isometric, and the art pipeline.
 - [ ] Which NanoGPT models.
 - [ ] A real name.
+
+**Proposed while building slice one (Oct 19).** DESIGN.md was silent on these, so the build picked simple defaults. All are numbers in `data/` and easy to change.
+
+- [ ] Walking times: the common room is the hub (1–3 minutes to each room) and the lounge links to the spa and rec room.
+- [ ] Comfort: each room and object has a comfort value; a contestant's comfort drifts toward their situation at 30 an hour, minus 3 per °F felt outside their range.
+- [ ] Needs while asleep: hunger drains at half speed, bladder at 0.3×, social and fun not at all.
+- [ ] The bladder takes over below 10. If every toilet they can use is taken, they queue and look again every 2 minutes.
+- [ ] Eating takes 30 minutes. Rank 7 is served leftovers at breakfast and lunch too, in the cafe.
+- [ ] The ceremony lasts 30 minutes and ranks are assigned 20 minutes in. Anyone left in a room they've lost access to is escorted to the common room.
+- [ ] Sleep: at night sleepers stay down until the wake chime; by day they wake when rested. At night a bed pulls 3 × its quality, so people go to bed rather than the nearest couch.
+- [ ] Anyone can nap on a free couch; beds are only for whoever was assigned them.
+- [ ] Rank ties left after the meter and lifetime points break on a seeded random draw.
+- [ ] Felines groom and don't shower or take sink baths. Aquatics get +60 from a cold shower and +40 from a sink bath.
+- [ ] Small extras: washing up at a sink (+5 hygiene), sitting on a couch for comfort, tending the garden plants, and an idle fallback when nothing appeals.
+- [ ] Social gains from activities (dancing, bowling, the hot tub) only count when someone else is in the room.
+- [ ] Recreation taste: each contestant has two favorite kinds; favorites give 1.5× fun, others 0.8×.
+- [ ] Gender rolls bimodal (45% feminine, 45% masculine, 10% in between); the two attraction axes roll around 5 with a wide spread.

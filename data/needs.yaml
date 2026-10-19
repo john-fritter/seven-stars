@@ -1,0 +1,23 @@
+# Needs run 0 (desperate) to 100 (satisfied). DESIGN.md Part two, Needs.
+# Species drain multipliers are in species.yaml, personality ones in personality.yaml.
+
+needs:
+  hunger:  { drainPerHour: 6,  weight: 1.2, start: [60, 90] }
+  rest:    { drainPerHour: 4,  weight: 1.0, start: [70, 95] }
+  hygiene: { drainPerHour: 3,  weight: 0.6, start: [60, 90] }
+  bladder: { drainPerHour: 15, weight: 1.5, start: [60, 100] }
+  social:  { drainPerHour: 5,  weight: 0.8, start: [50, 80] }
+  fun:     { drainPerHour: 4,  weight: 0.7, start: [50, 80] }
+  comfort: { drainPerHour: 0,  weight: 0.5, start: [50, 50] }   # set by surroundings, see comfortFollowPerHour
+
+# Proposal: drain multipliers while asleep (rest refills instead of draining).
+asleepDrain: { hunger: 0.5, rest: 0, hygiene: 1, bladder: 0.3, social: 0, fun: 0, comfort: 0 }
+
+sleep:
+  restPerHour: 12        # × the bed's quality: suite 1.2, good 1.0, dorm 0.8, couch 0.6
+
+bladder:
+  criticalBelow: 10      # proposal: below this it overrides everything and they head for a toilet
+  waitMinutes: 2         # proposal: when every toilet they can use is taken, they queue this long and look again
+
+comfortFollowPerHour: 30 # proposal: how fast comfort moves toward the current situation's comfort
