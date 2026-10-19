@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Seven Stars: debug view</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header>
+      <strong>Seven Stars</strong>
+      <span id="clock">day 1 00:00</span>
+      <span id="speeds"></span>
+      <button id="step1" title="One station minute">+1 min</button>
+      <button id="step60" title="One station hour">+1 hr</button>
+      <label>seed <input id="seed" type="number" min="1" /></label>
+      <button id="restart">Restart</button>
+    </header>
+    <div id="error" hidden></div>
+    <main>
+      <section id="station"></section>
+      <aside>
+        <div id="sheet"><p class="hint">Click a contestant for their sheet.</p></div>
+        <div id="ticker-head">
+          <strong>Events</strong>
+          <label><input id="routine" type="checkbox" checked /> routine actions</label>
+        </div>
+        <ol id="ticker"></ol>
+      </aside>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
