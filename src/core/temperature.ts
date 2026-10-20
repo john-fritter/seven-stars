@@ -1,6 +1,7 @@
 // Room temperatures and how they feel. DESIGN.md Part two, Temperature.
 import { accessRank, log, type Ctx } from './context.js';
 import { derived } from './derived.js';
+import { feel } from './ledger.js';
 import type { Contestant } from './types.js';
 
 export function clampTemp(ctx: Ctx, f: number): number {
@@ -42,7 +43,7 @@ export function preferredSetting(ctx: Ctx, c: Contestant): number {
   return clampTemp(ctx, Math.round((lo + hi) / 2 - clothingWarmth(ctx, c)));
 }
 
-/** Changes a bedroom's thermostat and logs who it bothered (they'll resent it once the ledger exists). */
+/** Changes a bedroom's thermostat. Anyone present who ends up less comfortable holds it against them. */
 export function setThermostat(ctx: Ctx, c: Contestant, roomId: string): void {
   const state = ctx.w.rooms[roomId]!;
   const from = state.setting;
@@ -52,5 +53,6 @@ export function setThermostat(ctx: Ctx, c: Contestant, roomId: string): void {
     .filter((o) => o !== c && o.room === roomId && discomfortAt(ctx, o, to) > discomfortAt(ctx, o, from))
     .map((o) => o.id);
   state.setting = to;
+  for (const o of ctx.w.contestants) if (bothered.includes(o.id)) feel(ctx, o, c, 'affection', ctx.data.temperature.botheredAffection, 'thermostat');
   log(ctx, 'thermostat', [c.id], roomId, { from, to, bothered });
 }

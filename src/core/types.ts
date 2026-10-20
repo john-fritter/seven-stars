@@ -52,6 +52,45 @@ export interface Contestant {
   asleep: boolean;
   activity: Activity | null;
   eaten: Record<string, number>; // meal group -> day last eaten
+
+  ledger: Record<string, Relation>; // contestant id -> how this contestant feels about them
+  thoughts: Thought[];
+  guest: Guest | null; // let into someone else's bedroom
+  knocked: Record<string, number>; // host id -> when this contestant last knocked on them
+}
+
+/** One reason in the ledger. Repeats of the same reason merge into the latest entry. */
+export interface Reason {
+  t: number;
+  why: string;
+  dim: string;
+  amount: number;
+  times: number;
+}
+
+/** How one contestant feels about another. Not shared: each side has its own. */
+export interface Relation {
+  affection: number; // −100..100
+  trust: number; // 0..100
+  fear: number; // 0..100, fear or resentment
+  attraction: number; // 0..10
+  knows: number; // 0..1: how well they know the other's real personality
+  chemistry: number; // hidden per-pair roll, the same on both sides
+  met: number;
+  reasons: Reason[];
+}
+
+export interface Thought {
+  id: string;
+  about: string | null;
+  value: number; // personality and species already applied
+  until: number;
+}
+
+export interface Guest {
+  room: string;
+  host: string;
+  since: number;
 }
 
 export interface RoomState {

@@ -645,6 +645,17 @@ Every 10 minutes that two contestants share a room and aren't absorbed in someth
 
 **Labels without AI.** Each character holds their own label. When exclusivity is asked and accepted, a deceptive, low-monogamy character records "fling" privately with odds of (10 − honesty) × (10 − monogamy) ÷ 100. When A sees or hears of B with C, A's label decides betrayal (affection −40, a long bad thought, a likely confrontation) or mild jealousy.
 
+**How the build does it (proposed; all numbers in `data/social.yaml`).**
+
+- **Rounds.** Every 10 minutes, each contestant who is awake, has arrived and isn't walking, asleep, on the toilet, showering or fighting rolls the chance above once (social urgency here is ((100 − social) ÷ 100)², 0 to 1). The partner is a weighted pick among the others in the room, favoring those they like or fancy. Interactions are instant; both sides gain the social amount (chitchat 8, deep talk 12, others 4).
+- **Scaling.** "Scaled by" in the table is a multiplier per factor, each kept between 0.1 and 5: an axis is 1 + k × (axis − 5) ÷ 5; affection is 1 + k × affection ÷ 100 (k −2 for slights and insults, so dislike doubles them at −50); attraction is attraction ÷ 5; chemistry is 1 + 5 × chemistry; privacy is 1 + the room's apparent privacy. Flirts need attraction 4+. Gifts wait for inventory and gossip for rumors.
+- **The ledger** holds affection (−100 to 100), trust and fear (0 to 100) and attraction (0 to 10) per direction, plus the last 12 dated reasons (repeats merge, "chitchat ×14"). Deep talk adds trust +3, an insult adds fear +3, losing a fight fear +10. Once a day at the wake chime affection fades 10% toward zero (× 1 − 0.5 × (loyal − 5) ÷ 5, so loyal people hold on), trust 2% and fear 10%.
+- **Attraction** is the formula above with beauty and fit on 0–1 and the result × 10. Fit is 1 − the mean gap between ideal and personality ÷ 5. Perceived fit is (1 − knows) × beauty + knows × the fit they show, where a deceptive person shows fit + (1 − fit) × 0.5 × (10 − honest) ÷ 10. Knows grows 0.02 per chitchat and 0.25 per deep talk. Chemistry is a per-pair roll with a 0.15 spread. On meeting, attraction starts at 0.6 × its target, and every interaction moves it 10% of the rest of the way.
+- **Flirts** land with the target's attraction back ÷ 10. Success: both affection +5 and attraction +0.5. A rebuff gives the flirter "rebuffed" (−8) and the target "awkward" (−3, 12 hours). Kisses, lovin' and labels come with romance.
+- **Fights** start from insults: the insulted one swings. Power is strength + stamina × 0.5 + a d6; the loser takes 10–30 (a 5% serious injury adds 20) but never drops below 10 health from a fight; health recovers 2 an hour. Both stop for 3 minutes. Then the coin flip, ±20 affection both ways, "won a fight" +3 and "lost a fight" −8. The event records the witnesses and whether it was outside the cage, for the show milestone to sentence.
+- **Company** pulls on action scoring: per person in the room, + 0.3 × affection ÷ 100 + 0.3 × attraction ÷ 10 − 0.3 × fear ÷ 100 (not for sleeping or the toilet).
+- **Thermostat** changes give everyone they made less comfortable affection −3 toward the changer.
+
 ## Thoughts, mood and breaks
 
 Mood starts at 50 and adds every active thought. Each thought has a value, a duration, a stacking limit, and a source category used to pick breaks. Personality scales the values.
@@ -758,6 +769,7 @@ Ranks are assigned at the ceremony by meter, ties broken by lifetime points, and
 - **Pestering:** knocking on the same person again within 3 hours costs affection −3 per repeat; being refused gives "turned away at the door" (−5).
 - **Guests** are there legally: bathroom, shower and bed included, overnight too. Guest status ends when the guest leaves, or at 07:00 after a night.
 - Being inside without an invitation is entering above your rank. Slipping in behind someone still counts.
+- **How the build does it (proposed, `data/social.yaml`).** Odds of yes = (0.15 + 0.01 × affection + 0.04 × attraction) × (1 + 0.5 × (kind − 5) ÷ 5), × 0.3 if asleep. Contestants knock only for a shower, a cold shower or a bed (their host's, and only if it sleeps two). When scoring, a knock option is the action's score × the odds the knocker expects (they assume the host feels about them as they feel about the host; × 0.25 for someone they knocked on in the last 3 hours) − 0.6 for the awkwardness of asking. A refused knocker stands at the door for 2 minutes. At 07:00 any guest still inside is shown out to the common room.
 
 **Rules.** Never enter an area above your rank; never take what belongs to another; never damage the set; attend every ceremony and event; never interfere with the cameras. Killing isn't against the rules.
 
@@ -822,7 +834,7 @@ A killer who accuses an innocent and wins walks free; the engine keeps the truth
 
 The core is a TypeScript library with no I/O, no clock and no global randomness. Everything tunable lives in YAML data files, hot-reloaded by the harness and debug view.
 
-**Data files:** schedule, rooms (including temperatures), objects, species, clothing, generator, needs, personality, actions, interactions, romance, thoughts, breaks, booze, scoring, ranks, rules, wheel, events.
+**Data files:** schedule, rooms (including temperatures), objects, species, clothing, generator, needs, personality, actions, social (interactions, the ledger, attraction, fights, knocking), romance, thoughts, breaks, booze, scoring, ranks, rules, wheel, events.
 
 **Core API (sketch):**
 

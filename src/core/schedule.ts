@@ -2,6 +2,7 @@
 // DESIGN.md Part two, Clock and daily schedule.
 import { CEREMONY, endActivity, onToilet, openMeals } from './actions.js';
 import { canEnter, dayOf, log, timeOfDay, type Ctx } from './context.js';
+import { fadeLedger } from './ledger.js';
 import { cast } from './generator.js';
 import { shuffle } from './rng.js';
 import type { Contestant } from './types.js';
@@ -16,6 +17,8 @@ export function runSchedule(ctx: Ctx): void {
   if (m === s.wakeChime.at) {
     log(ctx, 'wake_chime', []);
     for (const c of ctx.w.contestants) if (c.asleep && c.needs.rest > s.wakeChime.minRest) endActivity(ctx, c, 'woke');
+    guestsOut(ctx);
+    for (const c of ctx.w.contestants) fadeLedger(ctx, c);
   }
   if (m === s.arrivals) arrivals(ctx);
   if (m === s.lightsDim) log(ctx, 'lights_dim', []);
@@ -32,6 +35,20 @@ export function runSchedule(ctx: Ctx): void {
     for (const c of ctx.w.contestants) if (!c.asleep && c.activity?.action !== CEREMONY && !onToilet(ctx, c)) endActivity(ctx, c, 'interrupted');
   }
   if (m === s.ceremony.at + s.ceremony.resolveAfter) ceremony(ctx);
+}
+
+/** Guest status ends at 07:00 after a night: anyone still inside is shown out to the common room. */
+function guestsOut(ctx: Ctx): void {
+  for (const c of ctx.w.contestants) {
+    const g = c.guest;
+    if (!g) continue;
+    c.guest = null;
+    if (c.room === g.room || c.activity?.room === g.room) {
+      endActivity(ctx, c, 'woke');
+      if (!canEnter(ctx, c, c.room)) c.room = ctx.data.schedule.ceremony.room;
+    }
+    log(ctx, 'guest_out', [c.id, g.host], g.room);
+  }
 }
 
 /** Empty slots refill to seven through casting. */
@@ -77,6 +94,7 @@ function ceremony(ctx: Ctx): void {
     const a = c.activity;
     const def = a?.object ? ctx.st.object.get(a.object)!.actions.find((d) => d.id === a.action) : undefined;
     if (a && ((def?.assigned && a.object !== c.bed) || !canEnter(ctx, c, a.room))) endActivity(ctx, c, 'interrupted');
+    if (c.guest && !canEnter(ctx, c, c.guest.room)) c.guest = null; // the host moved out
     if (!canEnter(ctx, c, c.room)) {
       const from = c.room;
       c.room = ctx.data.schedule.ceremony.room;

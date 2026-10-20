@@ -42,3 +42,5 @@ aside { width: 380px; display: flex; flex-direction: column; border-left: 1px so
 #ticker .t { color: #778; margin-right: 6px; }
 #ticker .show { color: #e4c75a; }
 #ticker .routine { color: #889; }
+.rel { margin: 0 0 6px; padding: 4px 6px; background: #20222b; border-radius: 4px; }
+.rel small { color: #99a; }

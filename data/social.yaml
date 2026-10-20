@@ -1,0 +1,122 @@
+# The social layer: interactions, the ledger, attraction, fights and knocking.
+# DESIGN.md Part two, Social interactions and romance, and Rank, privileges, rules and punishments
+# (Getting let in). Numbers marked "proposal" aren't in DESIGN.md yet.
+
+# Every `every` minutes, each contestant who shares a room with someone and isn't absorbed may
+# start one interaction. Chance: outgoing ÷ 10 × (base + social urgency), where social urgency is
+# ((100 − social) / 100)², so 0 when satisfied and 1 when desperate.
+every: 10
+base: 0.5
+
+# Nobody starts or receives an interaction while walking, asleep, or doing one of these.
+absorbed:
+  kinds: [sleep, toilet]
+  tags: [exposed]                  # proposal: not mid-shower
+  actions: [fight, at_door]
+
+# Proposal: who they turn to, × (1 + affection ÷ 100 × affection + attraction ÷ 10 × attraction),
+# never below `min`.
+partner: { affection: 1, attraction: 1, min: 0.2 }
+
+# Interaction types. Weights are scaled by `scale` factors, each a multiplier on the actor:
+#   an axis name:  1 + k × (axis − 5) ÷ 5 (k defaults to 1; negative pulls the other way)
+#   affection:     1 + k × the actor's affection for the target ÷ 100 (negative k: dislike)
+#   attraction:    the actor's attraction to the target ÷ 5
+#   chemistry:     1 + k × the pair's hidden chemistry
+#   privacy:       1 + k × the room's apparent privacy
+# Every factor is kept between `factorRange`.
+# `needs`: the actor's minimum attraction or affection toward the target.
+# `social`: social need gained by both. `knows`: how much better both learn the other's personality.
+# `actor` / `target`: ledger changes, the actor's toward the target and the target's toward the actor.
+# `thought`: a thought the target gets about the actor.
+factorRange: [0.1, 5]
+interactions:
+  - { id: chitchat, weight: 1, social: 8, knows: 0.02,
+      actor: { affection: 0.5 }, target: { affection: 0.5 } }
+  - { id: deep_talk, weight: 0.075, scale: [{ by: chemistry, k: 5 }], social: 12, knows: 0.25,
+      actor: { affection: 10, trust: 3 }, target: { affection: 10, trust: 3 } }   # trust: proposal
+  - { id: kind_words, weight: 0.02, scale: [{ by: kind }], social: 4,
+      target: { affection: 3 }, thought: kind_words }                           # affection: proposal
+  - { id: flirt, weight: 0.02, needs: { attraction: 4 }, social: 4,
+      scale: [{ by: attraction }, { by: privacy, k: 1 }, { by: brave, k: 0.5 }] }
+  - { id: slight, weight: 0.02, scale: [{ by: affection, k: -2 }, { by: kind, k: -1 }],
+      target: { affection: -5 }, thought: slighted }
+  - { id: insult, weight: 0.007, scale: [{ by: affection, k: -2 }, { by: kind, k: -1 }],
+      target: { affection: -15, fear: 3 }, thought: insulted, fight: true }      # fear: proposal
+# Gifts wait for inventory (booze milestone); gossip waits for rumors.
+
+# Flirting. Success odds = the target's attraction back ÷ 10 × successScale.
+flirt:
+  successScale: 1
+  success: { affection: 5, attraction: 0.5 }   # both ways; attraction: proposal for "attraction grows"
+  rebuffed: rebuffed                            # the flirter's thought
+  awkward: awkward                              # the target's thought
+
+# Fights. Each insult has `chance` of a fight, × 1 + calmK × (calm − 5) ÷ 5 for the insulted
+# (so ×1.5 when fully volatile). Drunk multipliers arrive with booze.
+fight:
+  chance: 0.04
+  calmK: -0.5
+  minutes: 3
+  power: { strength: 1, stamina: 0.5, die: 6 }   # proposal: strength + stamina × 0.5 + a d6
+  damage: [10, 30]                              # the loser's health loss
+  serious: { chance: 0.05, extra: 20 }          # proposal: a rare serious injury
+  healthFloor: 10                               # proposal: ordinary fights never kill
+  cathartic: 0.5                                # coin flip: cathartic (+affection) or angering (−)
+  affection: 20
+  loserFear: 10                                 # proposal: the loser's fear of the winner
+  won: won_fight
+  lost: lost_fight
+  cageRoom: cage                                # fights anywhere else are an infraction (show milestone)
+
+health:
+  recoverPerHour: 2                             # proposal
+
+# The ledger: each contestant's feelings toward each other one, with the dated reasons.
+# Affection runs −100..100, trust and fear 0..100, attraction 0..10.
+ledger:
+  keepReasons: 12               # proposal: reasons kept per relationship (repeats merge)
+  # Proposal: the share of each value that fades per day. Affection fades × 1 + loyalK × (loyal − 5) ÷ 5.
+  fadePerDay: { affection: 0.1, trust: 0.02, fear: 0.1 }
+  loyalK: -0.5
+  # Proposal: labels for the harness and debug view only. Crushes need no label in the sim.
+  friendAt: 30
+  rivalAt: -30
+  crushAt: 6
+
+# Attraction, each direction separately:
+#   target = 10 × genderFit × (looks × beauty + personality × perceived fit + chemistry)
+# genderFit = (drawnToFeminine × (10 − gender) + drawnToMasculine × gender) ÷ 100.
+# Beauty is (beauty + clothing beauty) ÷ 10. Fit = 1 − mean |ideal − shown personality| ÷ fitScale.
+# Perceived fit starts at the beauty value (first impressions run on looks) and moves to the
+# real fit as `knows` grows. A deceptive person shows a better fit than they are:
+#   shown = fit + (1 − fit) × deception × (10 − honest) ÷ 10.
+attraction:
+  looks: 0.4
+  personality: 0.6
+  chemistrySd: 0.15             # proposal: hidden per-pair roll
+  fitScale: 5                   # proposal
+  deception: 0.5                # proposal
+  firstImpression: 0.6          # proposal: on meeting, attraction starts at this share of its target
+  approach: 0.1                 # proposal: each interaction moves it this share of the way
+
+# Proposal: the pull of company in action scoring, per person in the room,
+#   affection ÷ 100 × affection + attraction ÷ 10 × attraction + fear ÷ 100 × fear.
+# Not for sleeping or the toilet.
+companyPull: { affection: 0.3, attraction: 0.3, fear: -0.3 }
+
+# Knocking to be let into a bedroom (D-096). Odds of yes:
+#   (base + affection × affection + attraction × attraction) × (1 + kindK × (kind − 5) ÷ 5), × asleep if asleep.
+knock:
+  actions: [shower, cold_shower, sleep]   # proposal: what's worth knocking for (not a toilet or a sink)
+  base: 0.15                    # proposal
+  affection: 0.01               # proposal, per point of the host's affection for the knocker
+  attraction: 0.04              # proposal, per point of the host's attraction to the knocker
+  kindK: 0.5
+  asleep: 0.3
+  pesterHours: 3
+  pesterAffection: -3
+  turnedAway: turned_away
+  waitMinutes: 2                # proposal: standing at the door after a refusal
+  cost: 0.6                     # proposal: the awkwardness of asking, in scoring
+  repeat: 0.25                  # proposal: scoring × this for a host knocked on within pesterHours

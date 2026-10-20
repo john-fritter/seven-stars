@@ -161,3 +161,15 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Social gains from activities (dancing, bowling, the hot tub) only count when someone else is in the room.
 - [ ] Recreation taste: each contestant has two favorite kinds; favorites give 1.5× fun, others 0.8×.
 - [ ] Gender rolls bimodal (45% feminine, 45% masculine, 10% in between); the two attraction axes roll around 5 with a wide spread.
+
+**Proposed while building the social layer (Oct 19).** Numbers are in `data/social.yaml` and `data/thoughts.yaml`; DESIGN.md Part two has the formulas.
+
+- [ ] Each contestant rolls for one interaction every 10 minutes; nobody talks while walking, asleep, on the toilet, showering or fighting. The partner leans toward people they like or fancy.
+- [ ] Interaction scaling factors as described in DESIGN.md (dislike doubles slights and insults at affection −50; flirts need attraction 4+ and like believed-private rooms).
+- [ ] Ledger values: affection −100..100, trust and fear 0..100, attraction 0..10; the last 12 reasons are kept. Deep talk adds trust +3, an insult fear +3, losing a fight fear +10, kind words affection +3.
+- [ ] Feelings fade daily: affection 10% (slower for loyal people), trust 2%, fear 10%.
+- [ ] Attraction details: fit is 1 − the mean ideal gap ÷ 5; deception fakes up to half the missing fit; attraction starts at 60% of its target on meeting and moves 10% closer with each interaction; a landed flirt adds +0.5 both ways.
+- [ ] Fights: the insulted one swings; power is strength + stamina ÷ 2 + a d6; a 5% serious injury adds 20 damage; fights never take health below 10; health recovers 2 an hour; won a fight +3 and lost a fight −8 thoughts; awkward (−3) for the target of a rebuffed flirt.
+- [ ] Knocking: odds (0.15 + 0.01 × affection + 0.04 × attraction) × kindness; people knock only for showers and a host's double bed; asking costs 0.6 in scoring; a refused knocker waits 2 minutes at the door; guests still inside at 07:00 are shown out.
+- [ ] Company pulls people toward rooms with people they like or fancy and away from people they fear.
+- [ ] Mood is clamped to 0–100.

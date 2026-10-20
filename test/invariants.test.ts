@@ -16,8 +16,15 @@ describe('invariants, checked every minute', () => {
           for (const [need, v] of Object.entries(c.needs)) {
             if (!(v >= 0 && v <= 100)) throw new Error(`${c.name} ${need} = ${v} at t=${w.t}`);
           }
-          // Nobody is in a room above their rank. (Invitations and infractions don't exist yet.)
+          // Nobody is in a room above their rank unless they were let in. (Infractions don't exist yet.)
           if (!canEnter(ctx, c, c.room)) throw new Error(`${c.name} (rank ${c.rank}) is in ${c.room} at t=${w.t}`);
+          if (!(c.health >= 0 && c.health <= 100)) throw new Error(`${c.name} health = ${c.health} at t=${w.t}`);
+          if (!(c.mood >= 0 && c.mood <= 100)) throw new Error(`${c.name} mood = ${c.mood} at t=${w.t}`);
+          for (const [id, r] of Object.entries(c.ledger)) {
+            const ok = r.affection >= -100 && r.affection <= 100 && r.trust >= 0 && r.trust <= 100 && r.fear >= 0 && r.fear <= 100 && r.attraction >= 0 && r.attraction <= 10;
+            if (!ok || id === c.id) throw new Error(`${c.name}'s ledger on ${id} is out of range at t=${w.t}: ${JSON.stringify(r)}`);
+          }
+          if (c.guest && c.guest.host === c.id) throw new Error(`${c.name} is their own guest`);
           if (c.asleep && c.activity === null) throw new Error(`${c.name} is asleep doing nothing at t=${w.t}`);
         }
         for (const [id, users] of Object.entries(w.objects)) {
