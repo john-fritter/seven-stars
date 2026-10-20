@@ -14,6 +14,7 @@
 #   cost / speciesCost: a flat cost when scoring (a cold shower)
 #   tags:        drive the personality grid and the mood modifier (personality.yaml)
 #   onlySpecies / notSpecies / ranks: who can use it
+#   logs:        an event logged when the action is finished, for scoring (a karaoke performance)
 #
 # Numbers marked "proposal" aren't in DESIGN.md yet.
 
@@ -30,6 +31,11 @@ types:
     capacity: 1
     actions:
       - { id: sleep, label: sleeps in a bunk, kind: sleep, quality: 0.8, comfort: 50, assigned: true, tags: [solitary, comforting] }
+  fishbowl_floor:
+    capacity: 7
+    actions:
+      # proposal: the glass cell's floor, worse than the couch
+      - { id: sleep, label: curls up on the fishbowl floor, kind: sleep, quality: 0.5, comfort: 15, tags: [solitary] }
   couch:
     capacity: 1
     actions:
@@ -79,7 +85,7 @@ types:
     capacity: 1
     actions:
       - { id: karaoke, label: sings karaoke, minutes: 10, gains: { fun: 15 }, recreation: music,
-          tags: [performing] }
+          logs: karaoke, tags: [performing] }
   window_seat:
     capacity: 2
     actions:

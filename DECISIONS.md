@@ -173,3 +173,14 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Knocking: odds (0.15 + 0.01 × affection + 0.04 × attraction) × kindness; people knock only for showers and a host's double bed; asking costs 0.6 in scoring; a refused knocker waits 2 minutes at the door; guests still inside at 07:00 are shown out.
 - [ ] Company pulls people toward rooms with people they like or fancy and away from people they fear.
 - [ ] Mood is clamped to 0–100.
+
+**Proposed while building the show (Oct 20).** Numbers are in `data/meter.yaml`, `data/scoring.yaml` and `data/rules.yaml`; DESIGN.md Part two has the details.
+
+- [ ] One sentence per contestant per ceremony: the worst infraction's step on the ladder (meter −10, −15, fishbowl overnight, fishbowl 24 hours and −20), plus one step per extra infraction.
+- [ ] Contestants can choose to sneak into rooms above their rank, at a scoring risk of 1.5 scaled up for honest and timid people. Entering above rank is logged once per room per contestant between ceremonies.
+- [ ] Both fighters get the infraction for a fight outside the cage.
+- [ ] Infractions, sentences, the fishbowl release and deaths skip the witness multiplier. Kind words pay the speaker 1.
+- [ ] The ceremony chime wakes sleepers with rest above 40; anyone not at the ceremony, asleep included, has skipped it.
+- [ ] The fishbowl: a hard floor (rest × 0.5) and a toilet in view; hourly dousing gives hygiene +10 (aquatics +30) and doesn't wake anyone; mocking (−4 thought, affection −5) and passing food (hunger +20, affection +8, +4 thought) through the glass.
+- [ ] Watching a spacing pays 3 points but can't save someone else at zero that night: all spacings are decided first.
+- [ ] Note for tuning: with the drafted numbers, entering above rank pays 4 + 6 and costs 10, so a step-one sentence is free on the meter; the "sentenced in public" thought is the real cost.

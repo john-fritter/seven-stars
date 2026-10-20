@@ -129,6 +129,8 @@ describe('the ledger', () => {
   it('keeps dated reasons, merges repeats and clamps values', () => {
     const { ctx, cast } = aboard();
     const [a, b] = cast as [Contestant, Contestant];
+    delete a.ledger[b.id];
+    delete b.ledger[a.id];
     for (let i = 0; i < 5; i++) feel(ctx, a, b, 'affection', 30, 'chitchat');
     const r = rel(a, b)!;
     expect(r.affection).toBe(100);

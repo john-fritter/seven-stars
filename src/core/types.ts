@@ -57,6 +57,31 @@ export interface Contestant {
   thoughts: Thought[];
   guest: Guest | null; // let into someone else's bedroom
   knocked: Record<string, number>; // host id -> when this contestant last knocked on them
+  confined: Confinement | null; // serving a fishbowl sentence
+  immunities: number; // secret immunities: each cancels one spacing
+}
+
+export interface Confinement {
+  room: string;
+  since: number;
+  until: number;
+}
+
+/** An infraction waiting for the ceremony. */
+export interface Infraction {
+  who: string;
+  rule: string;
+  t: number;
+  room: string;
+  scored: number; // what the act itself scored for them, for the rule-of-cool waiver
+}
+
+/** The show's bookkeeping: the judge's boredom, repeat pairs, and infractions awaiting sentence. */
+export interface ShowState {
+  day: number; // the day `today` counts
+  today: Record<string, number>; // event type -> times scored today, station-wide
+  pairs: Record<string, number[]>; // "type|a|b" -> when that pair last scored it, within the repeat window
+  pending: Infraction[];
 }
 
 /** One reason in the ledger. Repeats of the same reason merge into the latest entry. */
@@ -107,6 +132,7 @@ export interface World {
   contestants: Contestant[];
   rooms: Record<string, RoomState>;
   objects: Record<string, string[]>; // object instance id -> contestants using or walking to it
+  show: ShowState;
 }
 
 /** Everything meaningful that happens. If it isn't in the log, it didn't happen. */

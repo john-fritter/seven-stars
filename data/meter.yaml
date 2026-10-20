@@ -1,4 +1,10 @@
 # The ratings meter. DESIGN.md Part two, The meter and scoring.
-# Drain and awards arrive with the show milestone; for now it only orders the ceremony.
-start: 60        # proposal (DECISIONS Open): newcomers start here
+# Runs 0..max. Drains all day and night; awards (scoring.yaml) refill it, capped at max. At zero a
+# contestant is on notice; still at zero at the ceremony, they're spaced (rules.yaml spacing).
+start: 60          # proposal (DECISIONS Open): newcomers start here
 max: 100
+drainPerHour: 1    # proposal (DECISIONS Open)
+
+# "The show is going to kill me": while the meter is under `below`, a thought from `from` (just
+# under) to `to` (at zero), refreshed every hour. DESIGN.md Thoughts table.
+doomed: { thought: doomed, below: 30, from: -4, to: -15 }

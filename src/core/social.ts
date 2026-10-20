@@ -3,6 +3,7 @@
 import type { InteractionDef } from '../data/schema.js';
 import { actionDef, begin, endActivity, FIGHT } from './actions.js';
 import { log, type Ctx } from './context.js';
+import { infraction } from './show.js';
 import { feel, meet, rel, relation, warm } from './ledger.js';
 import { addNeed, axisFactor } from './needs.js';
 import { between, chance, next, weightedIndex } from './rng.js';
@@ -39,7 +40,7 @@ export function socialRound(ctx: Ctx): void {
   }
   for (const c of cast) {
     if (!available(ctx, c)) continue;
-    const others = cast.filter((o) => o !== c && o.room === c.room && available(ctx, o));
+    const others = cast.filter((o) => o !== c && (o.room === c.room || throughGlass(ctx, c, o)) && available(ctx, o));
     if (others.length === 0) continue;
     if (!chance(ctx.w.rng, interactionChance(ctx, c))) continue;
     const p = ctx.data.social.partner;
@@ -48,10 +49,24 @@ export function socialRound(ctx: Ctx): void {
       return Math.max(p.min, 1 + (r.affection / 100) * p.affection + (r.attraction / 10) * p.attraction);
     });
     const o = others[weightedIndex(ctx.w.rng, weights)]!;
-    const defs = ctx.data.social.interactions;
+    const defs = interactionsFor(ctx, c, o);
+    if (!defs.length) continue;
     const def = defs[weightedIndex(ctx.w.rng, defs.map((d) => interactionWeight(ctx, c, o, d)))]!;
     interact(ctx, c, o, def);
   }
+}
+
+/** One of them is in a glass cell inside the other's room: they can see and talk, nothing more. */
+export function throughGlass(ctx: Ctx, a: Contestant, b: Contestant): boolean {
+  return ctx.st.room.get(a.room)!.glass === b.room || ctx.st.room.get(b.room)!.glass === a.room;
+}
+
+/** Face to face, the ordinary interactions; through the glass, only the ones marked for it. */
+function interactionsFor(ctx: Ctx, c: Contestant, o: Contestant): InteractionDef[] {
+  const defs = ctx.data.social.interactions;
+  if (o.room === c.room) return defs.filter((d) => !d.glass);
+  const outside = !ctx.st.room.get(c.room)!.glass;
+  return defs.filter((d) => d.glass === 'either' || (d.glass === 'outside' && outside));
 }
 
 /** An interaction type's weight for this actor and target, scale factors applied. */
@@ -96,6 +111,7 @@ function interact(ctx: Ctx, c: Contestant, o: Contestant, def: InteractionDef): 
   warm(ctx, o, c);
   for (const [dim, v] of Object.entries(def.actor)) feel(ctx, c, o, dim as never, v, def.id);
   for (const [dim, v] of Object.entries(def.target)) feel(ctx, o, c, dim as never, v, def.id);
+  for (const [n, v] of Object.entries(def.targetGains)) addNeed(o, n as never, v);
   if (def.thought) think(ctx, o, def.thought, c.id);
 
   if (def.id === 'flirt') {
@@ -169,15 +185,21 @@ export function fight(ctx: Ctx, insulter: Contestant, insulted: Contestant): voi
     endActivity(ctx, c, 'interrupted');
     begin(ctx, c, { action: FIGHT, object: null, room, minutes: f.minutes });
   }
-  log(ctx, 'fight', [insulted.id, insulter.id], room, {
+  const outsideCage = room !== f.cageRoom;
+  const e = log(ctx, 'fight', [insulted.id, insulter.id], room, {
     winner: winner.id,
     loser: loser.id,
     damage,
     serious,
     after: cathartic ? 'cathartic' : 'angering',
     witnesses,
-    outsideCage: room !== f.cageRoom,
+    outsideCage,
   });
+  if (!outsideCage) return;
+  // Fighting outside the cage is an infraction; what the fight scored can earn a rule-of-cool waiver.
+  const awards = (e.data?.awards ?? {}) as Record<string, number>;
+  const guilty = ctx.data.rules.fighting === 'both' ? [insulted, insulter] : [insulted];
+  for (const c of guilty) infraction(ctx, c, 'fighting', room, awards[c.id] ?? 0);
 }
 
 // ---------------------------------------------------------------------------------------------

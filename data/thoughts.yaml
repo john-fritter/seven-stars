@@ -4,6 +4,7 @@
 #
 # Each thought: value, hours it lasts, stack (how many can be active at once about the same
 # person; a new one replaces the oldest), and a source category (used later to pick breaks).
+# `species` replaces the value for those species (the fishbowl barely bothers aquatics).
 
 # Every thought hits × 1 + volatileK × (calm − 5) ÷ 5: up to 1.4× when volatile.
 volatileK: -0.4
@@ -21,3 +22,18 @@ thoughts:
   turned_away: { label: "Turned away at the door by {who}", value: -5, hours: 24, stack: 2, source: rejection }
   lost_fight:  { label: "Lost a fight to {who}", value: -8, hours: 24, stack: 2, source: person }  # proposal
   won_fight:   { label: "Won a fight against {who}", value: 3, hours: 12, stack: 2, source: person } # proposal
+
+  # The show
+  doomed:        { label: "The show is going to kill me", value: -4, hours: 1.5, stack: 1, source: fear }  # value set by meter.yaml doomed
+  sentenced:     { label: "Sentenced in public", value: -10, hours: 48, stack: 1, source: humiliation }
+  fishbowl_night: { label: "A night in the fishbowl", value: -12, species: { aquatic: -4 }, hours: 24, stack: 1, source: humiliation }
+  rank_up:       { label: "Rank went up", value: 5, hours: 48, stack: 1, source: status }
+  rank_down:     { label: "Rank went down", value: -8, hours: 48, stack: 1, source: status }
+  mocked:        { label: "Mocked through the glass by {who}", value: -4, hours: 12, stack: 2, source: humiliation } # proposal
+  fed:           { label: "{who} passed food through the slot", value: 4, hours: 12, stack: 1, source: person }     # proposal
+
+  # Deaths
+  watched_execution: { label: "Watched an execution", value: -8, hours: 48, stack: 3, source: fear }
+  someone_died:  { label: "{who} died", value: -6, hours: 72, stack: 1, source: fear }
+  friend_died:   { label: "My friend {who} died", value: -12, hours: 168, stack: 1, source: grief }
+  rival_died:    { label: "{who} got what was coming", value: 6, hours: 72, stack: 1, source: person }

@@ -3,6 +3,9 @@
 
 newcomerRank: 4          # proposal (DECISIONS Open): newcomers count as rank 4 until their first ceremony
 
+# Thoughts when the ceremony moves someone up or down.
+thoughts: { up: rank_up, down: rank_down }
+
 ranks:
   1: { bed: "suite:bed_suite:1", food: gourmet }
   2: { bed: "good:bed_good:1", food: gourmet }

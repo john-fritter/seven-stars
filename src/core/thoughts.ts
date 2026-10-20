@@ -1,25 +1,29 @@
 // Thoughts and mood: mood is the base plus every active thought. DESIGN.md Part two,
-// Thoughts, mood and breaks. Only what the social layer needs so far; breaks come later.
+// Thoughts, mood and breaks. Only what the social layer and the show need so far; breaks come later.
 import type { Ctx } from './context.js';
 import { axisFactor } from './needs.js';
 import type { Contestant } from './types.js';
 
-/** A thought's value for this contestant: volatility and species applied. */
-export function thoughtValue(ctx: Ctx, c: Contestant, id: string): number {
+/**
+ * A thought's value for this contestant: volatility and species applied. `base` replaces the
+ * data's value for thoughts whose size depends on the situation (the meter's dread).
+ */
+export function thoughtValue(ctx: Ctx, c: Contestant, id: string, base?: number): number {
   const th = ctx.data.thoughts;
   const def = th.thoughts[id]!;
-  return def.value * axisFactor(th.volatileK, c.personality.calm) * (th.species[c.species]?.[def.source] ?? 1);
+  const v = base ?? def.species[c.species] ?? def.value;
+  return v * axisFactor(th.volatileK, c.personality.calm) * (th.species[c.species]?.[def.source] ?? 1);
 }
 
 /** Adds a thought. At the stacking limit for that thought about that person, the oldest goes. */
-export function think(ctx: Ctx, c: Contestant, id: string, about: string | null = null): void {
+export function think(ctx: Ctx, c: Contestant, id: string, about: string | null = null, base?: number): void {
   const def = ctx.data.thoughts.thoughts[id]!;
   const same = c.thoughts.filter((x) => x.id === id && x.about === about);
   if (same.length >= def.stack) {
     const oldest = same.reduce((a, b) => (b.until < a.until ? b : a));
     c.thoughts.splice(c.thoughts.indexOf(oldest), 1);
   }
-  c.thoughts.push({ id, about, value: thoughtValue(ctx, c, id), until: ctx.w.t + def.hours * 60 });
+  c.thoughts.push({ id, about, value: thoughtValue(ctx, c, id, base), until: ctx.w.t + def.hours * 60 });
   updateMood(ctx, c);
 }
 

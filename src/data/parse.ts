@@ -103,6 +103,31 @@ function crossCheck(d: GameData, dir: string): void {
   thought(d.social.knock.turnedAway, 'social.yaml: knock.turnedAway');
   if (!rooms.has(d.social.fight.cageRoom)) errors.push(`${dir}/social.yaml: fight.cageRoom: no room "${d.social.fight.cageRoom}"`);
   for (const s of Object.keys(d.thoughts.species)) if (!species.has(s)) errors.push(`${dir}/thoughts.yaml: species.${s}: no such species`);
+  for (const [id, t] of Object.entries(thoughts)) {
+    for (const s of Object.keys(t.species)) if (!species.has(s)) errors.push(`${dir}/thoughts.yaml: thoughts.${id}.species.${s}: no such species`);
+  }
+
+  // The show
+  d.rooms.rooms.forEach((r, i) => {
+    if (r.glass !== undefined && !rooms.has(r.glass)) errors.push(`${dir}/rooms.yaml: rooms.${i}.glass: no room "${r.glass}"`);
+  });
+  thought(d.meter.doomed.thought, 'meter.yaml: doomed.thought');
+  thought(d.ranks.thoughts.up, 'ranks.yaml: thoughts.up');
+  thought(d.ranks.thoughts.down, 'ranks.yaml: thoughts.down');
+  const r = d.rules;
+  thought(r.sentencedThought, 'rules.yaml: sentencedThought');
+  thought(r.fishbowl.thought, 'rules.yaml: fishbowl.thought');
+  for (const [k, id] of Object.entries(r.spacing)) thought(id, `rules.yaml: spacing.${k}`);
+  if (!rooms.has(r.fishbowl.room)) errors.push(`${dir}/rules.yaml: fishbowl.room: no room "${r.fishbowl.room}"`);
+  else if (!d.rooms.rooms.find((x) => x.id === r.fishbowl.room)!.glass) errors.push(`${dir}/rooms.yaml: the fishbowl room "${r.fishbowl.room}" needs a glass: room`);
+  for (const s of Object.keys(r.fishbowl.douseSpecies)) if (!species.has(s)) errors.push(`${dir}/rules.yaml: fishbowl.douseSpecies.${s}: no such species`);
+  // The rules the simulation itself logs.
+  for (const rule of ['above_rank', 'skipped_ceremony', 'fighting']) {
+    if (!r.infractions[rule]) errors.push(`${dir}/rules.yaml: infractions.${rule}: missing`);
+  }
+  for (const [id, x] of Object.entries(r.infractions)) {
+    if (x.step > r.sentences.length) errors.push(`${dir}/rules.yaml: infractions.${id}.step: the ladder only has ${r.sentences.length} sentences`);
+  }
 
   if (errors.length) throw new DataError(`Bad data:\n${errors.map((e) => `  ${e}`).join('\n')}`);
 }

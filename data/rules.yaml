@@ -1,0 +1,52 @@
+# Rules, infractions, sentences and the fishbowl. DESIGN.md Part two, Rank, privileges, rules
+# and punishments. Detection is total; sentencing waits for the ceremony.
+
+# Each infraction has a starting step on the sentence ladder below. Proposal: one sentence per
+# contestant per ceremony, at the highest step among their infractions, one step higher for each
+# extra infraction that day ("a second infraction the same day bumps the sentence up a step").
+infractions:
+  above_rank:       { label: "Entering above rank", step: 1 }
+  skipped_ceremony: { label: "Skipping the ceremony", step: 1 }
+  fighting:         { label: "Fighting outside the cage", step: 2 }
+  theft:            { label: "Theft", step: 3 }                # arrives with breaks
+  damage:           { label: "Damaging the set", step: 3 }     # arrives with breaks
+  cameras:          { label: "Interfering with the cameras", step: 4 }   # arrives with breaks
+
+# The ladder, mildest first. meter: a penalty applied at the ceremony. fishbowl: "night" until the
+# release time below, "day" for dayHours.
+sentences:
+  - { meter: -10 }
+  - { meter: -15 }
+  - { fishbowl: night }
+  - { fishbowl: day, meter: -20 }
+
+# Rule of cool: an infraction whose own act scored at least minPoints for that contestant is
+# waived with this chance.
+waiver: { minPoints: 10, chance: 0.3 }
+
+# Proposal: an above-rank entry is logged once per room per contestant between ceremonies.
+# Sneaking in is a choice: actions in rooms above their rank are scored as usual, minus
+#   cost × (1 + honestK × (honest − 5) ÷ 5) × (1 + braveK × (brave − 5) ÷ 5),
+# so honest and timid people rarely risk it.
+sneak: { cost: 1.5, honestK: 0.5, braveK: -0.5 }
+
+# Proposal: who fights outside the cage gets the infraction: both fighters.
+fighting: both
+
+sentencedThought: sentenced     # "Sentenced in public"
+
+fishbowl:
+  room: fishbowl
+  release: "07:00"              # an overnight sentence ends here
+  dayHours: 24
+  douseEvery: 60                # minutes between cold showers
+  douseHygiene: 10              # proposal: hygiene from each dousing (douseSpecies replaces it)
+  douseSpecies: { aquatic: 30 }
+  thought: fishbowl_night
+
+# Spacing at the ceremony, and what everyone else feels about a death.
+spacing:
+  watched: watched_execution    # everyone at the ceremony
+  died: someone_died            # everyone else
+  friend: friend_died
+  rival: rival_died

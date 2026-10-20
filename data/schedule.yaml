@@ -22,4 +22,6 @@ ceremony:
   at: "21:00"
   minutes: 30            # proposal
   resolveAfter: 20       # proposal
+  wakeAbove: 40          # proposal: the ceremony chime wakes sleepers with rest above this; the
+                         # exhausted sleep through it, and skipping the ceremony is an infraction
   room: common

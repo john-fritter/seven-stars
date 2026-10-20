@@ -9,6 +9,7 @@ import { gainsOf, personalityOf } from './derived.js';
 import { addNeed, needUrgency } from './needs.js';
 import { between, weightedIndex } from './rng.js';
 import { walkMinutes, type ObjectInstance } from './station.js';
+import { caughtIn, infraction, sneakCost } from './show.js';
 import { companyPull, expectedKnockOdds, knock, occupants } from './social.js';
 import { discomfortAt, preferredSetting, setThermostat, situationComfort } from './temperature.js';
 import type { Activity, Contestant } from './types.js';
@@ -144,7 +145,11 @@ function candidates(ctx: Ctx, c: Contestant): Candidate[] {
   const night = isNight(ctx, ctx.w.t);
   const host = hostOf(ctx, c);
   for (const room of ctx.st.rooms) {
-    if (!canEnter(ctx, c, room.id)) continue;
+    // Rooms above their rank are a choice too, at the risk of an infraction; never when the
+    // bladder is critical, never the robots' rooms, and never out of the fishbowl.
+    const sneak = !canEnter(ctx, c, room.id);
+    if (sneak && (critical || c.confined || room.access === 'robots')) continue;
+    const risk = sneak && !caughtIn(ctx, c, room.id) ? sneakCost(ctx, c) : 0;
     const pull = critical ? 0 : companyPull(ctx, c, room.id);
     const guest = c.guest?.room === room.id && !(c.bed !== null && ctx.st.object.get(c.bed)!.room === room.id);
     for (const o of ctx.st.objectsInRoom.get(room.id)!) {
@@ -152,14 +157,15 @@ function candidates(ctx: Ctx, c: Contestant): Candidate[] {
       if (users.length >= o.capacity && !users.includes(c.id)) continue;
       for (const def of o.actions) {
         if (def.assigned && !bedAllowed(ctx, c, o, guest ? host : undefined)) continue;
-        if (def.kind === 'thermostat' && (guest || preferredSetting(ctx, c) === ctx.w.rooms[room.id]!.setting)) continue;
+        if (def.kind === 'thermostat' && (sneak || guest || preferredSetting(ctx, c) === ctx.w.rooms[room.id]!.setting)) continue;
         if (!usable(ctx, c, def)) continue;
-        out.push({ def, object: o, room: room.id, score: scoreAction(ctx, c, def, room.id, others, critical, night, pull) });
+        const score = scoreAction(ctx, c, def, room.id, others, critical, night, pull) - risk;
+        out.push({ def, object: o, room: room.id, score });
       }
     }
   }
   if (critical) return out;
-  knockCandidates(ctx, c, others, night, out);
+  if (!c.confined) knockCandidates(ctx, c, others, night, out);
   for (const def of ctx.st.personal) {
     if (usable(ctx, c, def)) out.push({ def, object: null, room: c.room, score: scoreAction(ctx, c, def, c.room, others, false, night, companyPull(ctx, c, c.room)) });
   }
@@ -204,7 +210,7 @@ export function decide(ctx: Ctx, c: Contestant): void {
   const cer = ctx.data.schedule.ceremony;
   const m = timeOfDay(ctx.w.t);
   const critical = c.needs.bladder < ctx.data.needs.bladder.criticalBelow;
-  if (!critical && m >= cer.at && m < cer.at + cer.minutes) {
+  if (!critical && !c.confined && m >= cer.at && m < cer.at + cer.minutes) {
     begin(ctx, c, { action: CEREMONY, object: null, room: cer.room, endAt: ctx.w.t - m + cer.at + cer.minutes });
     return;
   }
@@ -276,6 +282,8 @@ function arrive(ctx: Ctx, c: Contestant): void {
     c.guest = null;
   }
   a.phase = 'do';
+  // The cameras see everything: walking in above your rank is logged the moment it happens.
+  if (!canEnter(ctx, c, a.room) && !caughtIn(ctx, c, a.room)) infraction(ctx, c, 'above_rank', a.room);
   if (a.minutes !== null) a.endAt = ctx.w.t + a.minutes;
   if (a.action === MEAL) c.eaten[ctx.data.schedule.meals.find((m) => m.id === a.meal)!.group] = dayOf(ctx.w.t);
   const def = actionDef(ctx, a);
@@ -291,6 +299,7 @@ export function endActivity(ctx: Ctx, c: Contestant, how: 'done' | 'interrupted'
     if (def?.kind === 'toilet') c.needs.bladder = 100;
     if (def?.kind === 'thermostat') setThermostat(ctx, c, a.room);
     if (a.action === MEAL) log(ctx, 'meal', [c.id], a.room, { meal: a.meal, food: a.food });
+    if (def?.logs) log(ctx, def.logs, [c.id], a.room);
   }
   if (a.object) {
     const users = ctx.w.objects[a.object]!;
