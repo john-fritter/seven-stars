@@ -750,6 +750,17 @@ The enjoyment thought lasts 3 hours and stacks to three drinks. Drinks can be ca
 
 **The ceremony, in order:** today's infractions and sentences, meter penalties applied, anyone at zero spaced, ranks assigned, the Wheel spun by the new bottom rank, room moves.
 
+**How the build does it (proposed; numbers in `data/meter.yaml` and `data/scoring.yaml`).**
+
+- **Drain** is continuous, 1/60 a minute. Crossing zero logs "on notice" once.
+- **Awards** are scored as events are logged, from a table keyed by event type: each actor, the first actor, the second, the winner or loser, and witnesses. The award lands on the event (its points, and each contestant's share), so the log is the record.
+- **Witnesses** are everyone awake in the room who isn't taking part. Infractions, sentences, the fishbowl release and deaths skip the witness multiplier, since everyone is always watching the ceremony.
+- **Repeats** only count for events between two people: × 0.5 per time that pair scored the same type in the last 3 days, in either order.
+- **Boredom** counts each event type station-wide per day and resets at midnight. An event that doesn't score (a fight in the cage) doesn't bore the judge.
+- **The dread thought** "the show is going to kill me" is refreshed hourly while the meter is under 30, from −4 just under the line to −15 at zero.
+- **The ceremony** also takes a roll call first: anyone not there (asleep included) has skipped it. The ceremony chime wakes sleepers with rest above 40, so only the exhausted sleep through it. Rank changes give "rank went up" (+5) or "down" (−8) thoughts.
+- **Spacing** takes everyone at zero at once, decided before anyone goes, so the points for watching one spacing can't save the next person. Everyone at the ceremony gets "witnessed a death" (3 points) and "watched an execution"; everyone gets "someone died", "my friend died" (affection 30+) or "got what was coming" (affection −30 or less). A dead contestant leaves the world: their guests are shown out and others' ledger entries about them go.
+
 ## Rank, privileges, rules and punishments
 
 Ranks are assigned at the ceremony by meter, ties broken by lifetime points, and hold for 24 hours. Newcomers are treated as rank 4 for access until their first ceremony (proposed).
@@ -785,6 +796,14 @@ Ranks are assigned at the ceremony by meter, ties broken by lifetime points, and
 | Interfering with the cameras | Fishbowl 24 hours and meter −20 |
 
 A second infraction the same day bumps the sentence up a step.
+
+**How the build does it (proposed; numbers in `data/rules.yaml`).**
+
+- **The sentence ladder** is the table's four sentences in order: meter −10, meter −15, fishbowl overnight, fishbowl 24 hours and meter −20. Each infraction starts at its row's step. Each contestant gets one sentence per ceremony, at the step of their worst infraction plus one for each extra infraction since the last ceremony, capped at the top.
+- **Sneaking in.** Actions in rooms above a contestant's rank (not the airlock or the fishbowl) are scored like any other, minus a risk of 1.5 × (1 + 0.5 × (honest − 5) ÷ 5) × (1 − 0.5 × (brave − 5) ÷ 5). Walking in logs an "entering above rank" infraction, once per room per contestant between ceremonies. Nobody sneaks when the bladder is critical. Anyone still above their rank at the ceremony is escorted out with the room moves.
+- **Fights outside the cage** give both fighters the infraction. What the fight paid each of them decides the rule-of-cool waiver, rolled at the ceremony.
+- **Sentencing** logs the sentence (6 points), gives "sentenced in public" (−10), then applies the meter penalty, so a penalty can put someone at zero in time for the spacing.
+- **The fishbowl** is a glass cell inside the common room with a hard floor to sleep on (rest × 0.5) and a toilet in full view. The sentenced are escorted in after the room moves and can't leave; an overnight stay ends at 07:00, a day stay after 24 hours, with "fishbowl night" (8 points) paid on release. Every hour a cold dousing adds hygiene +10 (aquatics +30) and doesn't wake a sleeper. People on either side of the glass can only use the glass interactions: talk (either side), and mock or pass food (from outside). Passing food gives the prisoner hunger +20.
 
 **The fishbowl.** The occupant stays from the ceremony until 07:00 (or 24 hours), sits at 61°F with a cold shower every hour (aquatics don't mind), and hears everything. Passers-by get special interactions: mock (cruel), talk (social), pass food (kind).
 

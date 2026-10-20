@@ -1,6 +1,7 @@
 // What every system gets while the world steps: the data, its derived indexes, the world and
 // the event log being written. Also the small shared helpers: clock, access, logging.
 import type { GameData } from '../data/schema.js';
+import { award } from './scoring.js';
 import type { Station } from './station.js';
 import type { Contestant, SimEvent, World } from './types.js';
 
@@ -35,6 +36,7 @@ export function log(ctx: Ctx, type: string, actors: string[], room?: string, dat
   if (room !== undefined) e.room = room;
   if (data !== undefined) e.data = data;
   ctx.events.push(e);
+  award(ctx, e); // anything the show pays for is scored as it's logged
   return e;
 }
 
@@ -44,6 +46,7 @@ export function accessRank(ctx: Ctx, c: Contestant): number {
 }
 
 export function canEnter(ctx: Ctx, c: Contestant, roomId: string): boolean {
+  if (c.confined) return roomId === c.confined.room;
   const room = ctx.st.room.get(roomId)!;
   switch (room.access) {
     case 'all':

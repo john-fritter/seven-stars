@@ -89,6 +89,18 @@ function printReport(r: Report, ms: number): void {
     console.log(`  ${'avg affection'.padEnd(16)} ${r.relations.affection.toFixed(1)}`);
   }
   if (r.knockYesShare !== null) console.log(`\nKnocks answered yes: ${pct(r.knockYesShare)}`);
+  const sh = r.show;
+  console.log('\nThe show');
+  console.log(`  ${'meter at night'.padEnd(22)} ${sh.meterAtNight.toFixed(1)} average; ${pct(sh.onNoticeAtNight)} on notice (at zero)`);
+  console.log(`  ${'couch streak'.padEnd(22)} ${fmt(sh.couchStreak, 1)} nights in a row at rank 7, on average`);
+  console.log(`  ${'waived (rule of cool)'.padEnd(22)} ${sh.waivedPerWeek.toFixed(2)} a week`);
+  console.log(`  ${'fishbowl nights'.padEnd(22)} ${sh.fishbowlNightsPerWeek.toFixed(2)} a week`);
+  console.log('Infractions per day, by rule');
+  console.log(top(sh.infractionsPerDay, 10, (v) => v.toFixed(2)));
+  console.log('Sentences per day, by ladder step');
+  console.log(top(sh.sentencesPerDay, 10, (v) => v.toFixed(2)));
+  console.log('Points per contestant-day, by event');
+  console.log(top(sh.pointsPerContestantDay, 12, (v) => v.toFixed(2)));
 }
 
 async function main(): Promise<void> {

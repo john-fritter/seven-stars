@@ -1,0 +1,38 @@
+# Deterministic scoring, slice one's stand-in for the judge. DESIGN.md Part two, The meter and
+# scoring. Every award goes to the meter (capped) and lifetime points (uncapped) together.
+#
+# Each row is keyed by the event type it scores. Who gets what:
+#   each:      every actor
+#   actor:     the first actor (who started it)
+#   target:    the second actor
+#   winner / loser: the contestant named in the event's data
+#   witnesses: every witness (awake, in the same room, not an actor), on top of the rest
+# only:      a data field that must be true for the event to score (fights: outside the cage)
+# witnessed: false skips the witness multiplier (proposal: infractions, sentences and anything
+#            at the ceremony, where everyone is always watching)
+
+awards:
+  deep_talk:   { each: 2 }
+  kind_words:  { actor: 1 }               # "Gift; kind words: 2 giver; 1". Gifts wait for inventory
+  slight:      { each: 2 }
+  insult:      { actor: 4, target: 2 }
+  fight:       { each: 12, winner: 6, only: outsideCage }
+  flirt:       { each: 4 }                # a flirt that lands
+  rebuff:      { actor: 3 }               # the rebuffed flirter
+  karaoke:     { actor: 3 }               # a finished karaoke performance
+  infraction:  { actor: 4, witnessed: false }
+  sentence:    { actor: 6, witnessed: false }
+  fishbowl_night: { actor: 8, witnessed: false }   # paid on release
+  death:       { witnesses: 3, witnessed: false }  # "witnessed a death"
+  # Still to come with their systems: kiss 6 each; lovin' 12 each the first time with that person,
+  # 3 after; betrayal discovered 10 to everyone involved; breakup 8 each; breaks 5 / 10 / 15;
+  # hammered antics 4; dance-off 20 / 5; cage match 25 / 10; trial survived 15; murder 40 to the
+  # meter, 100 hidden lifetime.
+
+modifiers:
+  witnessEach: 0.15        # × 1 + 0.15 per witness
+  witnessMax: 2            # up to × 2
+  repeatDays: 3            # the same event between the same pair within this many days...
+  repeatFactor: 0.5        # ...is worth this much more each repeat (half, a quarter, ...)
+  boredom: 0.1             # each event type loses this share every time it happens station-wide
+                           # that day, recovering overnight (at midnight)

@@ -6,6 +6,7 @@ import { drainNeeds } from './needs.js';
 import { socialRound } from './social.js';
 import { expireThoughts } from './thoughts.js';
 import { createRng } from './rng.js';
+import { drainMeter, fearTheMeter } from './scoring.js';
 import { runSchedule } from './schedule.js';
 import { station } from './station.js';
 import { clampTemp, driftRooms } from './temperature.js';
@@ -25,7 +26,7 @@ export function createWorld(data: GameData, seed: number): World {
   }
   const objects: World['objects'] = {};
   for (const o of st.objects) objects[o.id] = [];
-  const w: World = { version: 1, seed, t: 0, rng: createRng(seed), nextId: 1, contestants: [], rooms, objects };
+  const w: World = { version: 1, seed, t: 0, rng: createRng(seed), nextId: 1, contestants: [], rooms, objects, show: { day: 1, today: {}, pairs: {}, pending: [] } };
   worldData.set(w, data);
   return w;
 }
@@ -53,8 +54,10 @@ function tick(ctx: Ctx): void {
   const tenth = ctx.w.t % 10 === 0;
   if (tenth) driftRooms(ctx);
   const critical = ctx.data.needs.bladder.criticalBelow;
+  const hour = ctx.w.t % 60 === 0;
   for (const c of ctx.w.contestants) {
     drainNeeds(ctx, c);
+    drainMeter(ctx, c);
     runActivity(ctx, c);
     // Near zero, the bladder overrides everything, sleep included.
     if (c.activity && c.needs.bladder < critical && !onToilet(ctx, c)) endActivity(ctx, c, 'interrupted');
@@ -65,6 +68,7 @@ function tick(ctx: Ctx): void {
     if (tenth) {
       followComfort(ctx, c, 10); // comfort moves slowly; every ten minutes is plenty
       expireThoughts(ctx, c);
+      if (hour) fearTheMeter(ctx, c);
       c.health = Math.min(100, c.health + ctx.data.social.health.recoverPerHour / 6);
     }
   }

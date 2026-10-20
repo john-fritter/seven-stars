@@ -22,6 +22,12 @@ export interface SeedStats {
   moodAtNight: number;
   knocks: Record<string, number>; // by answer
   relations: Record<string, number>; // directed pairs at each day's end: pairs, friends, rivals, crushes, affection
+  infractions: Record<string, number>; // by rule
+  sentences: Record<string, number>; // by ladder step
+  pointsByType: Record<string, number>; // points awarded, by event type
+  meterAtNight: number; // summed at each day's end
+  noticeAtNight: number; // contestants at zero at each day's end
+  bottomStreaks: number[]; // consecutive ceremonies each rank-7 contestant spent on the couch
 }
 
 function add(m: Record<string, number>, k: string, v = 1): void {
@@ -48,7 +54,15 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
     moodAtNight: 0,
     knocks: {},
     relations: {},
+    infractions: {},
+    sentences: {},
+    pointsByType: {},
+    meterAtNight: 0,
+    noticeAtNight: 0,
+    bottomStreaks: [],
   };
+  let bottom: string | null = null;
+  let streak = 0;
   const notable = new Set(data.targets.notable);
   const world = createWorld(data, seed);
   for (let d = 0; d < days; d++) {
@@ -60,17 +74,33 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
       if (notable.has(e.type)) isNotable = true;
       if (e.type === 'sentence') sentenced = true;
       tally(s, e);
+      if (e.type === 'ceremony') {
+        const b = (e.data!.ranks as string[])[6] ?? null;
+        if (b === bottom) streak++;
+        else {
+          if (bottom !== null) s.bottomStreaks.push(streak);
+          [bottom, streak] = [b, 1];
+        }
+      }
     }
     if (isNotable) s.notableDays++;
     if (sentenced) s.sentenceDays++;
     endOfDay(s, world, data);
   }
+  if (bottom !== null) s.bottomStreaks.push(streak);
   return s;
 }
 
 function tally(s: SeedStats, e: SimEvent): void {
   const d = e.data ?? {};
+  if (e.points) add(s.pointsByType, e.type, e.points);
   switch (e.type) {
+    case 'infraction':
+      add(s.infractions, d.rule as string);
+      break;
+    case 'sentence':
+      add(s.sentences, String(d.step));
+      break;
     case 'act.end':
       add(s.minutesByRoom, e.room ?? '?', d.minutes as number);
       add(s.minutesByAction, d.action as string, d.minutes as number);
@@ -99,6 +129,8 @@ function endOfDay(s: SeedStats, w: World, data: GameData): void {
   for (const c of w.contestants) {
     for (const [k, v] of Object.entries(c.needs)) add(s.needsAtNight, k, v);
     s.moodAtNight += c.mood;
+    s.meterAtNight += c.meter;
+    if (c.meter <= 0) s.noticeAtNight++;
     for (const r of Object.values(c.ledger)) {
       add(s.relations, 'pairs');
       add(s.relations, 'affection', r.affection);
@@ -136,6 +168,16 @@ export interface Report {
   knockYesShare: number | null;
   /** Shares of directed relationships at the end of each day, and the average affection. */
   relations: { friends: number; rivals: number; crushes: number; affection: number } | null;
+  show: {
+    infractionsPerDay: Record<string, number>; // by rule
+    sentencesPerDay: Record<string, number>; // by ladder step
+    waivedPerWeek: number;
+    fishbowlNightsPerWeek: number;
+    pointsPerContestantDay: Record<string, number>; // by event type, with a total
+    meterAtNight: number;
+    onNoticeAtNight: number; // share of contestants at zero at day's end
+    couchStreak: number | null; // average ceremonies in a row on the couch
+  };
 }
 
 export function report(data: GameData, seeds: SeedStats[]): Report {
@@ -174,6 +216,7 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
   const needs = sum((s) => s.needsAtNight);
   const knocks = sum((s) => s.knocks);
   const rel = sum((s) => s.relations);
+  const perDay = (m: Record<string, number>) => sortDesc(Object.fromEntries(Object.entries(m).map(([k, v]) => [k, v / days])));
 
   return {
     seeds: seeds.length,
@@ -188,6 +231,23 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
     needsAtNight: Object.fromEntries(Object.entries(needs).map(([k, v]) => [k, v / cDays])),
     moodAtNight: seeds.reduce((a, s) => a + s.moodAtNight, 0) / cDays,
     knockYesShare: ratio(knocks.yes ?? 0, (knocks.yes ?? 0) + (knocks.no ?? 0)),
+    show: {
+      infractionsPerDay: perDay(sum((s) => s.infractions)),
+      sentencesPerDay: perDay(sum((s) => s.sentences)),
+      waivedPerWeek: perWeek(events.waived ?? 0),
+      fishbowlNightsPerWeek: perWeek(events.fishbowl_night ?? 0),
+      pointsPerContestantDay: (() => {
+        const p = sum((s) => s.pointsByType);
+        const total = Object.values(p).reduce((a, b) => a + b, 0);
+        return { total: total / cDays, ...sortDesc(Object.fromEntries(Object.entries(p).map(([k, v]) => [k, v / cDays]))) };
+      })(),
+      meterAtNight: seeds.reduce((a, s) => a + s.meterAtNight, 0) / cDays,
+      onNoticeAtNight: seeds.reduce((a, s) => a + s.noticeAtNight, 0) / cDays,
+      couchStreak: (() => {
+        const st = seeds.flatMap((s) => s.bottomStreaks);
+        return st.length ? st.reduce((a, b) => a + b, 0) / st.length : null;
+      })(),
+    },
     relations: rel.pairs ? { friends: (rel.friends ?? 0) / rel.pairs, rivals: (rel.rivals ?? 0) / rel.pairs, crushes: (rel.crushes ?? 0) / rel.pairs, affection: (rel.affection ?? 0) / rel.pairs } : null,
   };
 }

@@ -5,6 +5,8 @@ import { canEnter, dayOf, log, timeOfDay, type Ctx } from './context.js';
 import { fadeLedger } from './ledger.js';
 import { cast } from './generator.js';
 import { shuffle } from './rng.js';
+import { confine, fishbowlMinute, rollCall, sentencing, spacings } from './show.js';
+import { think } from './thoughts.js';
 import type { Contestant } from './types.js';
 
 export const CAST_SIZE = 7;
@@ -13,6 +15,7 @@ export const CAST_SIZE = 7;
 export function runSchedule(ctx: Ctx): void {
   const s = ctx.data.schedule;
   const m = timeOfDay(ctx.w.t);
+  fishbowlMinute(ctx);
 
   if (m === s.wakeChime.at) {
     log(ctx, 'wake_chime', []);
@@ -32,7 +35,8 @@ export function runSchedule(ctx: Ctx): void {
   }
 
   if (m === s.ceremony.at) {
-    for (const c of ctx.w.contestants) if (!c.asleep && c.activity?.action !== CEREMONY && !onToilet(ctx, c)) endActivity(ctx, c, 'interrupted');
+    for (const c of ctx.w.contestants) if (c.asleep && !c.confined && c.needs.rest > s.ceremony.wakeAbove) endActivity(ctx, c, 'woke');
+    for (const c of ctx.w.contestants) if (!c.asleep && !c.confined && c.activity?.action !== CEREMONY && !onToilet(ctx, c)) endActivity(ctx, c, 'interrupted');
   }
   if (m === s.ceremony.at + s.ceremony.resolveAfter) ceremony(ctx);
 }
@@ -70,16 +74,22 @@ export function rankOrder(ctx: Ctx, cast: Contestant[]): Contestant[] {
 }
 
 /**
- * The evening ceremony. Slice one's full order is: sentences, meter penalties, spacings, ranks,
- * the Wheel, room moves. Only ranks and room moves exist so far.
+ * The evening ceremony, in order: roll call, today's infractions and sentences (meter penalties
+ * applied), anyone at zero spaced, ranks assigned, the Wheel (still to come), room moves, and the
+ * fishbowl's new occupants escorted in.
  */
 function ceremony(ctx: Ctx): void {
   const w = ctx.w;
+  rollCall(ctx);
+  const fishbowl = sentencing(ctx);
+  spacings(ctx);
+
   const order = rankOrder(ctx, w.contestants);
   const changes: { id: string; from: number | null; to: number }[] = [];
   order.forEach((c, i) => {
     const to = i + 1;
     if (c.rank !== to) changes.push({ id: c.id, from: c.rank, to });
+    if (c.rank !== null && to !== c.rank) think(ctx, c, to < c.rank ? ctx.data.ranks.thoughts.up : ctx.data.ranks.thoughts.down);
     c.rank = to;
     c.bed = ctx.data.ranks.ranks[String(to) as '1']!.bed;
   });
@@ -88,6 +98,8 @@ function ceremony(ctx: Ctx): void {
     ranks: order.map((c) => c.id),
     changes,
   });
+
+  for (const { c, kind } of fishbowl) if (w.contestants.includes(c)) confine(ctx, c, kind);
 
   // Room moves: anyone now in or heading for a bed or room that isn't theirs is moved along.
   for (const c of w.contestants) {

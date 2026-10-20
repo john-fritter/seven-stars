@@ -8,6 +8,7 @@ const clock = z
 
 const num = z.number();
 const range = z.tuple([num, num]);
+const unit = num.min(0).max(1);
 const rankRange = z.tuple([z.number().int().min(1).max(7), z.number().int().min(1).max(7)]);
 
 export const NEEDS = ['hunger', 'rest', 'hygiene', 'bladder', 'social', 'fun', 'comfort'] as const;
@@ -35,6 +36,7 @@ export const scheduleSchema = z.object({
     at: clock,
     minutes: z.number().int().positive(),
     resolveAfter: z.number().int().nonnegative(),
+    wakeAbove: num,
     room: z.string(),
   }),
 });
@@ -50,6 +52,7 @@ export const roomsSchema = z.object({
       temperature: num,
       comfort: num.min(0).max(100),
       objects: z.record(z.string(), z.number().int().positive()),
+      glass: z.string().optional(),
     }),
   ),
   links: z.array(z.tuple([z.string(), z.string(), z.number().positive()])),
@@ -74,6 +77,7 @@ export const actionSchema = z.object({
   onlySpecies: z.array(z.string()).optional(),
   notSpecies: z.array(z.string()).optional(),
   ranks: rankRange.optional(),
+  logs: z.string().optional(),
 });
 
 export const objectsSchema = z.object({
@@ -114,6 +118,7 @@ export const clothingSchema = z.object({
 
 export const ranksSchema = z.object({
   newcomerRank: z.number().int().min(1).max(7),
+  thoughts: z.object({ up: z.string(), down: z.string() }),
   ranks: z.record(rankKey, z.object({ bed: z.string(), food: z.string() })),
   food: z.record(z.string(), z.object({ hunger: num })),
 });
@@ -174,12 +179,60 @@ export const targetsSchema = z.object({
   notable: z.array(z.string()),
 });
 
-export const meterSchema = z.object({ start: num, max: num });
+export const meterSchema = z.object({
+  start: num,
+  max: num.positive(),
+  drainPerHour: num.nonnegative(),
+  doomed: z.object({ thought: z.string(), below: num, from: num, to: num }),
+});
+
+const awardSchema = z.object({
+  each: num.optional(),
+  actor: num.optional(),
+  target: num.optional(),
+  winner: num.optional(),
+  loser: num.optional(),
+  witnesses: num.optional(),
+  only: z.string().optional(),
+  witnessed: z.boolean().default(true),
+});
+
+export const scoringSchema = z.object({
+  awards: z.record(z.string(), awardSchema),
+  modifiers: z.object({
+    witnessEach: num,
+    witnessMax: num,
+    repeatDays: num.nonnegative(),
+    repeatFactor: unit,
+    boredom: unit,
+  }),
+});
+
+const sentenceSchema = z.object({ meter: num.optional(), fishbowl: z.enum(['night', 'day']).optional() });
+
+export const rulesSchema = z.object({
+  infractions: z.record(z.string(), z.object({ label: z.string(), step: z.number().int().positive() })),
+  sentences: z.array(sentenceSchema).min(1),
+  waiver: z.object({ minPoints: num, chance: unit }),
+  sneak: z.object({ cost: num, honestK: num, braveK: num }),
+  fighting: z.enum(['both', 'swinger']),
+  sentencedThought: z.string(),
+  fishbowl: z.object({
+    room: z.string(),
+    release: clock,
+    dayHours: num.positive(),
+    douseEvery: z.number().int().positive(),
+    douseHygiene: num,
+    douseSpecies: z.record(z.string(), num).default({}),
+    thought: z.string(),
+  }),
+  spacing: z.object({ watched: z.string(), died: z.string(), friend: z.string(), rival: z.string() }),
+});
+
 
 export const DIMS = ['affection', 'trust', 'fear', 'attraction'] as const;
 export type Dim = (typeof DIMS)[number];
 const dimMap = z.partialRecord(z.enum(DIMS), num);
-const unit = num.min(0).max(1);
 
 const scaleBy = z.union([axisEnum, z.enum(['affection', 'attraction', 'chemistry', 'privacy'])]);
 
@@ -194,6 +247,8 @@ export const interactionSchema = z.object({
   target: dimMap.default({}),
   thought: z.string().optional(),
   fight: z.boolean().default(false),
+  targetGains: needMap.default({}),
+  glass: z.enum(['outside', 'either']).optional(),
 });
 
 export const socialSchema = z.object({
@@ -264,7 +319,14 @@ export const thoughtsSchema = z.object({
   species: z.record(z.string(), z.record(z.string(), num)).default({}),
   thoughts: z.record(
     z.string(),
-    z.object({ label: z.string(), value: num, hours: num.positive(), stack: z.number().int().positive(), source: z.string() }),
+    z.object({
+      label: z.string(),
+      value: num,
+      species: z.record(z.string(), num).default({}),
+      hours: num.positive(),
+      stack: z.number().int().positive(),
+      source: z.string(),
+    }),
   ),
 });
 
@@ -285,6 +347,8 @@ export const fileSchemas = {
   meter: meterSchema,
   social: socialSchema,
   thoughts: thoughtsSchema,
+  scoring: scoringSchema,
+  rules: rulesSchema,
 } as const;
 
 export type GameData = { [K in keyof typeof fileSchemas]: z.output<(typeof fileSchemas)[K]> };

@@ -28,7 +28,9 @@ partner: { affection: 1, attraction: 1, min: 0.2 }
 # `needs`: the actor's minimum attraction or affection toward the target.
 # `social`: social need gained by both. `knows`: how much better both learn the other's personality.
 # `actor` / `target`: ledger changes, the actor's toward the target and the target's toward the actor.
-# `thought`: a thought the target gets about the actor.
+# `thought`: a thought the target gets about the actor. `targetGains`: needs the target gains.
+# `glass`: only through the fishbowl's glass, never face to face. "outside" means only someone
+# outside the cell starts it; "either" means either side can.
 factorRange: [0.1, 5]
 interactions:
   - { id: chitchat, weight: 1, social: 8, knows: 0.02,
@@ -43,6 +45,13 @@ interactions:
       target: { affection: -5 }, thought: slighted }
   - { id: insult, weight: 0.007, scale: [{ by: affection, k: -2 }, { by: kind, k: -1 }],
       target: { affection: -15, fear: 3 }, thought: insulted, fight: true }      # fear: proposal
+  # Through the fishbowl glass (DESIGN.md: mock is cruel, talk is social, pass food is kind).
+  # All proposal apart from the three kinds.
+  - { id: glass_talk, weight: 1, glass: either, social: 6, actor: { affection: 1 }, target: { affection: 1 } }
+  - { id: glass_mock, weight: 0.3, glass: outside, scale: [{ by: affection, k: -2 }, { by: kind, k: -1 }],
+      target: { affection: -5 }, thought: mocked }
+  - { id: pass_food, weight: 0.15, glass: outside, scale: [{ by: affection, k: 1 }, { by: kind, k: 1 }],
+      social: 2, targetGains: { hunger: 20 }, target: { affection: 8 }, thought: fed }
 # Gifts wait for inventory (booze milestone); gossip waits for rumors.
 
 # Flirting. Success odds = the target's attraction back ÷ 10 × successScale.

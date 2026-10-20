@@ -133,7 +133,9 @@ function renderSheet(): void {
   el.innerHTML = `<h2>${esc(c.name)} <small>(${esc(c.pronouns)}, ${esc(c.species)})</small></h2>
     <table>
       ${row('rank', c.rank === null ? 'newcomer' : String(c.rank))}
-      ${row('meter', `${c.meter.toFixed(1)} <span class="meterbar" style="width:${c.meter}px"></span>`)}
+      ${row('meter', `${c.meter.toFixed(1)} <span class="meterbar" style="width:${c.meter}px"></span>${c.meter <= 0 ? ' <b>ON NOTICE</b>' : ''}`)}
+      ${c.confined ? row('in the fishbowl', `until ${esc(clockText(c.confined.until))}`) : ''}
+      ${row('awaiting sentence', esc(world.show.pending.filter((x) => x.who === c.id).map((x) => infractionLabel(x.rule)).join(', ') || 'nothing'))}
       ${row('lifetime points', c.lifetime.toFixed(0))}
       ${row('mood', c.mood.toFixed(0))}
       ${row('health', c.health.toFixed(0))}
@@ -195,7 +197,7 @@ function ledgerHtml(c: Contestant): string {
 // ---------------------------------------------------------------------------------------------
 // The ticker
 
-const ROUTINE = new Set(['act.start', 'act.end', 'meal', 'wake', 'meet', 'chitchat', 'guest_leave']);
+const ROUTINE = new Set(['act.start', 'act.end', 'meal', 'wake', 'meet', 'chitchat', 'guest_leave', 'douse']);
 
 function who(id: string): string {
   return names.get(id) ?? id;
@@ -223,7 +225,34 @@ function describe(e: SimEvent): string | null {
       return `Ceremony, day ${d.day}: ${order}.${changes.length ? ` ${changes.join('; ')}.` : ' No changes.'}`;
     }
     case 'escorted':
+      if (d.to) return `Robots march ${a[0]} into ${roomName(d.to as string).toLowerCase()} until ${clockText(Number(d.until))}. Tap the glass!`;
       return `Robots escort ${a[0]} out of the ${roomName(d.from as string)}.`;
+    case 'infraction':
+      return `The cameras saw that: ${a[0]}, ${infractionLabel(d.rule)}${e.room ? ` (${roomName(e.room)})` : ''}.`;
+    case 'waived':
+      return `Tonight's infractions... ${a[0]}'s ${infractionLabel(d.rule).toLowerCase()} was too good to punish. Waived!`;
+    case 'sentence': {
+      const what = [d.meter ? `meter ${d.meter}` : '', d.fishbowl ? (d.fishbowl === 'day' ? '24 hours in the fishbowl' : 'a night in the fishbowl') : ''].filter(Boolean).join(' and ');
+      return `Tonight's infractions... ${a[0]}: ${(d.infractions as string[]).map(infractionLabel).join(', ').toLowerCase()}. Sentence: ${what}.`;
+    }
+    case 'on_notice':
+      return `${a[0]}'s meter hits zero. ${a[0]} is ON NOTICE.`;
+    case 'death':
+      return `☠ ${d.name} is spaced. The robots wave goodbye at the airlock (meter ${Number(d.meter).toFixed(0)}, aboard ${(Number(d.stay) / 1440).toFixed(1)} days).`;
+    case 'immunity_spent':
+      return `${a[0]} should be spaced, but plays a secret immunity!`;
+    case 'fishbowl_night':
+      return `${a[0]} is let out of the fishbowl after ${d.hours} hours, damp and famous.`;
+    case 'douse':
+      return `The fishbowl showers ${a[0]} with cold water`;
+    case 'karaoke':
+      return `${a[0]} belts out a karaoke number`;
+    case 'glass_talk':
+      return `${a[0]} talks to ${a[1]} through the fishbowl glass`;
+    case 'glass_mock':
+      return `${a[0]} taps the fishbowl glass and mocks ${a[1]}`;
+    case 'pass_food':
+      return `${a[0]} slips ${a[1]} some food through the fishbowl slot`;
     case 'thermostat':
       return `${a[0]} sets the ${roomName(e.room)} thermostat from ${d.from}° to ${d.to}°${(d.bothered as unknown[] | undefined)?.length ? ', to some grumbling' : ''}.`;
     case 'act.start':
@@ -267,6 +296,10 @@ function describe(e: SimEvent): string | null {
   }
 }
 
+function infractionLabel(rule: unknown): string {
+  return data.rules.infractions[String(rule)]?.label ?? String(rule);
+}
+
 function renderTicker(): void {
   const routine = ($('routine') as HTMLInputElement).checked;
   const lines: string[] = [];
@@ -275,8 +308,9 @@ function renderTicker(): void {
     const isRoutine = ROUTINE.has(e.type);
     if (isRoutine && !routine) continue;
     if (selected && e.actors.length && !e.actors.includes(selected)) continue;
-    const text = describe(e);
+    let text = describe(e);
     if (text === null) continue;
+    if (e.points) text += `  [${Object.entries(e.data!.awards as Record<string, number>).map(([id, p]) => `${who(id)} +${p}`).join(', ')}]`;
     lines.push(`<li class="${isRoutine ? 'routine' : 'show'}"><span class="t">${esc(clockText(e.t))}</span>${esc(text)}</li>`);
   }
   $('ticker').innerHTML = lines.join('');

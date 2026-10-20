@@ -6,6 +6,8 @@
 # temperature: the setting in °F. Rooms with a thermostat object let occupants change it.
 # comfort:     proposal, 0..100: how comfortable it is just to be here, before temperature
 # objects:     object type -> how many (types are in objects.yaml)
+# glass:       a glass cell inside another room: people on either side can see and talk through it
+#              (only the interactions marked `glass` in social.yaml), and nobody walks in or out
 
 rooms:
   - { id: common, name: Common room, access: all, privacy: 0.2, temperature: 66, comfort: 45,
@@ -30,6 +32,10 @@ rooms:
       objects: { bed_good: 2, toilet: 1, sink: 1, shower_hot: 1, thermostat: 1 } }
   - { id: dorm, name: Basic dorm, access: occupants, privacy: 0.2, temperature: 70, comfort: 45,
       objects: { bed_dorm: 3, toilet: 1, sink: 1, shower_cold: 1, thermostat: 1 } }
+  # The fishbowl: a glass cell in the common room for the sentenced, kept slightly too cold.
+  # Proposal: a hard floor to sleep on and a toilet in full view.
+  - { id: fishbowl, name: The fishbowl, access: robots, glass: common, privacy: 0, temperature: 61, comfort: 15,
+      objects: { fishbowl_floor: 1, toilet: 1 } }
   - { id: airlock, name: Airlock, access: robots, privacy: 0, temperature: 70, comfort: 0, objects: {} }
 
 # Walking minutes between adjacent rooms. Proposal until the floor plan exists: the common room
@@ -47,5 +53,6 @@ links:
   - [common, dorm, 2]
   - [common, suite, 3]
   - [common, airlock, 2]
+  - [common, fishbowl, 1]
   - [lounge, spa, 1]
   - [lounge, rec, 1]

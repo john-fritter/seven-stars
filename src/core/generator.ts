@@ -69,6 +69,8 @@ export function rollContestant(data: GameData, rng: Rng, id: string, t: number, 
     thoughts: [],
     guest: null,
     knocked: {},
+    confined: null,
+    immunities: 0,
   };
 }
 
