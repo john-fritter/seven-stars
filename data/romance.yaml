@@ -1,0 +1,62 @@
+# Romance: kisses, lovin', labels, exclusivity, breakups and betrayal. DESIGN.md Part two, Social
+# interactions and romance, and Part one, Attraction, relationships and lovin'.
+# The moves are interactions (social.yaml, `move:`); their weights and gates live there, the
+# outcomes here. Lovin' is always consensual and always offscreen (D-077).
+#
+# Labels are beliefs: each contestant holds their own label for every relationship, one of
+# none, flirting, fling, dating, exclusive or ex.
+
+kiss:
+  # Odds = the target's attraction back ÷ 10 × (1 + their affection ÷ 100) × successScale.
+  successScale: 1
+  label: flirting                 # "labels move to flirting" (from none)
+  thought: kissed                 # both
+  rebuffed: kiss_rebuffed         # the kisser, rebuffed hard
+
+proposition:
+  # Needs both attraction 6+ and affection 20+, both ways, in a believed-private spot (the
+  # asker's side is gated in social.yaml, the target's here).
+  attraction: 6
+  affection: 20
+  privacy: 0.5                    # proposal: the room's apparent privacy that counts as private
+  # The target chooses it with odds = their attraction ÷ 10 × successScale, × `attached` when
+  # they're dating or exclusive with someone else (scaled like the flirting penalty below).
+  successScale: 1
+  turnedDown: turned_down
+  minutes: 30                     # proposal: lumps under the covers
+  thought: lovin                  # both, "mood +10 for a day"
+  bond: 10                        # affection, both ways
+  disturbed: disturbed            # anyone asleep in the room
+  # Proposal: lovin' moves a label of none, flirting or ex to dating for someone whose monogamy is
+  # at least datingAt, otherwise to fling. Mismatched expectations happen without anyone lying.
+  datingAt: 5
+
+exclusive:
+  # Odds = the target's attraction ÷ 10 × (0.5 + monogamy ÷ 10) × (1 + loyalK × (loyal − 5) ÷ 5).
+  loyalK: 0.5
+  thought: exclusive              # both, on a yes
+  refused: not_exclusive          # the asker, on a no
+  # Saying yes out loud, a deceptive, low-monogamy target privately records a fling with odds
+  # (10 − honest) × (10 − monogamy) ÷ 100.
+
+breakup:
+  # Possible once a label is flirting or beyond, when affection is at most affectionBelow or the
+  # asker feels betrayed by them. Both labels go to ex.
+  affectionBelow: 0               # proposal
+  dumped: dumped
+
+# Flirting while attached gets rarer for loyal people: romance moves toward someone other than
+# whoever they're dating or exclusive with are × 1 − attachedK × loyal ÷ 10.
+attachedK: 0.8                    # proposal
+
+# Evidence: when A sees B kiss or have lovin' with C (or finds C in B's room when knocking),
+# A's label for B decides. exclusive: betrayal; flirting, fling, dating or ex: jealousy.
+betrayal:
+  affection: -40
+  thought: betrayed
+  confront: 0.5                   # proposal: chance A confronts B on the spot with an insult
+jealousy:
+  affection: -10                  # proposal
+  thought: jealous
+# B feels guilty about A when B believes they're exclusive with A and kisses or beds someone else.
+guilty: guilty

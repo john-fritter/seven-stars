@@ -1,0 +1,58 @@
+# Booze and intoxication. DESIGN.md Part two, Booze, and Personality grid (Why people drink).
+# Booze is never a punishment; it fuels drama (D-035). Quality goes by rank, and each place that
+# pours has a best quality it stocks (objects.yaml `booze`): you get your rank's quality or the
+# place's best, whichever is worse.
+
+order: [fancy, good, cheap, rotgut]     # best first
+byRank: { 1: fancy, 2: good, 3: good, 4: cheap, 5: cheap, 6: cheap, 7: rotgut }
+
+# Per drink: fun gained, the enjoyment thought (thoughts.yaml, 3 hours, stacks to three) and
+# how much it counts toward tomorrow's hangover (proposal: cheap and rotgut worst).
+qualities:
+  fancy:  { fun: 15, thought: drink_fancy, hangover: 1 }
+  good:   { fun: 12, thought: drink_good, hangover: 1.5 }
+  cheap:  { fun: 8, thought: drink_cheap, hangover: 2.5 }
+  rotgut: { fun: 4, thought: drink_rotgut, hangover: 3.5 }
+
+# Intoxication rises per drink by perDrink ÷ species size and falls fallPerHour.
+intoxication: { perDrink: 25, fallPerHour: 8 }
+bladderPerDrink: 15                # "+15 per drink"
+
+# Stages, highest first wins. Multipliers apply to the drinker:
+#   interaction: chance of starting an interaction; social: social gained from interactions
+#   moves: interaction weights by id (flirting ×1.5 tipsy, ×2 drunk; insults ×3 drunk)
+#   fight: an insult's chance of a fight (the larger of the two people's)
+#   axes: personality points subtracted while in this stage ("honesty and kindness act 2 lower")
+#   walk: walking time (hammered stumbling; proposal ×1.5)
+stages:
+  - { id: hammered, at: 80, interaction: 1.5, social: 1.5, fight: 3, walk: 1.5,
+      moves: { flirt: 2, kiss: 2, proposition: 2, insult: 3 }, axes: { honest: -2, kind: -2 } }
+  - { id: drunk, at: 50, interaction: 1.5, social: 1.5, fight: 2,
+      moves: { flirt: 2, kiss: 2, proposition: 2, insult: 3 }, axes: { honest: -2, kind: -2 } }
+  - { id: tipsy, at: 25, interaction: 1.5, social: 1.5,
+      moves: { flirt: 1.5, kiss: 1.5, proposition: 1.5 } }
+
+# Sobering up from hammered: this chance of a memory gap. They keep how they feel but lose the
+# ledger reasons from while they were hammered (they don't remember why).
+blackout: 0.3
+
+# Next morning at the wake chime: anyone whose drinks since the last chime add up to at least
+# `min` (the qualities' hangover values) gets a hangover of that size, between from and to.
+hangover: { thought: hangover, min: 3, from: -3, to: -10 }   # proposal: min
+
+# Drinking together: finishing a drink while others in the room are drinking warms you to each of
+# them, so a round together is +2 both ways.
+together: { affection: 2 }
+
+# Why people drink: three pulls on the drink action's score, stacked (proposal).
+#   taste × drinking ÷ 10
+#   social × (outgoing + playful) ÷ 20, when anyone else is in the room
+#   self × (lowMood − mood) ÷ lowMood when mood is under lowMood, × 1 + selfVolatileK × (calm − 5) ÷ 5
+# The drink's whole score fades as they get drunk: × (1 − intoxication ÷ soberAt), never below 0.
+pull: { taste: 0.15, social: 0.1, self: 0.25, lowMood: 50, selfVolatileK: -1, soberAt: 100 }
+
+# Carrying drinks to give away (DESIGN.md: drinks can be carried and gifted). Proposal: after a
+# drink at the bar, a chance to take one along, × 1 + kindK × (kind − 5) ÷ 5, × hoarders.
+carry: { chance: 0.1, kindK: 0.5, quirks: { hoards: 3 }, max: 2 }
+# A gift: affection +5, or +15 when it's better than what they'd get themselves.
+gift: { affection: 5, better: 15, thought: gifted }

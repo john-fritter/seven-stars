@@ -71,6 +71,12 @@ export function rollContestant(data: GameData, rng: Rng, id: string, t: number, 
     knocked: {},
     confined: null,
     immunities: 0,
+    secret: 0,
+    intox: 0,
+    drinks: 0,
+    hammeredSince: null,
+    inventory: [],
+    breakdown: null,
   };
 }
 

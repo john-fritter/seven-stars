@@ -100,7 +100,22 @@ function printReport(r: Report, ms: number): void {
   console.log('Sentences per day, by ladder step');
   console.log(top(sh.sentencesPerDay, 10, (v) => v.toFixed(2)));
   console.log('Points per contestant-day, by event');
-  console.log(top(sh.pointsPerContestantDay, 12, (v) => v.toFixed(2)));
+  console.log(top(sh.pointsPerContestantDay, 14, (v) => v.toFixed(2)));
+  const br = r.breaks;
+  console.log(`\nMental breaks: ${br.perContestantDay.toFixed(2)} per contestant-day`);
+  console.log(`  by level (a week)     ${Object.entries(br.byLevel).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(', ')}`);
+  console.log(`  by grievance (a week) ${Object.entries(br.bySource).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(', ')}`);
+  console.log('By kind, a week');
+  console.log(top(br.byKind, 20, (v) => v.toFixed(2)));
+  const bz = r.booze;
+  console.log('\nBooze: drinks per contestant-day, by quality');
+  console.log(top(bz.drinksPerContestantDay, 6, (v) => v.toFixed(2)));
+  console.log(`  time spent         ${Object.entries(bz.stageShare).map(([k, v]) => `${k} ${pct(v)}`).join(', ')}`);
+  const ro = r.romance;
+  console.log('\nRomance, a week');
+  console.log(top(ro.perWeek, 12, (v) => v.toFixed(2)));
+  console.log(`  ${'couples'.padEnd(16)} ${ro.couplesAtNight.toFixed(2)} at the end of an average day; ${ro.mismatchedAtNight.toFixed(2)} pairs whose labels disagree`);
+  console.log(`  labels held, per contestant: ${Object.entries(ro.labelsAtNight).map(([k, v]) => `${k} ${v.toFixed(2)}`).join(', ') || 'none'}`);
 }
 
 async function main(): Promise<void> {

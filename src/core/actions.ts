@@ -4,6 +4,8 @@
 //
 // Gains are capped at what the need can still take. A weighted pick among the top few follows.
 import type { ActionDef, MealDef, Need } from '../data/schema.js';
+import { drinkFun, drinkPull, finishDrink, qualityFor, soberFactor, stageMult } from './booze.js';
+import { breakArrive, breakMinute, endBreak } from './breaks.js';
 import { accessRank, canEnter, dayOf, inRanks, isNight, log, timeOfDay, type Ctx } from './context.js';
 import { gainsOf, personalityOf } from './derived.js';
 import { addNeed, needUrgency } from './needs.js';
@@ -12,6 +14,7 @@ import { walkMinutes, type ObjectInstance } from './station.js';
 import { caughtIn, infraction, sneakCost } from './show.js';
 import { companyPull, expectedKnockOdds, knock, occupants } from './social.js';
 import { discomfortAt, preferredSetting, setThermostat, situationComfort } from './temperature.js';
+import { think } from './thoughts.js';
 import type { Activity, Contestant } from './types.js';
 
 /** Scheduled actions that aren't advertised by objects. */
@@ -21,7 +24,7 @@ export const IDLE = 'idle';
 export const WAIT = 'wait'; // waiting for a toilet to free up
 export const FIGHT = 'fight';
 export const AT_DOOR = 'at_door'; // turned away after knocking
-
+export const LOVIN = 'lovin'; // lumps under the covers (romance.ts)
 
 const defCache = new WeakMap<Activity, ActionDef | undefined>();
 
@@ -90,6 +93,9 @@ function scoreAction(ctx: Ctx, c: Contestant, def: ActionDef, room: string, othe
     if (night) pulls += a.nightSleepPull * def.quality!;
   } else if (def.kind === 'toilet') {
     needs += needTerm(ctx, c, 'bladder', 100);
+  } else if (def.kind === 'drink') {
+    needs += needTerm(ctx, c, 'fun', drinkFun(ctx, c, def));
+    pulls += drinkPull(ctx, c, !!others.get(room));
   } else if (def.kind === 'thermostat') {
     const now = discomfortAt(ctx, c, ctx.w.rooms[room]!.temp);
     const after = discomfortAt(ctx, c, preferredSetting(ctx, c));
@@ -100,7 +106,8 @@ function scoreAction(ctx: Ctx, c: Contestant, def: ActionDef, room: string, othe
   let costs = walk * a.walkCostPerMinute + (def.speciesCost[c.species] ?? def.cost);
   if (def.tags.includes('exposed') && !def.private && others.get(room)) costs += (c.modesty / 10) * a.modestyCost;
 
-  return (needs + pulls - costs) * personalityOf(ctx.data, c, def) * moodMult(ctx, c, def.tags);
+  const enough = def.kind === 'drink' ? soberFactor(ctx, c) : 1;
+  return (needs + pulls - costs) * personalityOf(ctx.data, c, def) * moodMult(ctx, c, def.tags) * enough;
 }
 
 function mealScore(ctx: Ctx, c: Contestant, meal: MealDef): number {
@@ -251,11 +258,12 @@ export interface Plan {
   endAt?: number; // or a fixed end time
   meal?: MealDef;
   food?: string;
+  partner?: string;
 }
 
 export function begin(ctx: Ctx, c: Contestant, p: Plan): void {
   const t = ctx.w.t;
-  const walk = walkMinutes(ctx.st, c.room, p.room);
+  const walk = Math.round(walkMinutes(ctx.st, c.room, p.room) * stageMult(ctx, c, 'walk')); // hammered people stumble
   const a: Activity = {
     action: p.action,
     object: p.object,
@@ -268,6 +276,9 @@ export function begin(ctx: Ctx, c: Contestant, p: Plan): void {
   };
   if (p.meal) a.meal = p.meal.id;
   if (p.food) a.food = p.food;
+  if (p.partner) a.partner = p.partner;
+  const def = p.object ? ctx.st.object.get(p.object)!.actions.find((d) => d.id === p.action) : undefined;
+  if (def?.kind === 'drink') a.booze = qualityFor(ctx, c, def.booze!);
   if (p.object) ctx.w.objects[p.object]!.push(c.id);
   c.activity = a;
   log(ctx, 'act.start', [c.id], p.room, { action: p.action, ...(p.object ? { object: p.object } : {}), walk });
@@ -288,19 +299,29 @@ function arrive(ctx: Ctx, c: Contestant): void {
   if (a.action === MEAL) c.eaten[ctx.data.schedule.meals.find((m) => m.id === a.meal)!.group] = dayOf(ctx.w.t);
   const def = actionDef(ctx, a);
   if (def?.kind === 'sleep') c.asleep = true;
+  if (c.breakdown && a.action === c.breakdown.kind) breakArrive(ctx, c);
 }
 
 /** Ends the current activity. Completion effects only apply when it finished properly. */
 export function endActivity(ctx: Ctx, c: Contestant, how: 'done' | 'interrupted' | 'woke'): void {
   const a = c.activity;
   if (!a) return;
+  const def = a.phase === 'do' ? actionDef(ctx, a) : undefined;
   if (how === 'done' && a.phase === 'do') {
-    const def = actionDef(ctx, a);
     if (def?.kind === 'toilet') c.needs.bladder = 100;
     if (def?.kind === 'thermostat') setThermostat(ctx, c, a.room);
-    if (a.action === MEAL) log(ctx, 'meal', [c.id], a.room, { meal: a.meal, food: a.food });
+    if (def?.kind === 'drink') finishDrink(ctx, c, a.booze!, a.room);
+    if (a.action === MEAL) {
+      log(ctx, 'meal', [c.id], a.room, { meal: a.meal, food: a.food });
+      const thought = ctx.data.ranks.food[a.food!]!.thought;
+      if (thought) think(ctx, c, thought);
+    }
     if (def?.logs) log(ctx, def.logs, [c.id], a.room);
+    if (def?.thought && def.kind !== 'sleep') think(ctx, c, def.thought);
   }
+  // A night (or a long nap) leaves a thought about where they slept.
+  if (def?.kind === 'sleep' && def.thought && ctx.w.t - a.arriveAt >= ctx.data.thoughts.sleepMinutes) think(ctx, c, def.thought);
+  if (c.breakdown && a.action === c.breakdown.kind) endBreak(ctx, c);
   if (a.object) {
     const users = ctx.w.objects[a.object]!;
     const i = users.indexOf(c.id);
@@ -332,7 +353,10 @@ export function runActivity(ctx: Ctx, c: Contestant): void {
   const def = actionDef(ctx, a);
   if (a.action === MEAL) {
     addNeed(c, 'hunger', ctx.data.ranks.food[a.food!]!.hunger / ctx.data.schedule.mealMinutes);
+  } else if (c.breakdown && a.action === c.breakdown.kind) {
+    breakMinute(ctx, c);
   } else if (def) {
+    if (def.kind === 'drink') addNeed(c, 'fun', ctx.data.booze.qualities[a.booze!]!.fun / def.minutes!);
     if (def.kind === 'sleep') {
       addNeed(c, 'rest', (ctx.data.needs.sleep.restPerHour * def.quality!) / 60);
       if (c.needs.rest >= 100 && !isNight(ctx, t)) endActivity(ctx, c, 'done');

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { canEnter } from '../src/core/context.js';
 import { caughtIn } from '../src/core/show.js';
 import { createWorld, step } from '../src/core/index.js';
+import { LABELS } from '../src/data/schema.js';
 import { ctxFor, data } from './helpers.js';
 
 describe('invariants, checked every minute', () => {
@@ -29,6 +30,10 @@ describe('invariants, checked every minute', () => {
           }
           if (c.guest && c.guest.host === c.id) throw new Error(`${c.name} is their own guest`);
           if (c.asleep && c.activity === null) throw new Error(`${c.name} is asleep doing nothing at t=${w.t}`);
+          if (!(c.intox >= 0 && c.intox <= 100)) throw new Error(`${c.name} intoxication = ${c.intox} at t=${w.t}`);
+          if (c.breakdown && c.activity?.action !== c.breakdown.kind) throw new Error(`${c.name} is breaking down (${c.breakdown.kind}) but doing ${c.activity?.action} at t=${w.t}`);
+          if (c.breakdown && c.asleep) throw new Error(`${c.name} is breaking down in their sleep at t=${w.t}`);
+          for (const r of Object.values(c.ledger)) if (!LABELS.includes(r.label)) throw new Error(`${c.name} holds a label "${r.label}"`);
         }
         // The dead don't act: nobody gone is using anything, in anyone's ledger, or awaiting sentence.
         const alive = new Set(w.contestants.map((c) => c.id));

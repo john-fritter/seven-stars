@@ -61,7 +61,7 @@ export const roomsSchema = z.object({
 export const actionSchema = z.object({
   id: z.string(),
   label: z.string(),
-  kind: z.enum(['timed', 'sleep', 'toilet', 'thermostat']).default('timed'),
+  kind: z.enum(['timed', 'sleep', 'toilet', 'thermostat', 'drink']).default('timed'),
   minutes: z.number().int().positive().optional(),
   gains: needMap.default({}),
   speciesGains: z.record(z.string(), needMap).default({}),
@@ -78,6 +78,8 @@ export const actionSchema = z.object({
   notSpecies: z.array(z.string()).optional(),
   ranks: rankRange.optional(),
   logs: z.string().optional(),
+  thought: z.string().optional(),
+  booze: z.string().optional(),
 });
 
 export const objectsSchema = z.object({
@@ -113,14 +115,14 @@ export const speciesSchema = z.object({
 const rankKey = z.enum(['1', '2', '3', '4', '5', '6', '7']);
 
 export const clothingSchema = z.object({
-  byRank: z.record(rankKey, z.object({ warmth: num, beauty: num })),
+  byRank: z.record(rankKey, z.object({ warmth: num, beauty: num, thought: z.string().optional() })),
 });
 
 export const ranksSchema = z.object({
   newcomerRank: z.number().int().min(1).max(7),
   thoughts: z.object({ up: z.string(), down: z.string() }),
   ranks: z.record(rankKey, z.object({ bed: z.string(), food: z.string() })),
-  food: z.record(z.string(), z.object({ hunger: num })),
+  food: z.record(z.string(), z.object({ hunger: num, thought: z.string().optional() })),
 });
 
 export const temperatureSchema = z.object({
@@ -186,15 +188,22 @@ export const meterSchema = z.object({
   doomed: z.object({ thought: z.string(), below: num, from: num, to: num }),
 });
 
-const awardSchema = z.object({
+const amounts = z.object({
   each: num.optional(),
   actor: num.optional(),
   target: num.optional(),
   winner: num.optional(),
   loser: num.optional(),
   witnesses: num.optional(),
+});
+
+const awardSchema = amounts.extend({
   only: z.string().optional(),
   witnessed: z.boolean().default(true),
+  by: z.string().optional(),
+  cases: z.record(z.string(), amounts).default({}),
+  meterOnly: z.boolean().default(false),
+  secret: num.optional(),
 });
 
 export const scoringSchema = z.object({
@@ -234,13 +243,28 @@ export const DIMS = ['affection', 'trust', 'fear', 'attraction'] as const;
 export type Dim = (typeof DIMS)[number];
 const dimMap = z.partialRecord(z.enum(DIMS), num);
 
-const scaleBy = z.union([axisEnum, z.enum(['affection', 'attraction', 'chemistry', 'privacy'])]);
+const scaleBy = z.union([axisEnum, z.enum(['affection', 'attraction', 'chemistry', 'privacy', 'monogamy'])]);
+
+export const MOVES = ['flirt', 'kiss', 'proposition', 'exclusive', 'breakup', 'gift'] as const;
+export type Move = (typeof MOVES)[number];
+export const LABELS = ['none', 'flirting', 'fling', 'dating', 'exclusive', 'ex'] as const;
+export type Label = (typeof LABELS)[number];
 
 export const interactionSchema = z.object({
   id: z.string(),
   weight: num.nonnegative(),
   scale: z.array(z.object({ by: scaleBy, k: num.optional() })).default([]),
-  needs: z.partialRecord(z.enum(['attraction', 'affection']), num).default({}),
+  needs: z
+    .object({
+      attraction: num.optional(),
+      affection: num.optional(),
+      labels: z.array(z.enum(LABELS)).optional(),
+      flirted: z.boolean().optional(),
+      inventory: z.boolean().optional(),
+    })
+    .default({}),
+  move: z.enum(MOVES).optional(),
+  witnessThought: z.string().optional(),
   social: num.default(0),
   knows: num.default(0),
   actor: dimMap.default({}),
@@ -278,6 +302,7 @@ export const socialSchema = z.object({
     won: z.string(),
     lost: z.string(),
     cageRoom: z.string(),
+    witnessThought: z.string().optional(),
   }),
   health: z.object({ recoverPerHour: num.nonnegative() }),
   ledger: z.object({
@@ -297,7 +322,7 @@ export const socialSchema = z.object({
     firstImpression: unit,
     approach: unit,
   }),
-  companyPull: z.object({ affection: num, attraction: num, fear: num }),
+  companyPull: z.object({ affection: num, attraction: num, fear: num, private: num.default(0) }),
   knock: z.object({
     actions: z.array(z.string()),
     base: num,
@@ -314,9 +339,16 @@ export const socialSchema = z.object({
   }),
 });
 
+const axisScale = z.array(z.object({ axis: axisEnum, k: num.default(0.5) })).default([]);
+
 export const thoughtsSchema = z.object({
   volatileK: num,
   species: z.record(z.string(), z.record(z.string(), num)).default({}),
+  sources: z.record(z.string(), axisScale).default({}),
+  trapped: z.string(),
+  needs: z.array(z.object({ need: needEnum, below: num, thought: z.string() })),
+  temperature: z.object({ cold: z.string(), hot: z.string(), perDegree: num, max: num }),
+  sleepMinutes: num.nonnegative(),
   thoughts: z.record(
     z.string(),
     z.object({
@@ -326,8 +358,94 @@ export const thoughtsSchema = z.object({
       hours: num.positive(),
       stack: z.number().int().positive(),
       source: z.string(),
+      scale: axisScale,
     }),
   ),
+});
+
+const stageSchema = z.object({
+  id: z.string(),
+  at: num,
+  interaction: num.default(1),
+  social: num.default(1),
+  fight: num.default(1),
+  walk: num.default(1),
+  moves: z.record(z.string(), num).default({}),
+  axes: z.partialRecord(axisEnum, num).default({}),
+});
+
+export const boozeSchema = z.object({
+  order: z.array(z.string()).min(1),
+  byRank: z.record(rankKey, z.string()),
+  qualities: z.record(z.string(), z.object({ fun: num, thought: z.string(), hangover: num.nonnegative() })),
+  intoxication: z.object({ perDrink: num.positive(), fallPerHour: num.positive() }),
+  bladderPerDrink: num,
+  stages: z.array(stageSchema),
+  blackout: unit,
+  hangover: z.object({ thought: z.string(), min: num, from: num, to: num }),
+  together: z.object({ affection: num }),
+  pull: z.object({ taste: num, social: num, self: num, lowMood: num.positive(), selfVolatileK: num, soberAt: num.positive() }),
+  carry: z.object({ chance: unit, kindK: num, quirks: z.record(z.string(), num).default({}), max: z.number().int().nonnegative() }),
+  gift: z.object({ affection: num, better: num, thought: z.string() }),
+});
+
+export const LEVELS = ['minor', 'major', 'extreme'] as const;
+export type Level = (typeof LEVELS)[number];
+
+const breakKind = z.object({
+  label: z.string(),
+  room: z.string(),
+  target: z.enum(['about', 'top', 'feared']).optional(),
+  minutes: z.number().int().positive(),
+  gains: needMap.default({}),
+  drinks: z.number().int().nonnegative().default(0),
+  infraction: z.string().optional(),
+  insults: z.number().int().positive().optional(),
+  wreck: z.object({ thought: z.string(), affection: num }).optional(),
+  attack: z.boolean().default(false),
+});
+
+export const breaksSchema = z.object({
+  lines: z.object({ minorBase: num, minorPerVolatile: num, majorShare: unit, extremeShare: unit }),
+  chance: z.object({ minor: unit, major: unit, extreme: unit }),
+  catharsis: z.string(),
+  sources: z.record(z.string(), z.object({ minor: z.string(), major: z.string(), extreme: z.string() })),
+  fallback: z.string(),
+  kinds: z.record(z.string(), breakKind),
+  passion: z.object({
+    kindAtMost: num,
+    calmAtMost: num,
+    otherwise: z.string(),
+    firstBlow: num,
+    perStrength: num.nonnegative(),
+    weapons: z.record(z.string(), num).default({}),
+    follow: z.number().int().nonnegative(),
+    witnessFear: num,
+    witnessThought: z.string(),
+    feared: num,
+  }),
+});
+
+export const romanceSchema = z.object({
+  kiss: z.object({ successScale: num, label: z.enum(LABELS), thought: z.string(), rebuffed: z.string() }),
+  proposition: z.object({
+    attraction: num,
+    affection: num,
+    privacy: unit,
+    successScale: num,
+    turnedDown: z.string(),
+    minutes: z.number().int().positive(),
+    thought: z.string(),
+    bond: num,
+    disturbed: z.string(),
+    datingAt: num,
+  }),
+  exclusive: z.object({ loyalK: num, thought: z.string(), refused: z.string() }),
+  breakup: z.object({ affectionBelow: num, dumped: z.string() }),
+  attachedK: num,
+  betrayal: z.object({ affection: num, thought: z.string(), confront: unit }),
+  jealousy: z.object({ affection: num, thought: z.string() }),
+  guilty: z.string(),
 });
 
 /** Every data file, by file name (without .yaml). */
@@ -349,6 +467,9 @@ export const fileSchemas = {
   thoughts: thoughtsSchema,
   scoring: scoringSchema,
   rules: rulesSchema,
+  booze: boozeSchema,
+  breaks: breaksSchema,
+  romance: romanceSchema,
 } as const;
 
 export type GameData = { [K in keyof typeof fileSchemas]: z.output<(typeof fileSchemas)[K]> };

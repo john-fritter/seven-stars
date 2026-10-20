@@ -184,3 +184,17 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] The fishbowl: a hard floor (rest × 0.5) and a toilet in view; hourly dousing gives hygiene +10 (aquatics +30) and doesn't wake anyone; mocking (−4 thought, affection −5) and passing food (hunger +20, affection +8, +4 thought) through the glass.
 - [ ] Watching a spacing pays 3 points but can't save someone else at zero that night: all spacings are decided first.
 - [ ] Note for tuning: with the drafted numbers, entering above rank pays 4 + 6 and costs 10, so a step-one sentence is free on the meter; the "sentenced in public" thought is the real cost.
+
+**Proposed while building thoughts, breaks, booze and romance (Oct 20).** Numbers are in `data/thoughts.yaml`, `data/breaks.yaml`, `data/booze.yaml`, `data/romance.yaml` and `data/social.yaml`; DESIGN.md Part two has the details.
+
+- [ ] Low-need thoughts: hungry under 20 (−4), exhausted under 15 (−6), couldn't wash under 20 (−6), lonely under 20 (−4), bored under 20 (−4 × playful). A sleep leaves its thought only if it lasted three hours.
+- [ ] New thoughts: kissed +6, jealous −5, cheating −5, kept up by roommates −3, exclusive +5, watched cruelty −2 (× kindness), brought a drink +4, things wrecked −8, saw a murder −12, and the hangover lasts 8 hours.
+- [ ] Breaks check on the hour and roll only the deepest line. Broken contestants skip meals and are excused from the ceremony. The table's "—" falls back to the major break; anything with no target becomes an hour of moping.
+- [ ] What each break does (places, lengths, effects) as listed in DESIGN.md; theft doesn't yet cost everyone cold water and breakfast.
+- [ ] Crimes of passion: the attacker's first blow is +3 on the roll, only a winning attacker can kill, the victim isn't charged with fighting, and witnesses fear the killer +30.
+- [ ] Booze pulls 0.15 taste, 0.1 social, 0.25 self-medication; a drink's appeal × 1 − intoxication ÷ 100; hangover weights 1 / 1.5 / 2.5 / 3.5 by quality, and 3 makes a hangover; hammered walking 1.5×; the drinker's stage multiplies flirts, kisses and propositions alike.
+- [ ] Carrying drinks: 10% after a drink (× kindness, × 3 for hoarders), up to two; gifts are drunk on the spot.
+- [ ] Romance weights: kiss 0.02, proposition 0.03, exclusive 0.02, breakup 0.05. Lovin' happens in place for 30 minutes in a room of apparent privacy 0.5+. It moves labels to dating (monogamy 5+) or fling. Loyal people's romance moves toward someone other than their partner × 1 − 0.8 × loyal ÷ 10.
+- [ ] Betrayal only for an exclusive label; flirting, fling, dating or ex is jealousy (−10 affection). A betrayed contestant confronts on the spot half the time. Breakups need affection at 0 or below, or feeling betrayed.
+- [ ] Crushes pull harder toward believed-private rooms (× 1 + 2 × privacy).
+- [ ] Note for tuning: hookups barely happen (0.06 a week) because attraction 6+ both ways is rare: about 0.2 pairs a day clear it. Mood also runs low enough that extreme breaks are as common as major ones.

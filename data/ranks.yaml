@@ -15,7 +15,8 @@ ranks:
   6: { bed: "dorm:bed_dorm:3", food: plain }
   7: { bed: "common:couch:1", food: leftovers }
 
+# What each food fills, and the thought it leaves (plain leaves none).
 food:
-  gourmet:   { hunger: 70 }
+  gourmet:   { hunger: 70, thought: ate_gourmet }
   plain:     { hunger: 70 }
-  leftovers: { hunger: 50 }
+  leftovers: { hunger: 50, thought: ate_leftovers }
