@@ -177,6 +177,8 @@ describe('knocking', () => {
     meet(ctx, host, k);
     Object.assign(rel(host, k)!, { affection: 100, attraction: 10 });
     host.asleep = false;
+    host.personality.kind = 10; // a sure yes
+    for (const c of cast) if (c.guest?.host === host.id) c.guest = null; // not already hosting
     expect(knock(ctx, k, host, 'suite')).toBe(true);
     expect(k.guest).toMatchObject({ room: 'suite', host: host.id });
     const before = rel(host, k)!.affection;

@@ -82,7 +82,16 @@ function doingText(c: Contestant): string {
   if (c.asleep) return 'asleep';
   const a = c.activity;
   if (!a) return 'deciding';
-  const what = a.action === 'meal' && a.food ? `${a.meal} (${a.food})` : label(a.action);
+  const brk = c.breakdown ? data.breaks.kinds[c.breakdown.kind] : undefined;
+  const what = brk
+    ? `BREAKDOWN: ${brk.label}${c.breakdown!.target ? ` (${who(c.breakdown!.target)})` : ''}`
+    : a.action === 'meal' && a.food
+      ? `${a.meal} (${a.food})`
+      : a.action === 'lovin'
+        ? `▇▇▇ lovin' ▇▇▇ with ${who(a.partner ?? '')}`
+        : a.booze
+          ? `${label(a.action)} (${a.booze})`
+          : label(a.action);
   if (a.phase === 'walk') return `→ ${data.rooms.rooms.find((r) => r.id === a.room)?.name ?? a.room}: ${what}`;
   return what;
 }
@@ -93,7 +102,7 @@ function whoHtml(c: Contestant): string {
     const v = Math.max(0, Math.min(100, c.needs[n]));
     return `<i class="${needClass(v)}" style="height:${Math.max(1, v)}%" title="${n} ${v.toFixed(0)}"></i>`;
   }).join('');
-  const cls = ['who', c.id === selected ? 'sel' : '', c.asleep ? 'asleep' : '', c.activity?.phase === 'walk' ? 'walking' : ''].join(' ');
+  const cls = ['who', c.id === selected ? 'sel' : '', c.asleep ? 'asleep' : '', c.activity?.phase === 'walk' ? 'walking' : '', c.breakdown ? 'broken' : ''].join(' ');
   return `<div class="${cls}" data-id="${c.id}">
     <div class="top"><span class="dot" style="background:hsl(${hue} 70% 60%)"></span><span class="name">${esc(c.name)}</span><small>${c.rank ?? 'new'}</small></div>
     <div class="doing">${esc(doingText(c))}</div>
@@ -137,7 +146,11 @@ function renderSheet(): void {
       ${c.confined ? row('in the fishbowl', `until ${esc(clockText(c.confined.until))}`) : ''}
       ${row('awaiting sentence', esc(world.show.pending.filter((x) => x.who === c.id).map((x) => infractionLabel(x.rule)).join(', ') || 'nothing'))}
       ${row('lifetime points', c.lifetime.toFixed(0))}
-      ${row('mood', c.mood.toFixed(0))}
+      ${row('mood', `${c.mood.toFixed(0)} <small>(breaks below ${breakLine(c)})</small>`)}
+      ${c.breakdown ? row('breakdown', `<b>${esc(data.breaks.kinds[c.breakdown.kind]?.label ?? c.breakdown.kind)}</b> (${c.breakdown.level}, over ${esc(c.breakdown.source)})`) : ''}
+      ${row('intoxication', `${c.intox.toFixed(0)}${stageText(c)}${c.drinks ? ` <small>(hangover weight ${c.drinks.toFixed(1)})</small>` : ''}`)}
+      ${c.inventory.length ? row('carrying', esc(c.inventory.join(', '))) : ''}
+      ${c.secret ? row('secret points', `${c.secret.toFixed(0)} <small>(hidden until they die)</small>`) : ''}
       ${row('health', c.health.toFixed(0))}
       ${row('doing', esc(doingText(c)))}
       ${row('bed', esc(c.bed ?? 'none yet'))}
@@ -161,6 +174,18 @@ function renderSheet(): void {
     <h4>Ledger</h4>${ledgerHtml(c)}`;
 }
 
+function breakLine(c: Contestant): string {
+  const l = data.breaks.lines;
+  const minor = l.minorBase + l.minorPerVolatile * (10 - c.personality.calm);
+  return `${minor.toFixed(0)} / ${(minor * l.majorShare).toFixed(0)} / ${(minor * l.extremeShare).toFixed(0)}`;
+}
+
+function stageText(c: Contestant): string {
+  let best: { id: string; at: number } | undefined;
+  for (const s of data.booze.stages) if (c.intox > 0 && c.intox >= s.at && (!best || s.at > best.at)) best = s;
+  return best ? ` <b>${best.id}</b>` : '';
+}
+
 function thoughtsHtml(c: Contestant): string {
   if (!c.thoughts.length) return '<p class="hint">Nothing on their mind but the show.</p>';
   const rows = [...c.thoughts]
@@ -180,7 +205,9 @@ function ledgerHtml(c: Contestant): string {
   if (!entries.length) return '<p class="hint">Hasn\'t met anyone yet.</p>';
   return entries
     .map(([id, r]) => {
-      const tags = [r.affection >= l.friendAt ? 'friend' : '', r.affection <= l.rivalAt ? 'rival' : '', r.attraction >= l.crushAt ? '♥ crush' : ''].filter(Boolean).join(', ');
+      const back = world.contestants.find((o) => o.id === id)?.ledger[c.id]?.label;
+      const labels = r.label !== 'none' || (back && back !== 'none') ? `${r.label} (they think: ${back ?? '?'})` : '';
+      const tags = [labels, r.affection >= l.friendAt ? 'friend' : '', r.affection <= l.rivalAt ? 'rival' : '', r.attraction >= l.crushAt ? '♥ crush' : ''].filter(Boolean).join(', ');
       const gone = world.contestants.some((o) => o.id === id) ? '' : ' (gone)';
       const reasons = r.reasons
         .slice(-4)
@@ -197,7 +224,7 @@ function ledgerHtml(c: Contestant): string {
 // ---------------------------------------------------------------------------------------------
 // The ticker
 
-const ROUTINE = new Set(['act.start', 'act.end', 'meal', 'wake', 'meet', 'chitchat', 'guest_leave', 'douse']);
+const ROUTINE = new Set(['act.start', 'act.end', 'meal', 'wake', 'meet', 'chitchat', 'guest_leave', 'douse', 'drink', 'intox', 'break_end']);
 
 function who(id: string): string {
   return names.get(id) ?? id;
@@ -238,7 +265,48 @@ function describe(e: SimEvent): string | null {
     case 'on_notice':
       return `${a[0]}'s meter hits zero. ${a[0]} is ON NOTICE.`;
     case 'death':
+      if (d.cause === 'murder') return `☠ ${d.name} is dead, killed by ${who(String(d.killer))} in the ${roomName(e.room)} (aboard ${(Number(d.stay) / 1440).toFixed(1)} days).`;
       return `☠ ${d.name} is spaced. The robots wave goodbye at the airlock (meter ${Number(d.meter).toFixed(0)}, aboard ${(Number(d.stay) / 1440).toFixed(1)} days).`;
+    case 'murder':
+      return `MURDER. ${a[0]} kills ${a[1]}${d.weapon ? ` (${d.weapon === 'cafe' ? 'with a cafe knife' : 'in the hot tub'})` : ''}. ${(d.witnesses as unknown[]).length ? 'Someone saw.' : 'Nobody saw. The cameras did.'}`;
+    case 'secret_revealed':
+      return `${a[0]}'s secret points come out: +${d.points} lifetime.`;
+    case 'break': {
+      const k = data.breaks.kinds[String(d.kind)];
+      return `${a[0]} snaps (${d.level} break, over ${d.source}) and ${k?.label ?? d.kind}${a[1] ? `: ${a[1]}` : ''}.`;
+    }
+    case 'break_end':
+      return `${a[0]} comes out of it`;
+    case 'drink':
+      return a[1] ? `${a[0]} downs the ${d.quality} drink ${a[1]} brought` : `${a[0]} has a ${d.quality} drink`;
+    case 'intox':
+      return `${a[0]} is ${d.to === 'sober' ? 'sober again' : `now ${d.to}`}`;
+    case 'hammered':
+      return `${a[0]} is HAMMERED`;
+    case 'blackout':
+      return `${a[0]} sobers up with no memory of the last few hours`;
+    case 'hangover':
+      return `${a[0]} wakes up hungover`;
+    case 'gift':
+      return `${a[0]} brings ${a[1]} a ${d.quality} drink${d.better ? ', way better than their usual' : ''}`;
+    case 'kiss':
+      return `${a[0]} kisses ${a[1]}! ♥`;
+    case 'kiss_rebuff':
+      return `${a[0]} goes in for a kiss and ${a[1]} pulls away. Ouch.`;
+    case 'lovin':
+      return `▇▇▇ ${a[0]} and ${a[1]} disappear under the covers ▇▇▇${d.first ? ' (a first!)' : ''}`;
+    case 'turned_down':
+      return `${a[0]} propositions ${a[1]}: not tonight`;
+    case 'exclusive':
+      return `${a[0]} asks ${a[1]} to be exclusive: yes!${d.secretly ? ' (privately, it\'s a fling)' : ''}`;
+    case 'exclusive_refused':
+      return `${a[0]} asks ${a[1]} to be exclusive: no`;
+    case 'breakup':
+      return `${a[0]} dumps ${a[1]}`;
+    case 'betrayal':
+      return `BETRAYAL! ${a[0]} sees ${a[1]} with ${a[2]} (${d.what})`;
+    case 'jealous':
+      return `${a[0]} sees ${a[1]} with ${a[2]} and stews`;
     case 'immunity_spent':
       return `${a[0]} should be spaced, but plays a secret immunity!`;
     case 'fishbowl_night':

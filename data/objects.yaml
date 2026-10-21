@@ -1,7 +1,7 @@
 # Objects advertise actions. DESIGN.md Part two, Rooms, objects and access.
 #
 # Each action:
-#   kind:        timed (default) | sleep | toilet | thermostat
+#   kind:        timed (default) | sleep | toilet | thermostat | drink
 #   minutes:     how long it takes (sleep runs until rested; see needs.yaml sleep)
 #   gains:       need -> total refill over the action (spread evenly over the minutes)
 #   speciesGains: species -> gains that replace the default for that species
@@ -15,6 +15,8 @@
 #   tags:        drive the personality grid and the mood modifier (personality.yaml)
 #   onlySpecies / notSpecies / ranks: who can use it
 #   logs:        an event logged when the action is finished, for scoring (a karaoke performance)
+#   thought:     a thought when it's finished (for sleep: when they wake, if they slept long enough)
+#   booze:       for drinks, the best quality poured here (booze.yaml); fun comes from the quality
 #
 # Numbers marked "proposal" aren't in DESIGN.md yet.
 
@@ -22,7 +24,7 @@ types:
   bed_suite:
     capacity: 2
     actions:
-      - { id: sleep, label: sleeps in the suite, kind: sleep, quality: 1.2, comfort: 85, assigned: true, tags: [solitary, comforting] }
+      - { id: sleep, label: sleeps in the suite, kind: sleep, quality: 1.2, comfort: 85, assigned: true, thought: slept_suite, tags: [solitary, comforting] }
   bed_good:
     capacity: 1
     actions:
@@ -30,7 +32,7 @@ types:
   bed_dorm:
     capacity: 1
     actions:
-      - { id: sleep, label: sleeps in a bunk, kind: sleep, quality: 0.8, comfort: 50, assigned: true, tags: [solitary, comforting] }
+      - { id: sleep, label: sleeps in a bunk, kind: sleep, quality: 0.8, comfort: 50, assigned: true, thought: slept_dorm, tags: [solitary, comforting] }
   fishbowl_floor:
     capacity: 7
     actions:
@@ -39,7 +41,7 @@ types:
   couch:
     capacity: 1
     actions:
-      - { id: sleep, label: sleeps on the couch, kind: sleep, quality: 0.6, comfort: 40, tags: [solitary, comforting] }
+      - { id: sleep, label: sleeps on the couch, kind: sleep, quality: 0.6, comfort: 40, thought: slept_couch, tags: [solitary, comforting] }
       # proposal: sitting is a cheap comfort fallback
       - { id: sit, label: lounges on a couch, minutes: 30, comfort: 55, tags: [comforting] }
 
@@ -58,7 +60,7 @@ types:
       - { id: wash_up, label: washes up, minutes: 2, gains: { hygiene: 5 }, tags: [] }
       - { id: sink_bath, label: takes a sink bath, minutes: 15, gains: { hygiene: 15 }, ranks: [7, 7],
           speciesGains: { aquatic: { hygiene: 40 } },  # proposal: "any water refills" aquatics
-          notSpecies: [feline], comfort: 25, tags: [exposed] }
+          notSpecies: [feline], comfort: 25, thought: sink_bath, tags: [exposed] }
   shower_hot:
     capacity: 1
     actions:
@@ -70,11 +72,27 @@ types:
       - { id: cold_shower, label: takes a cold shower, minutes: 10, gains: { hygiene: 40 }, comfort: 25,
           speciesGains: { aquatic: { hygiene: 60 } },
           cost: 0.5, speciesCost: { aquatic: 0 },  # proposal
-          notSpecies: [feline], tags: [solitary, exposed] }
+          notSpecies: [feline], thought: cold_shower, tags: [solitary, exposed] }
   thermostat:
     capacity: 1
     actions:
       - { id: set_thermostat, label: changes the thermostat, kind: thermostat, minutes: 1, tags: [] }
+
+  # Booze (booze.yaml). Social only counts with company; drinking together bonds.
+  bar:
+    capacity: 4
+    actions:
+      - { id: drink, label: has a drink at the bar, kind: drink, minutes: 15, booze: fancy, gains: { social: 4 },
+          company: true, comfort: 65, tags: [social, drinking] }
+  booze_vending:
+    capacity: 1
+    actions:
+      - { id: drink, label: gets a drink from the machine, kind: drink, minutes: 15, booze: good, tags: [drinking] }
+  still:
+    capacity: 1
+    actions:
+      # "Hidden" in the garden; anyone can use it. Its raiding rules are out of slice one.
+      - { id: drink, label: nips from the hidden still, kind: drink, minutes: 20, booze: rotgut, tags: [solitary, drinking, illicit] }
 
   dance_floor:
     capacity: 8

@@ -6,7 +6,8 @@ import { fadeLedger } from './ledger.js';
 import { cast } from './generator.js';
 import { shuffle } from './rng.js';
 import { confine, fishbowlMinute, rollCall, sentencing, spacings } from './show.js';
-import { think } from './thoughts.js';
+import { hangover } from './booze.js';
+import { forget, think } from './thoughts.js';
 import type { Contestant } from './types.js';
 
 export const CAST_SIZE = 7;
@@ -21,7 +22,10 @@ export function runSchedule(ctx: Ctx): void {
     log(ctx, 'wake_chime', []);
     for (const c of ctx.w.contestants) if (c.asleep && c.needs.rest > s.wakeChime.minRest) endActivity(ctx, c, 'woke');
     guestsOut(ctx);
-    for (const c of ctx.w.contestants) fadeLedger(ctx, c);
+    for (const c of ctx.w.contestants) {
+      fadeLedger(ctx, c);
+      hangover(ctx, c);
+    }
   }
   if (m === s.arrivals) arrivals(ctx);
   if (m === s.lightsDim) log(ctx, 'lights_dim', []);
@@ -30,15 +34,23 @@ export function runSchedule(ctx: Ctx): void {
   for (const meal of s.meals) {
     if (m !== meal.from) continue;
     for (const c of ctx.w.contestants) {
-      if (!c.asleep && !onToilet(ctx, c) && openMeals(ctx, c).some((x) => x.id === meal.id)) endActivity(ctx, c, 'interrupted');
+      if (!c.asleep && !c.breakdown && !onToilet(ctx, c) && openMeals(ctx, c).some((x) => x.id === meal.id)) endActivity(ctx, c, 'interrupted');
     }
   }
 
   if (m === s.ceremony.at) {
     for (const c of ctx.w.contestants) if (c.asleep && !c.confined && c.needs.rest > s.ceremony.wakeAbove) endActivity(ctx, c, 'woke');
-    for (const c of ctx.w.contestants) if (!c.asleep && !c.confined && c.activity?.action !== CEREMONY && !onToilet(ctx, c)) endActivity(ctx, c, 'interrupted');
+    // Everyone is summoned, unless they're in the middle of a breakdown.
+    for (const c of ctx.w.contestants) if (!c.asleep && !c.confined && !c.breakdown && c.activity?.action !== CEREMONY && !onToilet(ctx, c)) endActivity(ctx, c, 'interrupted');
   }
   if (m === s.ceremony.at + s.ceremony.resolveAfter) ceremony(ctx);
+}
+
+/** The robots deliver or repossess clothes with the new rank; the outfit leaves a thought. */
+function dress(ctx: Ctx, c: Contestant): void {
+  for (const tier of Object.values(ctx.data.clothing.byRank)) if (tier.thought) forget(ctx, c, tier.thought);
+  const thought = ctx.data.clothing.byRank[String(c.rank) as '1']!.thought;
+  if (thought) think(ctx, c, thought);
 }
 
 /** Guest status ends at 07:00 after a night: anyone still inside is shown out to the common room. */
@@ -62,6 +74,7 @@ function arrivals(ctx: Ctx): void {
     const c = cast(ctx.data, w.rng, w.contestants, `c${w.nextId++}`, w.t);
     w.contestants.push(c);
     log(ctx, 'arrive', [c.id], c.room, { name: c.name, species: c.species, pronouns: c.pronouns });
+    think(ctx, c, ctx.data.thoughts.trapped);
   }
 }
 
@@ -92,6 +105,7 @@ function ceremony(ctx: Ctx): void {
     if (c.rank !== null && to !== c.rank) think(ctx, c, to < c.rank ? ctx.data.ranks.thoughts.up : ctx.data.ranks.thoughts.down);
     c.rank = to;
     c.bed = ctx.data.ranks.ranks[String(to) as '1']!.bed;
+    dress(ctx, c);
   });
   log(ctx, 'ceremony', w.contestants.map((c) => c.id), ctx.data.schedule.ceremony.room, {
     day: dayOf(w.t),

@@ -1,10 +1,11 @@
 # Thoughts and mood. DESIGN.md Part two, Thoughts, mood and breaks.
-# Mood = personality.yaml mood.base + every active thought. Only the rows the social layer
-# needs so far; the rest of the table arrives with breaks.
+# Mood = personality.yaml mood.base + every active thought, kept to 0..100.
 #
 # Each thought: value, hours it lasts, stack (how many can be active at once about the same
-# person; a new one replaces the oldest), and a source category (used later to pick breaks).
+# person; a new one replaces the oldest), and a source category, which picks the break when
+# mood falls too far (breaks.yaml). A thought whose value works out to 0 isn't added.
 # `species` replaces the value for those species (the fishbowl barely bothers aquatics).
+# `scale` multiplies the value by personality: 1 + k × (axis − 5) ÷ 5 per entry (k defaults to 0.5).
 
 # Every thought hits × 1 + volatileK × (calm − 5) ÷ 5: up to 1.4× when volatile.
 volatileK: -0.4
@@ -13,7 +14,54 @@ volatileK: -0.4
 species:
   reptilian: { person: 0.7, rejection: 0.7 }
 
+# Personality by source (DESIGN.md Personality grid): brave people feel fear less, vain people
+# feel rank more.
+sources:
+  fear:   [{ axis: brave, k: -0.5 }]
+  status: [{ axis: vain }]
+
+# Everyone carries this from the moment they arrive.
+trapped: trapped
+
+# Proposal: low needs reach mood through these, refreshed every ten minutes while the need is
+# below the line ("hungry, exhausted, filthy, lonely, bored").
+needs:
+  - { need: hunger,  below: 20, thought: hungry }
+  - { need: rest,    below: 15, thought: exhausted }
+  - { need: hygiene, below: 20, thought: filthy }
+  - { need: social,  below: 20, thought: lonely }
+  - { need: fun,     below: 20, thought: bored }
+
+# Too cold / too hot: −perDegrees per degree felt outside your range, up to −max, refreshed every
+# ten minutes while it lasts.
+temperature: { cold: too_cold, hot: too_hot, perDegree: 0.5, max: 8 }
+
+# A sleep has to last this long to leave a "slept on the couch / in the dorm / in the suite" thought.
+sleepMinutes: 180   # proposal
+
 thoughts:
+  trapped:     { label: "Trapped here", value: -5, hours: 100000, stack: 1, source: fear }
+
+  # Needs and comfort
+  hungry:      { label: "Hungry", value: -4, hours: 0.5, stack: 1, source: hunger }            # proposal
+  exhausted:   { label: "Exhausted", value: -6, hours: 0.5, stack: 1, source: discomfort }     # proposal
+  filthy:      { label: "Couldn't wash", value: -6, hours: 0.5, stack: 1, source: discomfort } # "couldn't wash −6"
+  lonely:      { label: "Lonely", value: -4, hours: 0.5, stack: 1, source: rejection }         # proposal
+  bored:       { label: "Bored stiff", value: -4, hours: 0.5, stack: 1, source: discomfort,    # proposal
+                 scale: [{ axis: playful }] }
+  too_cold:    { label: "Too cold", value: -1, hours: 0.5, stack: 1, source: discomfort }      # value set by the temperature line
+  too_hot:     { label: "Too hot", value: -1, hours: 0.5, stack: 1, source: discomfort }
+  slept_couch: { label: "Slept on the couch", value: -6, hours: 24, stack: 1, source: discomfort, scale: [{ axis: vain }] }
+  slept_dorm:  { label: "Slept in the dorm", value: -2, hours: 24, stack: 1, source: discomfort, scale: [{ axis: vain }] }
+  slept_suite: { label: "Slept in the suite", value: 6, hours: 24, stack: 1, source: status, scale: [{ axis: vain }] }
+  ate_gourmet: { label: "Ate gourmet", value: 6, hours: 24, stack: 1, source: hunger }
+  ate_leftovers: { label: "Ate leftovers", value: -4, hours: 24, stack: 1, source: hunger }
+  cold_shower: { label: "Cold shower", value: -4, species: { aquatic: 0 }, hours: 24, stack: 1, source: discomfort }
+  sink_bath:   { label: "Sink bath", value: -4, hours: 24, stack: 1, source: humiliation }
+  dressed_star: { label: "Dressed like a star", value: 3, hours: 25, stack: 1, source: status, scale: [{ axis: vain }] }
+  dressed_nobody: { label: "Dressed like nobody", value: -3, hours: 25, stack: 1, source: status, scale: [{ axis: vain }] }
+
+  # People
   insulted:    { label: "Insulted by {who}", value: -6, hours: 48, stack: 3, source: person }
   slighted:    { label: "Slighted by {who}", value: -3, hours: 24, stack: 3, source: person }      # proposal
   kind_words:  { label: "Kind words from {who}", value: 5, hours: 12, stack: 2, source: person } # hours: proposal
@@ -22,6 +70,33 @@ thoughts:
   turned_away: { label: "Turned away at the door by {who}", value: -5, hours: 24, stack: 2, source: rejection }
   lost_fight:  { label: "Lost a fight to {who}", value: -8, hours: 24, stack: 2, source: person }  # proposal
   won_fight:   { label: "Won a fight against {who}", value: 3, hours: 12, stack: 2, source: person } # proposal
+  saw_cruelty: { label: "Watched {who} be cruel", value: -2, hours: 12, stack: 2, source: person,   # proposal: "witnessing
+                 scale: [{ axis: kind }] }                                                         # cruelty hurts more"
+  gifted:      { label: "{who} brought me a drink", value: 4, hours: 12, stack: 2, source: person } # proposal
+  wrecked:     { label: "{who} wrecked my things", value: -8, hours: 48, stack: 1, source: person } # proposal
+
+  # Romance
+  kissed:        { label: "Kissed {who}", value: 6, hours: 24, stack: 1, source: romance }          # proposal
+  kiss_rebuffed: { label: "Kiss rebuffed by {who}", value: -12, hours: 48, stack: 1, source: rejection }
+  lovin:         { label: "Lovin' with {who}", value: 10, hours: 24, stack: 1, source: romance }
+  turned_down:   { label: "Turned down by {who}", value: -10, hours: 24, stack: 1, source: rejection } # hours: proposal
+  disturbed:     { label: "Kept up by the roommates", value: -3, hours: 12, stack: 1, source: discomfort } # proposal
+  exclusive:     { label: "Exclusive with {who}", value: 5, hours: 48, stack: 1, source: romance }     # proposal
+  not_exclusive: { label: "{who} won't commit", value: -10, hours: 24, stack: 1, source: rejection }   # "Hurt: −10"
+  dumped:        { label: "Dumped by {who}", value: -20, hours: 72, stack: 1, source: rejection }      # hours: proposal
+  betrayed:      { label: "Betrayed by {who}", value: -20, hours: 168, stack: 1, source: person, scale: [{ axis: loyal }] }
+  jealous:       { label: "Jealous of {who}", value: -5, hours: 24, stack: 2, source: person }         # proposal
+  guilty:        { label: "Cheating on {who}", value: -5, hours: 24, stack: 1, source: guilt }         # proposal
+
+  # Booze (booze.yaml)
+  drink_fancy:   { label: "Savored something special", value: 6, hours: 3, stack: 3, source: booze, scale: [{ axis: vain }] }
+  drink_good:    { label: "A good drink", value: 4, hours: 3, stack: 3, source: booze }
+  drink_cheap:   { label: "A cheap drink", value: 2, hours: 3, stack: 3, source: booze }
+  drink_rotgut:  { label: "Rotgut", value: 1, hours: 3, stack: 3, source: booze }
+  hangover:      { label: "Hungover", value: -3, hours: 8, stack: 1, source: discomfort }   # value set by booze.yaml hangover
+
+  # Breaks (breaks.yaml)
+  catharsis:     { label: "Catharsis", value: 15, hours: 24, stack: 1, source: catharsis }
 
   # The show
   doomed:        { label: "The show is going to kill me", value: -4, hours: 1.5, stack: 1, source: fear }  # value set by meter.yaml doomed
@@ -37,3 +112,4 @@ thoughts:
   someone_died:  { label: "{who} died", value: -6, hours: 72, stack: 1, source: fear }
   friend_died:   { label: "My friend {who} died", value: -12, hours: 168, stack: 1, source: grief }
   rival_died:    { label: "{who} got what was coming", value: 6, hours: 72, stack: 1, source: person }
+  saw_murder:    { label: "Saw {who} kill someone", value: -12, hours: 72, stack: 1, source: fear }  # proposal

@@ -129,5 +129,61 @@ function crossCheck(d: GameData, dir: string): void {
     if (x.step > r.sentences.length) errors.push(`${dir}/rules.yaml: infractions.${id}.step: the ladder only has ${r.sentences.length} sentences`);
   }
 
+  // Thoughts, breaks, booze and romance
+  const th = d.thoughts;
+  thought(th.trapped, 'thoughts.yaml: trapped');
+  th.needs.forEach((n, i) => thought(n.thought, `thoughts.yaml: needs.${i}.thought`));
+  thought(th.temperature.cold, 'thoughts.yaml: temperature.cold');
+  thought(th.temperature.hot, 'thoughts.yaml: temperature.hot');
+  for (const [t, def] of Object.entries(types)) def.actions.forEach((a, i) => thought(a.thought, `objects.yaml: types.${t}.actions.${i}.thought`));
+  for (const [id, f] of Object.entries(d.ranks.food)) thought(f.thought, `ranks.yaml: food.${id}.thought`);
+  for (const [r, c] of Object.entries(d.clothing.byRank)) thought(c.thought, `clothing.yaml: byRank.${r}.thought`);
+  d.social.interactions.forEach((x, i) => thought(x.witnessThought, `social.yaml: interactions.${i}.witnessThought`));
+  thought(d.social.fight.witnessThought, 'social.yaml: fight.witnessThought');
+
+  const bz = d.booze;
+  for (const q of bz.order) if (!bz.qualities[q]) errors.push(`${dir}/booze.yaml: order: no quality "${q}" in qualities`);
+  for (const [r, q] of Object.entries(bz.byRank)) if (!bz.qualities[q]) errors.push(`${dir}/booze.yaml: byRank.${r}: no quality "${q}"`);
+  for (const [id, q] of Object.entries(bz.qualities)) thought(q.thought, `booze.yaml: qualities.${id}.thought`);
+  thought(bz.hangover.thought, 'booze.yaml: hangover.thought');
+  thought(bz.gift.thought, 'booze.yaml: gift.thought');
+  if (!bz.stages.some((s) => s.id === 'hammered')) errors.push(`${dir}/booze.yaml: stages: needs a "hammered" stage`);
+  for (const [t, def] of Object.entries(types)) {
+    def.actions.forEach((a, i) => {
+      if (a.kind === 'drink' && (!a.booze || !bz.qualities[a.booze])) errors.push(`${dir}/objects.yaml: types.${t}.actions.${i}.booze: drinks need a quality from booze.yaml`);
+    });
+  }
+
+  const br = d.breaks;
+  const kind = (id: string, at: string) => {
+    if (!br.kinds[id]) errors.push(`${dir}/breaks.yaml: ${at}: no break kind "${id}"`);
+  };
+  for (const [src, row] of Object.entries(br.sources)) for (const [lvl, id] of Object.entries(row)) kind(id, `sources.${src}.${lvl}`);
+  kind(br.fallback, 'fallback');
+  kind(br.passion.otherwise, 'passion.otherwise');
+  thought(br.catharsis, 'breaks.yaml: catharsis');
+  thought(br.passion.witnessThought, 'breaks.yaml: passion.witnessThought');
+  for (const [id, k] of Object.entries(br.kinds)) {
+    if (k.infraction && !r.infractions[k.infraction]) errors.push(`${dir}/breaks.yaml: kinds.${id}.infraction: no rule "${k.infraction}" in rules.yaml`);
+    if (k.wreck) thought(k.wreck.thought, `breaks.yaml: kinds.${id}.wreck.thought`);
+    if (!['here', 'bed', 'target', 'target_bed', 'bar'].includes(k.room) && !rooms.has(k.room)) errors.push(`${dir}/breaks.yaml: kinds.${id}.room: no room "${k.room}"`);
+    if ((k.room === 'target' || k.room === 'target_bed' || k.attack) && !k.target) errors.push(`${dir}/breaks.yaml: kinds.${id}.target: needed for this room or an attack`);
+  }
+  if (br.kinds[br.fallback]?.room !== 'here') errors.push(`${dir}/breaks.yaml: fallback: the fallback break has to happen "here"`);
+
+  const ro = d.romance;
+  thought(ro.kiss.thought, 'romance.yaml: kiss.thought');
+  thought(ro.kiss.rebuffed, 'romance.yaml: kiss.rebuffed');
+  thought(ro.proposition.turnedDown, 'romance.yaml: proposition.turnedDown');
+  thought(ro.proposition.thought, 'romance.yaml: proposition.thought');
+  thought(ro.proposition.disturbed, 'romance.yaml: proposition.disturbed');
+  thought(ro.exclusive.thought, 'romance.yaml: exclusive.thought');
+  thought(ro.exclusive.refused, 'romance.yaml: exclusive.refused');
+  thought(ro.breakup.dumped, 'romance.yaml: breakup.dumped');
+  thought(ro.betrayal.thought, 'romance.yaml: betrayal.thought');
+  thought(ro.jealousy.thought, 'romance.yaml: jealousy.thought');
+  thought(ro.guilty, 'romance.yaml: guilty');
+  if (!d.social.interactions.some((x) => x.id === 'insult')) errors.push(`${dir}/social.yaml: interactions: an "insult" is needed (fights, sprees, confrontations)`);
+
   if (errors.length) throw new DataError(`Bad data:\n${errors.map((e) => `  ${e}`).join('\n')}`);
 }

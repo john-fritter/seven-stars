@@ -39,7 +39,8 @@ export function sneakCost(ctx: Ctx, c: Contestant): number {
 export function rollCall(ctx: Ctx): void {
   const room = ctx.data.schedule.ceremony.room;
   for (const c of ctx.w.contestants) {
-    const here = c.confined !== null || c.activity?.action === CEREMONY || (c.room === room && !c.asleep);
+    // Proposal: someone in the middle of a breakdown is excused.
+    const here = c.confined !== null || c.breakdown !== null || c.activity?.action === CEREMONY || (c.room === room && !c.asleep);
     if (!here) infraction(ctx, c, 'skipped_ceremony', c.room);
   }
 }
@@ -96,15 +97,20 @@ export function spacings(ctx: Ctx): void {
 /** The robots take someone to the airlock. Everyone at the ceremony watches. */
 export function space(ctx: Ctx, c: Contestant, cause: string): void {
   const room = ctx.data.schedule.ceremony.room;
-  const sp = ctx.data.rules.spacing;
   const witnesses = ctx.w.contestants.filter((o) => o !== c && !o.asleep && (o.room === room || ctx.st.room.get(o.room)!.glass === room)).map((o) => o.id);
-  log(ctx, 'death', [c.id], room, { cause, name: c.name, stay: ctx.w.t - c.arrivedAt, meter: c.meter, witnesses });
+  kill(ctx, c, cause, room, witnesses);
+  for (const o of ctx.w.contestants) if (witnesses.includes(o.id)) think(ctx, o, ctx.data.rules.spacing.watched);
+}
+
+/** Someone dies: the log, everyone's feelings about it, and they leave the world. */
+export function kill(ctx: Ctx, c: Contestant, cause: string, room: string, witnesses: string[], killer?: string): void {
+  const sp = ctx.data.rules.spacing;
+  log(ctx, 'death', [c.id], room, { cause, name: c.name, stay: ctx.w.t - c.arrivedAt, meter: c.meter, witnesses, ...(killer ? { killer } : {}) });
   const l = ctx.data.social.ledger;
   for (const o of ctx.w.contestants) {
     if (o === c) continue;
     const aff = o.ledger[c.id]?.affection ?? 0;
     think(ctx, o, aff >= l.friendAt ? sp.friend : aff <= l.rivalAt ? sp.rival : sp.died, c.id);
-    if (witnesses.includes(o.id)) think(ctx, o, sp.watched);
   }
   remove(ctx, c);
 }
@@ -112,7 +118,14 @@ export function space(ctx: Ctx, c: Contestant, cause: string): void {
 /** Takes a contestant out of the world: their objects, their guests, and others' feelings about them. */
 function remove(ctx: Ctx, c: Contestant): void {
   endActivity(ctx, c, 'interrupted');
+  c.breakdown = null;
   const w = ctx.w;
+  // Hidden points (murder) come out when the killer dies.
+  if (c.secret) {
+    c.lifetime = Math.round((c.lifetime + c.secret) * 100) / 100;
+    log(ctx, 'secret_revealed', [c.id], c.room, { points: c.secret, lifetime: c.lifetime });
+    c.secret = 0;
+  }
   w.contestants.splice(w.contestants.indexOf(c), 1);
   w.show.pending = w.show.pending.filter((x) => x.who !== c.id);
   for (const o of w.contestants) {

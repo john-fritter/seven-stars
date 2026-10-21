@@ -28,6 +28,12 @@ export interface SeedStats {
   meterAtNight: number; // summed at each day's end
   noticeAtNight: number; // contestants at zero at each day's end
   bottomStreaks: number[]; // consecutive ceremonies each rank-7 contestant spent on the couch
+  breaks: Record<string, number>; // by kind
+  breakLevels: Record<string, number>; // by level
+  breakSources: Record<string, number>; // by the grievance that picked it
+  drinks: Record<string, number>; // by quality
+  intoxMinutes: Record<string, number>; // contestant-minutes in each stage
+  labels: Record<string, number>; // directed relationships by label at each day's end, plus couples
 }
 
 function add(m: Record<string, number>, k: string, v = 1): void {
@@ -60,7 +66,14 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
     meterAtNight: 0,
     noticeAtNight: 0,
     bottomStreaks: [],
+    breaks: {},
+    breakLevels: {},
+    breakSources: {},
+    drinks: {},
+    intoxMinutes: {},
+    labels: {},
   };
+  const stage = new Map<string, { stage: string; since: number }>();
   let bottom: string | null = null;
   let streak = 0;
   const notable = new Set(data.targets.notable);
@@ -74,6 +87,16 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
       if (notable.has(e.type)) isNotable = true;
       if (e.type === 'sentence') sentenced = true;
       tally(s, e);
+      if (e.type === 'intox') {
+        const id = e.actors[0]!;
+        const prev = stage.get(id);
+        if (prev && prev.stage !== 'sober') add(s.intoxMinutes, prev.stage, e.t - prev.since);
+        stage.set(id, { stage: e.data!.to as string, since: e.t });
+      } else if (e.type === 'death') {
+        const prev = stage.get(e.actors[0]!);
+        if (prev && prev.stage !== 'sober') add(s.intoxMinutes, prev.stage, e.t - prev.since);
+        stage.delete(e.actors[0]!);
+      }
       if (e.type === 'ceremony') {
         const b = (e.data!.ranks as string[])[6] ?? null;
         if (b === bottom) streak++;
@@ -88,6 +111,7 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
     endOfDay(s, world, data);
   }
   if (bottom !== null) s.bottomStreaks.push(streak);
+  for (const prev of stage.values()) if (prev.stage !== 'sober') add(s.intoxMinutes, prev.stage, world.t - prev.since);
   return s;
 }
 
@@ -120,6 +144,14 @@ function tally(s: SeedStats, e: SimEvent): void {
       add(s.deathsByCause, (d.cause as string) ?? 'unknown');
       if (typeof d.stay === 'number') s.stays.push(d.stay);
       break;
+    case 'break':
+      add(s.breaks, d.kind as string);
+      add(s.breakLevels, d.level as string);
+      add(s.breakSources, d.source as string);
+      break;
+    case 'drink':
+      add(s.drinks, d.quality as string);
+      break;
   }
 }
 
@@ -137,6 +169,16 @@ function endOfDay(s: SeedStats, w: World, data: GameData): void {
       if (r.affection >= l.friendAt) add(s.relations, 'friends');
       if (r.affection <= l.rivalAt) add(s.relations, 'rivals');
       if (r.attraction >= l.crushAt) add(s.relations, 'crushes');
+      add(s.labels, r.label);
+    }
+    // A couple: both believe they're dating or exclusive. Mismatched: they believe different things.
+    for (const o of w.contestants) {
+      if (o.id <= c.id) continue;
+      const a = c.ledger[o.id]?.label ?? 'none';
+      const b = o.ledger[c.id]?.label ?? 'none';
+      const together = (x: string) => x === 'dating' || x === 'exclusive';
+      if (together(a) && together(b)) add(s.labels, 'couples');
+      if (a !== b && (a !== 'none' || b !== 'none')) add(s.labels, 'mismatched');
     }
   }
 }
@@ -177,6 +219,22 @@ export interface Report {
     meterAtNight: number;
     onNoticeAtNight: number; // share of contestants at zero at day's end
     couchStreak: number | null; // average ceremonies in a row on the couch
+  };
+  breaks: {
+    perContestantDay: number;
+    byKind: Record<string, number>; // per week
+    byLevel: Record<string, number>; // per week
+    bySource: Record<string, number>; // per week
+  };
+  booze: {
+    drinksPerContestantDay: Record<string, number>; // by quality, with a total
+    stageShare: Record<string, number>; // share of contestant time tipsy, drunk, hammered
+  };
+  romance: {
+    perWeek: Record<string, number>; // flirts, kisses, hookups, exclusives, breakups, betrayals, jealousy
+    labelsAtNight: Record<string, number>; // directed relationships by label, per contestant
+    couplesAtNight: number; // pairs who both believe they're together, on average
+    mismatchedAtNight: number; // pairs whose labels disagree, on average
   };
 }
 
@@ -248,6 +306,31 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
         return st.length ? st.reduce((a, b) => a + b, 0) / st.length : null;
       })(),
     },
+    breaks: {
+      perContestantDay: (events.break ?? 0) / cDays,
+      byKind: sortDesc(Object.fromEntries(Object.entries(sum((s) => s.breaks)).map(([k, v]) => [k, perWeek(v)]))),
+      byLevel: Object.fromEntries(Object.entries(sum((s) => s.breakLevels)).map(([k, v]) => [k, perWeek(v)])),
+      bySource: sortDesc(Object.fromEntries(Object.entries(sum((s) => s.breakSources)).map(([k, v]) => [k, perWeek(v)]))),
+    },
+    booze: (() => {
+      const dr = sum((s) => s.drinks);
+      const all = Object.values(dr).reduce((a, b) => a + b, 0);
+      return {
+        drinksPerContestantDay: { total: all / cDays, ...sortDesc(Object.fromEntries(Object.entries(dr).map(([k, v]) => [k, v / cDays]))) },
+        stageShare: Object.fromEntries(Object.entries(sum((s) => s.intoxMinutes)).map(([k, v]) => [k, v / total])),
+      };
+    })(),
+    romance: (() => {
+      const lb = sum((s) => s.labels);
+      const { couples = 0, mismatched = 0, ...labels } = lb;
+      const ids = ['flirt', 'rebuff', 'kiss', 'kiss_rebuff', 'lovin', 'turned_down', 'exclusive', 'exclusive_refused', 'breakup', 'betrayal', 'jealous'];
+      return {
+        perWeek: Object.fromEntries(ids.map((k) => [k, perWeek(events[k] ?? 0)])),
+        labelsAtNight: sortDesc(Object.fromEntries(Object.entries(labels).filter(([k]) => k !== 'none').map(([k, v]) => [k, v / cDays]))),
+        couplesAtNight: couples / days,
+        mismatchedAtNight: mismatched / days,
+      };
+    })(),
     relations: rel.pairs ? { friends: (rel.friends ?? 0) / rel.pairs, rivals: (rel.rivals ?? 0) / rel.pairs, crushes: (rel.crushes ?? 0) / rel.pairs, affection: (rel.affection ?? 0) / rel.pairs } : null,
   };
 }

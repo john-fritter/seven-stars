@@ -10,24 +10,32 @@
 # only:      a data field that must be true for the event to score (fights: outside the cage)
 # witnessed: false skips the witness multiplier (proposal: infractions, sentences and anything
 #            at the ceremony, where everyone is always watching)
+# by / cases: a data field whose value picks a case, which replaces the row's amounts
+# meterOnly: the award goes to the meter but not lifetime points
+# secret:    hidden lifetime points for the first actor, revealed when they die (murder)
 
 awards:
   deep_talk:   { each: 2 }
-  kind_words:  { actor: 1 }               # "Gift; kind words: 2 giver; 1". Gifts wait for inventory
+  kind_words:  { actor: 1 }               # "Gift; kind words: 2 giver; 1"
+  gift:        { actor: 2 }
   slight:      { each: 2 }
   insult:      { actor: 4, target: 2 }
   fight:       { each: 12, winner: 6, only: outsideCage }
   flirt:       { each: 4 }                # a flirt that lands
   rebuff:      { actor: 3 }               # the rebuffed flirter
+  kiss:        { each: 6 }
+  lovin:       { each: 3, by: first, cases: { "true": { each: 12 } } }   # 12 each the first time with that person
+  betrayal:    { each: 10 }               # discovered: the betrayed, the betrayer and the third party
+  breakup:     { each: 8 }
+  break:       { by: level, cases: { minor: { actor: 5 }, major: { actor: 10 }, extreme: { actor: 15 } } }
+  hammered:    { actor: 4 }               # hammered antics, once per time they get hammered
   karaoke:     { actor: 3 }               # a finished karaoke performance
   infraction:  { actor: 4, witnessed: false }
   sentence:    { actor: 6, witnessed: false }
   fishbowl_night: { actor: 8, witnessed: false }   # paid on release
   death:       { witnesses: 3, witnessed: false }  # "witnessed a death"
-  # Still to come with their systems: kiss 6 each; lovin' 12 each the first time with that person,
-  # 3 after; betrayal discovered 10 to everyone involved; breakup 8 each; breaks 5 / 10 / 15;
-  # hammered antics 4; dance-off 20 / 5; cage match 25 / 10; trial survived 15; murder 40 to the
-  # meter, 100 hidden lifetime.
+  murder:      { actor: 40, meterOnly: true, secret: 100, witnessed: false }  # 40 to the meter, 100 hidden lifetime
+  # Still to come with their systems: dance-off 20 / 5; cage match 25 / 10; trial survived 15.
 
 modifiers:
   witnessEach: 0.15        # × 1 + 0.15 per witness

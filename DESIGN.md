@@ -656,6 +656,16 @@ Every 10 minutes that two contestants share a room and aren't absorbed in someth
 - **Company** pulls on action scoring: per person in the room, + 0.3 × affection ÷ 100 + 0.3 × attraction ÷ 10 − 0.3 × fear ÷ 100 (not for sleeping or the toilet).
 - **Thermostat** changes give everyone they made less comfortable affection −3 toward the changer.
 
+**Romance, as built (proposed; outcomes in `data/romance.yaml`, the moves' weights and gates in `data/social.yaml`).**
+
+- **The moves are interactions** with a `move`: flirt, kiss (weight 0.02, attraction 6+ and a landed flirt between them before), proposition (0.03, attraction and affection 20+, only in a room of apparent privacy 0.5 or more), ask to be exclusive (0.02, the asker's label at dating) and break up (0.05, a label of flirting or beyond and either affection at 0 or below or a "betrayed" thought about them). Drunkenness multiplies them (Booze). Toward anyone but whoever they're dating or exclusive with, romance moves are × 1 − 0.8 × loyal ÷ 10.
+- **Kiss** odds are the target's attraction ÷ 10 × (1 + their affection ÷ 100). A kiss gives both "kissed" (+6, a day) and moves a label of none to flirting; a rebuff gives the kisser "kiss rebuffed" (−12).
+- **Proposition:** the target says yes with odds of their attraction ÷ 10, only if they're at attraction 6+ and affection 20+ themselves, × the attached factor above if they're seeing someone. Lovin' is 30 minutes in place for both (lumps under the covers): "lovin'" +10 for a day, affection +10 both ways, and anyone asleep in the room gets "kept up by the roommates" (−3). It moves a label of none, flirting or ex to dating for someone with monogamy 5 or more, otherwise to fling, so expectations can mismatch without anyone lying. A no gives "turned down" (−10).
+- **Exclusivity** odds are the target's attraction ÷ 10 × (0.5 + monogamy ÷ 10) × (1 + 0.5 × (loyal − 5) ÷ 5). A yes makes the asker's label exclusive; the target's too, unless the deceptive-fling roll in the table above comes up, in which case they privately record a fling. A no gives "won't commit" (−10).
+- **Break up:** both labels go to ex; the dumped one gets "dumped" (−20, three days).
+- **Evidence:** everyone awake in the room sees a kiss or lovin', and a knocker who finds someone else in the host's room sees that. If A's label for B is exclusive, it's a betrayal: affection −40, "betrayed" (−20 for a week, loyal people feel it more), 10 points each to A, B and the third party, and a 50% chance A confronts B on the spot with an insult. A label of flirting, fling, dating or ex makes it jealousy instead (affection −10, "jealous" −5). Whoever kisses or beds someone while believing they're exclusive with someone else gets "cheating on them" (−5).
+- **Company pull** for anyone they fancy past the proposition bar is × 1 + 2 × the room's privacy, so crushes drift toward believed-private spots.
+
 ## Thoughts, mood and breaks
 
 Mood starts at 50 and adds every active thought. Each thought has a value, a duration, a stacking limit, and a source category used to pick breaks. Personality scales the values.
@@ -694,6 +704,15 @@ Mood starts at 50 and adds every active thought. Each thought has a value, a dur
 
 **Crimes of passion.** An extreme attack turns violent only if kindness is 3 or under or calm is 2 or under; otherwise it collapses into a catatonic sulk. The attack is a fight in which the attacker gets the first blow. The chance it kills: 5% × strength advantage, ×4 with a knife from the cafe, ×3 at the hot tub. A kill is a murder, scored like any other.
 
+**How the build does it (proposed; numbers in `data/thoughts.yaml` and `data/breaks.yaml`).**
+
+- **Thoughts** carry a value, hours, a stacking limit and a source. Personality scales them: volatility as before, a per-thought `scale` (vain for the couch, the suite, clothes and fancy booze; kind for watching cruelty; loyal for betrayal; playful for boredom) and a per-source one (fear × 1 − 0.5 × (brave − 5) ÷ 5, status × vanity). A thought that works out to zero (an aquatic's cold shower) isn't added.
+- **Where they come from:** "trapped here" (−5) from arrival, forever. Low needs, refreshed every ten minutes while under the line: hungry (hunger under 20, −4), exhausted (rest under 15, −6), couldn't wash (hygiene under 20, −6), lonely (social under 20, −4), bored (fun under 20, −4). Too cold or too hot, −0.5 per °F felt outside the range up to −8. Sleep leaves its thought on waking if it lasted three hours. Meals leave gourmet +6 or leftovers −4 (plain nothing). A cold shower and a sink bath leave theirs when finished. Clothes leave "dressed like a star" (+3, rank 1) or "dressed like nobody" (−3, rank 7) from one ceremony to the next. Witnesses of an insult, a mocking or a fight get "watched them be cruel" (−2, × kindness).
+- **Break checks** run on the hour for anyone awake and not asleep, fighting, in lovin' or on the toilet. They roll the chance of the deepest line their mood is under. The biggest grievance is the source whose bad thoughts add up to the most, among the sources in the table (guilt, romance and booze never pick a break); for a break aimed at someone, the target is whoever those thoughts are most about.
+- **The breaks:** binge (the cafe, 30 minutes, hunger +40), steal food (the cafe, hunger +50, theft), sulk in bed (two hours), tantrum (where they are, damaging the set), cry in the confessional (30 minutes), drink binge (the best bar they can enter, four drinks in an hour), hide (a restroom stall, an hour), panic (30 minutes), insulting spree (follows the target, an insult every 10 minutes for an hour), wreck their things (the target's bedroom, damage; the target gets "wrecked my things" −8 and affection −15), and the attacks. "Attack whoever outranks them most" goes for rank 1; "lash out at the feared person" goes for whoever they fear most (fear 10+). An attacker chases a target who moved on up to three times. Anything with no possible target, or that would need to leave the fishbowl, becomes an hour of moping instead. Broken contestants skip meals and are excused from the ceremony.
+- **Catharsis** (+15 for a day) comes when the break ends, however it ends.
+- **The attack** adds +3 to the attacker's fight roll. Only an attacker who wins can kill. The victim isn't charged with fighting. A murder pays the killer 40 to the meter only and 100 hidden lifetime points, revealed when they die; witnesses fear the killer +30 and get "saw them kill someone" (−12). The body, its discovery and the trial come with trials.
+
 ## Booze
 
 | Quality | Rank | Enjoyment per drink | Where |
@@ -715,6 +734,15 @@ The enjoyment thought lasts 3 hours and stacks to three drinks. Drinks can be ca
 | Hangover | Next morning | −3 to −10 by amount drunk; cheap and rotgut worst |
 
 **Drinking together** gives both affection +2 per shared drink.
+
+**How the build does it (proposed; numbers in `data/booze.yaml` and `data/objects.yaml`).**
+
+- **Where it pours:** the lounge bar (four at a time, 15 minutes, up to fancy, social with company), the rec room machine (one at a time, up to good) and the hidden still in the garden (20 minutes, rotgut). You get your rank's quality or the place's best, whichever is worse. Rank 7 is locked out of the lounge and rec room, so the still is theirs.
+- **Choosing a drink** scores the quality's fun like any other gain, plus the three pulls: 0.15 × drinking ÷ 10, 0.1 × (outgoing + playful) ÷ 20 when anyone else is in the room, and 0.25 × (50 − mood) ÷ 50 when mood is under 50, × 1 − (calm − 5) ÷ 5 (doubled for the fully volatile). The drink's whole score is × 1 − intoxication ÷ 100, so people slow down as they get drunk.
+- **A drink** adds intoxication, bladder −15, the enjoyment thought, and a hangover weight (fancy 1, good 1.5, cheap 2.5, rotgut 3.5). At the wake chime, a weight of 3 or more becomes a hangover of that size, between −3 and −10, for 8 hours.
+- **Stages** multiply the drinker's interaction chance and social gains by 1.5 from tipsy up; flirts, kisses and propositions × 1.5 tipsy and × 2 drunk or hammered; insults × 3 drunk or hammered; an insult's fight chance × the drunker person's 2 (drunk) or 3 (hammered); honesty and kindness act 2 lower when drunk or hammered; walking takes 1.5× as long when hammered. Getting hammered is logged once per time ("hammered antics", 4 points). Sobering up past hammered has a 30% chance of a blackout: they lose the ledger reasons from that stretch but keep the feelings.
+- **Drinking together:** finishing a drink while others in the room are drinking gives +2 affection toward each of them; they get theirs when they finish.
+- **Carrying and gifts:** after a drink, a 10% chance (× kindness, × 3 for hoarders) of taking one along, up to two. A gift is an interaction (weight 0.03, × kindness and affection) that needs a carried drink: the best one is handed over and downed on the spot, affection +5, or +15 when it's better than the target's own rank pours, "brought me a drink" (+4), and 2 points to the giver.
 
 ## The meter and scoring
 
@@ -753,7 +781,7 @@ The enjoyment thought lasts 3 hours and stacks to three drinks. Drinks can be ca
 **How the build does it (proposed; numbers in `data/meter.yaml` and `data/scoring.yaml`).**
 
 - **Drain** is continuous, 1/60 a minute. Crossing zero logs "on notice" once.
-- **Awards** are scored as events are logged, from a table keyed by event type: each actor, the first actor, the second, the winner or loser, and witnesses. The award lands on the event (its points, and each contestant's share), so the log is the record.
+- **Awards** are scored as events are logged, from a table keyed by event type: each actor, the first actor, the second, the winner or loser, and witnesses. The award lands on the event (its points, and each contestant's share), so the log is the record. A row can pick its amounts by a field of the event (lovin' the first time, a break's level), go to the meter only (murder), and add hidden lifetime points that are revealed when the contestant dies.
 - **Witnesses** are everyone awake in the room who isn't taking part. Infractions, sentences, the fishbowl release and deaths skip the witness multiplier, since everyone is always watching the ceremony.
 - **Repeats** only count for events between two people: × 0.5 per time that pair scored the same type in the last 3 days, in either order.
 - **Boredom** counts each event type station-wide per day and resets at midnight. An event that doesn't score (a fight in the cage) doesn't bore the judge.

@@ -1,8 +1,8 @@
 // The world is plain serializable data. Static definitions live in GameData, never in here.
-import type { Axis, Need } from '../data/schema.js';
+import type { Axis, Label, Level, Need } from '../data/schema.js';
 import type { Rng } from './rng.js';
 
-export type { Axis, Need };
+export type { Axis, Label, Level, Need };
 
 export type Personality = Record<Axis, number>;
 export type Needs = Record<Need, number>;
@@ -19,6 +19,8 @@ export interface Activity {
   endAt: number | null; // set on arrival; null: runs until its own end condition
   meal?: string; // meal id for meal activities
   food?: string; // what they were served
+  booze?: string; // what they're drinking
+  partner?: string; // who they're having lovin' with
 }
 
 export interface Contestant {
@@ -59,6 +61,24 @@ export interface Contestant {
   knocked: Record<string, number>; // host id -> when this contestant last knocked on them
   confined: Confinement | null; // serving a fishbowl sentence
   immunities: number; // secret immunities: each cancels one spacing
+  secret: number; // hidden lifetime points (murder), revealed when they die
+
+  intox: number; // 0.. intoxication
+  drinks: number; // hangover weight of what they've drunk since the last wake chime
+  hammeredSince: number | null;
+  inventory: string[]; // carried drinks, by quality
+  breakdown: Breakdown | null; // in the middle of a mental break
+}
+
+/** A mental break in progress. Its activity is the break kind; it ends with catharsis. */
+export interface Breakdown {
+  kind: string;
+  level: Level;
+  source: string;
+  target: string | null;
+  since: number;
+  follows: number; // times they've chased a target who moved on
+  next: number; // when the next insult or drink is due
 }
 
 export interface Confinement {
@@ -103,6 +123,9 @@ export interface Relation {
   chemistry: number; // hidden per-pair roll, the same on both sides
   met: number;
   reasons: Reason[];
+  label: Label; // what this contestant believes the relationship is
+  flirts: number; // flirts that landed between them, either way
+  lovin: number; // times they've had lovin'
 }
 
 export interface Thought {

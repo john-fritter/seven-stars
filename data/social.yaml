@@ -12,7 +12,7 @@ base: 0.5
 absorbed:
   kinds: [sleep, toilet]
   tags: [exposed]                  # proposal: not mid-shower
-  actions: [fight, at_door]
+  actions: [fight, at_door, lovin]
 
 # Proposal: who they turn to, × (1 + affection ÷ 100 × affection + attraction ÷ 10 × attraction),
 # never below `min`.
@@ -24,8 +24,12 @@ partner: { affection: 1, attraction: 1, min: 0.2 }
 #   attraction:    the actor's attraction to the target ÷ 5
 #   chemistry:     1 + k × the pair's hidden chemistry
 #   privacy:       1 + k × the room's apparent privacy
-# Every factor is kept between `factorRange`.
-# `needs`: the actor's minimum attraction or affection toward the target.
+#   monogamy:      1 + k × (monogamy − 5) ÷ 5
+# Every factor is kept between `factorRange`. Drunkenness multiplies some too (booze.yaml stages).
+# `needs`: the actor's minimum attraction or affection toward the target, the labels the actor
+# must hold for them, and `flirted` (a flirt has landed between them before).
+# `move`: a romance move or a gift, with its outcome in romance.yaml or booze.yaml.
+# `witnessThought`: a thought for everyone awake who sees it, about the actor.
 # `social`: social need gained by both. `knows`: how much better both learn the other's personality.
 # `actor` / `target`: ledger changes, the actor's toward the target and the target's toward the actor.
 # `thought`: a thought the target gets about the actor. `targetGains`: needs the target gains.
@@ -39,20 +43,33 @@ interactions:
       actor: { affection: 10, trust: 3 }, target: { affection: 10, trust: 3 } }   # trust: proposal
   - { id: kind_words, weight: 0.02, scale: [{ by: kind }], social: 4,
       target: { affection: 3 }, thought: kind_words }                           # affection: proposal
-  - { id: flirt, weight: 0.02, needs: { attraction: 4 }, social: 4,
+  - { id: flirt, weight: 0.02, move: flirt, needs: { attraction: 4 }, social: 4,
       scale: [{ by: attraction }, { by: privacy, k: 1 }, { by: brave, k: 0.5 }] }
   - { id: slight, weight: 0.02, scale: [{ by: affection, k: -2 }, { by: kind, k: -1 }],
       target: { affection: -5 }, thought: slighted }
   - { id: insult, weight: 0.007, scale: [{ by: affection, k: -2 }, { by: kind, k: -1 }],
-      target: { affection: -15, fear: 3 }, thought: insulted, fight: true }      # fear: proposal
+      target: { affection: -15, fear: 3 }, thought: insulted, fight: true,       # fear: proposal
+      witnessThought: saw_cruelty }
+  # Gifts: a carried drink (booze.yaml carry and gift).
+  - { id: gift, weight: 0.03, move: gift, needs: { inventory: true }, social: 4,
+      scale: [{ by: kind }, { by: affection, k: 1 }] }
+  # Romance moves (romance.yaml). Weights are proposals.
+  - { id: kiss, weight: 0.02, move: kiss, needs: { attraction: 6, flirted: true }, social: 4,
+      scale: [{ by: attraction }, { by: privacy, k: 1 }, { by: brave, k: 0.5 }] }
+  - { id: proposition, weight: 0.03, move: proposition, needs: { attraction: 6, affection: 20 }, social: 4,
+      scale: [{ by: attraction }, { by: brave, k: 0.5 }] }
+  - { id: ask_exclusive, weight: 0.02, move: exclusive, needs: { labels: [dating] }, social: 4,
+      scale: [{ by: monogamy, k: 1 }, { by: affection, k: 1 }] }
+  - { id: breakup, weight: 0.05, move: breakup, needs: { labels: [flirting, fling, dating, exclusive] },
+      scale: [{ by: affection, k: -2 }] }
   # Through the fishbowl glass (DESIGN.md: mock is cruel, talk is social, pass food is kind).
   # All proposal apart from the three kinds.
   - { id: glass_talk, weight: 1, glass: either, social: 6, actor: { affection: 1 }, target: { affection: 1 } }
   - { id: glass_mock, weight: 0.3, glass: outside, scale: [{ by: affection, k: -2 }, { by: kind, k: -1 }],
-      target: { affection: -5 }, thought: mocked }
+      target: { affection: -5 }, thought: mocked, witnessThought: saw_cruelty }
   - { id: pass_food, weight: 0.15, glass: outside, scale: [{ by: affection, k: 1 }, { by: kind, k: 1 }],
       social: 2, targetGains: { hunger: 20 }, target: { affection: 8 }, thought: fed }
-# Gifts wait for inventory (booze milestone); gossip waits for rumors.
+# Gossip waits for rumors.
 
 # Flirting. Success odds = the target's attraction back ÷ 10 × successScale.
 flirt:
@@ -62,7 +79,7 @@ flirt:
   awkward: awkward                              # the target's thought
 
 # Fights. Each insult has `chance` of a fight, × 1 + calmK × (calm − 5) ÷ 5 for the insulted
-# (so ×1.5 when fully volatile). Drunk multipliers arrive with booze.
+# (so ×1.5 when fully volatile), × the drunker of the two's stage (booze.yaml).
 fight:
   chance: 0.04
   calmK: -0.5
@@ -76,7 +93,8 @@ fight:
   loserFear: 10                                 # proposal: the loser's fear of the winner
   won: won_fight
   lost: lost_fight
-  cageRoom: cage                                # fights anywhere else are an infraction (show milestone)
+  cageRoom: cage                                # fights anywhere else are an infraction
+  witnessThought: saw_cruelty                   # proposal
 
 health:
   recoverPerHour: 2                             # proposal
@@ -112,7 +130,9 @@ attraction:
 # Proposal: the pull of company in action scoring, per person in the room,
 #   affection ÷ 100 × affection + attraction ÷ 10 × attraction + fear ÷ 100 × fear.
 # Not for sleeping or the toilet.
-companyPull: { affection: 0.3, attraction: 0.3, fear: -0.3 }
+# Proposal: a believed-private spot pulls harder when they're up to something: the attraction term for
+# anyone they fancy past romance.yaml proposition.attraction is × 1 + private × the room's privacy.
+companyPull: { affection: 0.3, attraction: 0.3, fear: -0.3, private: 2 }
 
 # Knocking to be let into a bedroom (D-096). Odds of yes:
 #   (base + affection × affection + attraction × attraction) × (1 + kindK × (kind − 5) ÷ 5), × asleep if asleep.

@@ -27,7 +27,7 @@ export function rel(a: Contestant, b: Contestant): Relation | undefined {
 export function meet(ctx: Ctx, a: Contestant, b: Contestant): void {
   if (a.ledger[b.id]) return;
   const chemistry = normal(ctx.w.rng, 0, ctx.data.social.attraction.chemistrySd);
-  const fresh = (): Relation => ({ affection: 0, trust: 0, fear: 0, attraction: 0, knows: 0, chemistry, met: ctx.w.t, reasons: [] });
+  const fresh = (): Relation => ({ affection: 0, trust: 0, fear: 0, attraction: 0, knows: 0, chemistry, met: ctx.w.t, reasons: [], label: 'none', flirts: 0, lovin: 0 });
   a.ledger[b.id] = fresh();
   b.ledger[a.id] = fresh();
   const first = ctx.data.social.attraction.firstImpression;

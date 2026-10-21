@@ -4,7 +4,9 @@ import { decide, endActivity, followComfort, onToilet, runActivity } from './act
 import type { Ctx } from './context.js';
 import { drainNeeds } from './needs.js';
 import { socialRound } from './social.js';
-import { expireThoughts } from './thoughts.js';
+import { soberMinute } from './booze.js';
+import { maybeBreak } from './breaks.js';
+import { conditions, expireThoughts } from './thoughts.js';
 import { createRng } from './rng.js';
 import { drainMeter, fearTheMeter } from './scoring.js';
 import { runSchedule } from './schedule.js';
@@ -58,6 +60,7 @@ function tick(ctx: Ctx): void {
   for (const c of ctx.w.contestants) {
     drainNeeds(ctx, c);
     drainMeter(ctx, c);
+    soberMinute(ctx, c);
     runActivity(ctx, c);
     // Near zero, the bladder overrides everything, sleep included.
     if (c.activity && c.needs.bladder < critical && !onToilet(ctx, c)) endActivity(ctx, c, 'interrupted');
@@ -68,7 +71,11 @@ function tick(ctx: Ctx): void {
     if (tenth) {
       followComfort(ctx, c, 10); // comfort moves slowly; every ten minutes is plenty
       expireThoughts(ctx, c);
-      if (hour) fearTheMeter(ctx, c);
+      conditions(ctx, c);
+      if (hour) {
+        fearTheMeter(ctx, c);
+        maybeBreak(ctx, c);
+      }
       c.health = Math.min(100, c.health + ctx.data.social.health.recoverPerHour / 6);
     }
   }

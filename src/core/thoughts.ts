@@ -1,30 +1,78 @@
 // Thoughts and mood: mood is the base plus every active thought. DESIGN.md Part two,
-// Thoughts, mood and breaks. Only what the social layer and the show need so far; breaks come later.
+// Thoughts, mood and breaks. Conditions (low needs, the temperature) are thoughts refreshed
+// while they last; breaks (breaks.ts) read the sources to pick what kind of break.
 import type { Ctx } from './context.js';
 import { axisFactor } from './needs.js';
+import { derived } from './derived.js';
+import { clothingWarmth, discomfortAt } from './temperature.js';
 import type { Contestant } from './types.js';
 
 /**
- * A thought's value for this contestant: volatility and species applied. `base` replaces the
- * data's value for thoughts whose size depends on the situation (the meter's dread).
+ * A thought's value for this contestant: personality, volatility and species applied. `base`
+ * replaces the data's value for thoughts whose size depends on the situation (the meter's dread).
  */
 export function thoughtValue(ctx: Ctx, c: Contestant, id: string, base?: number): number {
   const th = ctx.data.thoughts;
   const def = th.thoughts[id]!;
-  const v = base ?? def.species[c.species] ?? def.value;
-  return v * axisFactor(th.volatileK, c.personality.calm) * (th.species[c.species]?.[def.source] ?? 1);
+  let v = (base ?? def.species[c.species] ?? def.value) * axisFactor(th.volatileK, c.personality.calm) * (th.species[c.species]?.[def.source] ?? 1);
+  for (const s of def.scale) v *= axisFactor(s.k, c.personality[s.axis]);
+  for (const s of th.sources[def.source] ?? []) v *= axisFactor(s.k, c.personality[s.axis]);
+  return v;
 }
 
 /** Adds a thought. At the stacking limit for that thought about that person, the oldest goes. */
 export function think(ctx: Ctx, c: Contestant, id: string, about: string | null = null, base?: number): void {
   const def = ctx.data.thoughts.thoughts[id]!;
+  const value = thoughtValue(ctx, c, id, base);
+  if (value === 0) return;
   const same = c.thoughts.filter((x) => x.id === id && x.about === about);
   if (same.length >= def.stack) {
     const oldest = same.reduce((a, b) => (b.until < a.until ? b : a));
     c.thoughts.splice(c.thoughts.indexOf(oldest), 1);
   }
-  c.thoughts.push({ id, about, value: thoughtValue(ctx, c, id, base), until: ctx.w.t + def.hours * 60 });
+  c.thoughts.push({ id, about, value, until: ctx.w.t + def.hours * 60 });
   updateMood(ctx, c);
+}
+
+/** Drops a thought (and any repeats of it) if they have it. */
+export function forget(ctx: Ctx, c: Contestant, id: string): void {
+  if (!c.thoughts.some((x) => x.id === id)) return;
+  c.thoughts = c.thoughts.filter((x) => x.id !== id);
+  updateMood(ctx, c);
+}
+
+/** A thought that lasts while a condition holds: refreshed with the current value, or dropped. */
+export function condition(ctx: Ctx, c: Contestant, id: string, base: number | null): void {
+  const i = c.thoughts.findIndex((x) => x.id === id);
+  if (base === null) {
+    if (i >= 0) forget(ctx, c, id);
+    return;
+  }
+  const value = thoughtValue(ctx, c, id, base);
+  const until = ctx.w.t + ctx.data.thoughts.thoughts[id]!.hours * 60;
+  if (i >= 0) {
+    const x = c.thoughts[i]!;
+    x.until = until;
+    if (x.value === value) return;
+    x.value = value;
+    updateMood(ctx, c);
+  } else if (value !== 0) {
+    c.thoughts.push({ id, about: null, value, until });
+    updateMood(ctx, c);
+  }
+}
+
+/** Every ten minutes: low needs and the temperature reach mood. */
+export function conditions(ctx: Ctx, c: Contestant): void {
+  const th = ctx.data.thoughts;
+  for (const n of th.needs) condition(ctx, c, n.thought, c.needs[n.need] < n.below ? th.thoughts[n.thought]!.value : null);
+  const tp = th.temperature;
+  const temp = ctx.w.rooms[c.room]!.temp;
+  const off = discomfortAt(ctx, c, temp);
+  const cold = off > 0 && temp + clothingWarmth(ctx, c) < derived(ctx.data, c).comfortLo;
+  const value = off > 0 ? -Math.min(tp.max, off * tp.perDegree) : null;
+  condition(ctx, c, tp.cold, cold ? value : null);
+  condition(ctx, c, tp.hot, cold ? null : value);
 }
 
 /** Drops expired thoughts. */
@@ -39,4 +87,33 @@ export function updateMood(ctx: Ctx, c: Contestant): void {
   let m = ctx.data.personality.mood.base;
   for (const x of c.thoughts) m += x.value;
   c.mood = Math.min(100, Math.max(0, m));
+}
+
+/**
+ * The worst grievance among `sources`: the source whose bad thoughts add up to the most, and who
+ * its thoughts are most about.
+ */
+export function grievance(ctx: Ctx, c: Contestant, sources: Record<string, unknown>): { source: string; about: string | null } | null {
+  const th = ctx.data.thoughts.thoughts;
+  const bySource = new Map<string, number>();
+  for (const x of c.thoughts) {
+    const s = th[x.id]!.source;
+    if (x.value < 0 && s in sources) bySource.set(s, (bySource.get(s) ?? 0) + x.value);
+  }
+  let source: string | null = null;
+  let worst = 0;
+  for (const [s, v] of bySource) {
+    if (v < worst) [source, worst] = [s, v];
+  }
+  if (source === null) return null;
+  const byWho = new Map<string, number>();
+  for (const x of c.thoughts) {
+    if (x.value < 0 && x.about !== null && th[x.id]!.source === source) byWho.set(x.about, (byWho.get(x.about) ?? 0) + x.value);
+  }
+  let about: string | null = null;
+  worst = 0;
+  for (const [id, v] of byWho) {
+    if (v < worst) [about, worst] = [id, v];
+  }
+  return { source, about };
 }

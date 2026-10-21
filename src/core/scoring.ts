@@ -25,10 +25,13 @@ export function witnessMultiplier(ctx: Ctx, n: number): number {
 
 /** Scores an event that was just logged, writing `points` and per-contestant `awards` onto it. */
 export function award(ctx: Ctx, e: SimEvent): void {
-  const row = ctx.data.scoring.awards[e.type];
-  if (!row) return;
+  const base0 = ctx.data.scoring.awards[e.type];
+  if (!base0) return;
   const d = e.data ?? {};
-  if (row.only && !d[row.only]) return;
+  if (base0.only && !d[base0.only]) return;
+  // A case picked by a data field replaces the row's amounts (lovin' the first time, break levels).
+  const picked = base0.by !== undefined ? base0.cases[String(d[base0.by])] : undefined;
+  const row = picked ? { ...base0, each: undefined, actor: undefined, target: undefined, winner: undefined, loser: undefined, witnesses: undefined, ...picked } : base0;
   const m = ctx.data.scoring.modifiers;
   const show = ctx.w.show;
 
@@ -68,10 +71,13 @@ export function award(ctx: Ctx, e: SimEvent): void {
     const pts = round2(v * mult);
     if (pts <= 0) continue;
     addMeter(ctx, c, pts);
-    c.lifetime = round2(c.lifetime + pts);
+    if (!row.meterOnly) c.lifetime = round2(c.lifetime + pts);
     awards[id] = pts;
     total += pts;
   }
+  // Hidden lifetime points go to the first actor, kept secret until they die.
+  const actor = row.secret ? ctx.w.contestants.find((x) => x.id === e.actors[0]) : undefined;
+  if (actor) actor.secret = round2(actor.secret + row.secret!);
   if (!total) return;
   e.points = round2(total);
   e.data = { ...d, awards };

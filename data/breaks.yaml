@@ -1,0 +1,73 @@
+# Mental breaks. DESIGN.md Part two, Thoughts, mood and breaks.
+#
+# Break lines come from calmness: minor = minorBase + minorPerVolatile × (10 − calm);
+# major = minor × majorShare; extreme = minor × extremeShare. Every hour, an awake contestant
+# below a line rolls that line's chance (the deepest line they're under).
+lines: { minorBase: 30, minorPerVolatile: 1.5, majorShare: 0.5714, extremeShare: 0.142857 }
+chance: { minor: 0.04, major: 0.1, extreme: 0.2 }
+
+# Every break ends with catharsis.
+catharsis: catharsis
+
+# The biggest grievance picks the break: the source whose active thoughts add up to the most
+# negative. Sources not listed never pick one. "—" in DESIGN.md falls back to the major break.
+sources:
+  hunger:      { minor: binge, major: steal_food, extreme: steal_food }
+  envy:        { minor: binge, major: steal_food, extreme: steal_food }
+  discomfort:  { minor: sulk, major: tantrum, extreme: tantrum }
+  status:      { minor: cry, major: drink_binge, extreme: attack_top }
+  humiliation: { minor: cry, major: drink_binge, extreme: attack_top }
+  rejection:   { minor: hide, major: drink_binge, extreme: attack_rejecter }
+  person:      { minor: insult_spree, major: wreck, extreme: attack }
+  fear:        { minor: hide, major: panic, extreme: lash_out }
+  grief:       { minor: hide, major: panic, extreme: lash_out }
+
+# What each break does (all proposal apart from the names in DESIGN.md).
+#   room:     here | bed (their own bed's room) | target (wherever the target is) | target_bed
+#             (the target's bedroom) | bar (the best place that pours that they can enter) | a room id
+#   target:   about (whoever the biggest thought of that source is about) | top (whoever
+#             outranks them most) | feared (whoever they fear most)
+#   gains:    needs refilled over the break; drinks: drinks downed over it
+#   infraction: a rule broken on arrival (theft, damage)
+#   insults:  insult the target every this many minutes while they're in the room
+#   wreck:    the target's thought and affection toward the breaker
+#   attack:   a crime of passion (below)
+# A break that can't happen (no target, or they're in the fishbowl and it needs to go somewhere)
+# becomes `fallback` instead.
+fallback: mope
+kinds:
+  mope:            { label: "mopes", room: here, minutes: 60 }
+  binge:           { label: "binge-eats in the cafe", room: cafe, minutes: 30, gains: { hunger: 40 } }
+  steal_food:      { label: "raids the cafe's treats", room: cafe, minutes: 15, gains: { hunger: 50 }, infraction: theft }
+  sulk:            { label: "sulks in bed", room: bed, minutes: 120 }
+  tantrum:         { label: "throws a tantrum and breaks things", room: here, minutes: 20, infraction: damage }
+  cry:             { label: "sobs in the confessional", room: confessional, minutes: 30 }
+  drink_binge:     { label: "goes on a bender", room: bar, minutes: 60, drinks: 4 }
+  hide:            { label: "hides in a restroom stall", room: restroom, minutes: 60 }
+  panic:           { label: "panics", room: here, minutes: 30 }
+  insult_spree:    { label: "goes on an insulting spree", room: target, target: about, minutes: 60, insults: 10 }
+  wreck:           { label: "wrecks someone's things", room: target_bed, target: about, minutes: 15, infraction: damage,
+                     wreck: { thought: wrecked, affection: -15 } }
+  attack:          { label: "goes for someone", room: target, target: about, minutes: 10, attack: true }
+  attack_rejecter: { label: "goes for whoever rejected them", room: target, target: about, minutes: 10, attack: true }
+  attack_top:      { label: "goes for the top of the ranking", room: target, target: top, minutes: 10, attack: true }
+  lash_out:        { label: "lashes out", room: target, target: feared, minutes: 10, attack: true }
+  catatonic:       { label: "sits catatonic", room: here, minutes: 120 }
+
+# Crimes of passion. An extreme attack turns violent only if kindness is at most `kindAtMost` or
+# calm at most `calmAtMost` (drunk kindness counts); otherwise it collapses into `otherwise`.
+# The attack is a fight in which the attacker gets the first blow (proposal: + firstBlow to their
+# roll). The chance it kills: perStrength × the attacker's strength advantage, × the room's
+# weapon (a knife from the cafe, the hot tub). Proposal: they chase the target up to `follow`
+# times if the target has moved on by the time they arrive.
+passion:
+  kindAtMost: 3
+  calmAtMost: 2
+  otherwise: catatonic
+  firstBlow: 3
+  perStrength: 0.05
+  weapons: { cafe: 4, spa: 3 }
+  follow: 3
+  witnessFear: 30         # proposal: witnesses' fear of a killer
+  witnessThought: saw_murder
+  feared: 10              # proposal: the least fear that makes someone "the feared person"
