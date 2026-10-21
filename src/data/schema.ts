@@ -104,7 +104,13 @@ export const objectsSchema = z.object({
 export const needsSchema = z.object({
   needs: z.record(needEnum, z.object({ drainPerHour: num.min(0), weight: num, start: range })),
   asleepDrain: z.record(needEnum, num),
-  sleep: z.object({ restPerHour: num }),
+  sleep: z.object({
+    restPerHour: num,
+    // Sharing a bed: how a contestant feels about a bedmate, and the thoughts it leaves.
+    share: z.object({ neutral: num, pull: num, reluctant: unit, refused: z.string(), labels: z.record(z.string(), num).default({}), good: z.string(), bad: z.string() }),
+    // Noisy people (quirks with `noise`) disturb sleepers in the same room.
+    noise: z.object({ restMult: num.min(0), wakeChance: unit, cost: num, thought: z.string(), affection: num }),
+  }),
   bladder: z.object({ criticalBelow: num, waitMinutes: z.number().int().positive() }),
   comfortFollowPerHour: num,
 });
@@ -160,6 +166,7 @@ export const actionsSchema = z.object({
   topChoices: z.number().int().positive(),
   walkCostPerMinute: num,
   modestyCost: num,
+  modestyThought: z.string(), // finishing an exposed action with someone watching
   recreationTaste: z.object({ favorite: num, other: num }),
   mealPull: num,
   nightSleepPull: num,
@@ -181,7 +188,11 @@ export const generatorSchema = z.object({
   }),
   recreation: z.array(z.string()).min(1),
   favoriteRecreations: z.number().int().nonnegative(),
-  quirks: z.array(z.string()).min(1),
+  // Each quirk's weight in the roll, and its hooks: `noise` (snoring while asleep, humming while
+  // awake) disturbs sleepers; `nightShift` moves their night later by that many minutes.
+  quirks: z
+    .record(z.string(), z.object({ weight: num.positive(), noise: z.enum(['asleep', 'awake']).optional(), nightShift: num.default(0) }))
+    .refine((q) => Object.keys(q).length > 0, 'needs at least one quirk'),
   names: z.array(z.string()).min(14),
 });
 
@@ -359,7 +370,8 @@ export const socialSchema = z.object({
   }),
 });
 
-const axisScale = z.array(z.object({ axis: axisEnum, k: num.default(0.5) })).default([]);
+// A thought can also scale by modesty (a taste, not a personality axis): minding being seen.
+const axisScale = z.array(z.object({ axis: z.union([axisEnum, z.literal('modesty')]), k: num.default(0.5) })).default([]);
 
 export const thoughtsSchema = z.object({
   volatileK: num,
@@ -454,11 +466,14 @@ export const romanceSchema = z.object({
     privacy: unit,
     successScale: num,
     turnedDown: z.string(),
-    minutes: z.number().int().positive(),
+    minutes: z.tuple([z.number().int().positive(), z.number().int().positive()]),
     thought: z.string(),
     bond: num,
     disturbed: z.string(),
     datingAt: num,
+    // Where: a bed by default; sometimes right here, which is a show for anyone watching.
+    bed: z.object({ walkCost: num, crowd: num }),
+    here: z.object({ chance: unit, noBed: unit, modestyK: num, braveK: num, witnessThought: z.string() }),
   }),
   exclusive: z.object({ loyalK: num, thought: z.string(), refused: z.string() }),
   breakup: z.object({ affectionBelow: num, dumped: z.string() }),

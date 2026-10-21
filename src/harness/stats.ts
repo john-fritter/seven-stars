@@ -40,6 +40,8 @@ export interface SeedStats {
   murders: Record<string, number>; // witnessed, found (by someone), announced, accused, unaccused, trials, right, wrong, spared
   bodyMinutes: number[]; // how long an unwitnessed body lay before it was found
   fightsOutsideCage: number;
+  beds: Record<string, number>; // lovin' by place and minutes, bed-share asks, nights, bedmates, noise
+  wakeMinutes: Record<string, number[]>; // time of day of each morning wake after a night, night owls and others
 }
 
 function add(m: Record<string, number>, k: string, v = 1): void {
@@ -84,7 +86,11 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
     murders: {},
     bodyMinutes: [],
     fightsOutsideCage: 0,
+    beds: {},
+    wakeMinutes: { owl: [], other: [] },
   };
+  const owls = new Set<string>();
+  const wokeToday = new Set<string>();
   const stage = new Map<string, { stage: string; since: number }>();
   let bottom: string | null = null;
   let streak = 0;
@@ -92,6 +98,7 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
   const world = createWorld(data, seed);
   for (let d = 0; d < days; d++) {
     const events = step(world, MINUTES_PER_DAY);
+    wokeToday.clear();
     let isNotable = false;
     let sentenced = false;
     for (const e of events) {
@@ -99,6 +106,13 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
       if (notable.has(e.type)) isNotable = true;
       if (e.type === 'sentence') sentenced = true;
       tally(s, e);
+      if (e.type === 'arrive' && data.generator.quirks[e.data!.quirk as string]?.nightShift) owls.add(e.actors[0]!);
+      // The first wake after a night, each day: when do night owls get up?
+      const m = e.t % MINUTES_PER_DAY;
+      if (e.type === 'wake' && (e.data!.slept as number) >= data.thoughts.sleepMinutes && m >= 180 && m < 840 && !wokeToday.has(e.actors[0]!)) {
+        wokeToday.add(e.actors[0]!);
+        s.wakeMinutes[owls.has(e.actors[0]!) ? 'owl' : 'other']!.push(m);
+      }
       if (e.type === 'intox') {
         const id = e.actors[0]!;
         const prev = stage.get(id);
@@ -147,6 +161,22 @@ function tally(s: SeedStats, e: SimEvent): void {
       break;
     case 'knock':
       add(s.knocks, d.answer as string);
+      break;
+    case 'lovin':
+      add(s.beds, `lovin_${d.where as string}`);
+      add(s.beds, 'lovinMinutes', d.minutes as number);
+      break;
+    case 'share_ask':
+      add(s.beds, `share_${d.answer as string}`);
+      break;
+    case 'kept_up':
+      add(s.beds, 'keptUpWakings');
+      break;
+    case 'wake':
+      if ((d.slept as number) < 180) break;
+      add(s.beds, 'nights');
+      if (d.bedmate) add(s.beds, d.glad ? 'sharedGlad' : 'sharedSorry');
+      if (d.kept) add(s.beds, 'disturbedNights');
       break;
     case 'ceremony':
       s.ceremonies++;
@@ -294,6 +324,18 @@ export interface Report {
     perWeek: Record<string, number>; // what happens after a murder
     bodyHours: number | null; // average hours an unwitnessed body lay before anyone knew
   };
+  beds: {
+    lovinPerWeek: Record<string, number>; // by where: bed, bedroom (not in a bed), public
+    lovinMinutes: number | null; // average length
+    offToBedPerWeek: number;
+    rainChecksPerWeek: number;
+    shareAsks: { perWeek: number; yesShare: number | null };
+    sharedNightShare: number | null; // nights (3h+ of sleep) spent beside someone
+    sorryShare: number | null; // of those, the share where they'd rather not have
+    disturbedNightShare: number | null; // nights cut into by a snorer or hummer
+    keptUpWakingsPerWeek: number;
+    wakeTime: { owl: number | null; other: number | null }; // average minute of day of the first wake after a night
+  };
 }
 
 export function report(data: GameData, seeds: SeedStats[]): Report {
@@ -408,6 +450,24 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
       return {
         perWeek: Object.fromEntries(Object.entries(sum((s) => s.murders)).map(([k, v]) => [k, perWeek(v)])),
         bodyHours: mins.length ? mins.reduce((a, b) => a + b, 0) / mins.length / 60 : null,
+      };
+    })(),
+    beds: (() => {
+      const b = sum((s) => s.beds);
+      const lovins = (b.lovin_bed ?? 0) + (b.lovin_bedroom ?? 0) + (b.lovin_public ?? 0);
+      const shared = (b.sharedGlad ?? 0) + (b.sharedSorry ?? 0);
+      const avg = (xs: number[]) => (xs.length ? xs.reduce((a, x) => a + x, 0) / xs.length : null);
+      return {
+        lovinPerWeek: { bed: perWeek(b.lovin_bed ?? 0), bedroom: perWeek(b.lovin_bedroom ?? 0), public: perWeek(b.lovin_public ?? 0) },
+        lovinMinutes: lovins ? (b.lovinMinutes ?? 0) / lovins : null,
+        offToBedPerWeek: perWeek(events.off_to_bed ?? 0),
+        rainChecksPerWeek: perWeek(events.rain_check ?? 0),
+        shareAsks: { perWeek: perWeek((b.share_yes ?? 0) + (b.share_no ?? 0)), yesShare: ratio(b.share_yes ?? 0, (b.share_yes ?? 0) + (b.share_no ?? 0)) },
+        sharedNightShare: ratio(shared, b.nights ?? 0),
+        sorryShare: ratio(b.sharedSorry ?? 0, shared),
+        disturbedNightShare: ratio(b.disturbedNights ?? 0, b.nights ?? 0),
+        keptUpWakingsPerWeek: perWeek(b.keptUpWakings ?? 0),
+        wakeTime: { owl: avg(seeds.flatMap((s) => s.wakeMinutes.owl!)), other: avg(seeds.flatMap((s) => s.wakeMinutes.other!)) },
       };
     })(),
     relations: rel.pairs ? { friends: (rel.friends ?? 0) / rel.pairs, rivals: (rel.rivals ?? 0) / rel.pairs, crushes: (rel.crushes ?? 0) / rel.pairs, affection: (rel.affection ?? 0) / rel.pairs } : null,

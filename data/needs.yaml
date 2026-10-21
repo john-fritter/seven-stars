@@ -15,6 +15,29 @@ asleepDrain: { hunger: 0.5, rest: 0, hygiene: 1, bladder: 0.3, social: 0, fun: 0
 
 sleep:
   restPerHour: 12        # × the bed's quality: suite 1.2, good 1.0, dorm 0.8, couch 0.6
+  # Proposal: every bed sleeps two. Sharing is welcome with someone they fancy and unwelcome
+  # otherwise. Scoring a bed with someone in it (or a host's bed), the bedmate adds
+  #   pull × (attraction − neutral) ÷ 10 + labels[their label for the bedmate]
+  # Waking after a real night (thoughts.yaml sleepMinutes) beside someone leaves `good` when that
+  # came out at 0 or more, `bad` otherwise, about the bedmate.
+  share:
+    neutral: 5
+    pull: 3
+    labels: { fling: 0.5, dating: 1, exclusive: 1.5 }
+    reluctant: 0.3       # asked to share (a knock or a roommate asking), a host who'd rather not says yes this much less often
+    refused: share_refused   # the asker's thought on a no (milder than being turned away at the door)
+    good: slept_beside
+    bad: shared_bed
+  # Proposal: a snorer asleep or a hummer awake in the room cuts other sleepers' rest gain to
+  # restMult, with wakeChance a minute of waking them. A bed in a room with someone noisy in it
+  # right now costs `cost` in scoring. Waking after a disturbed sleep: `thought` about the
+  # culprit and affection toward them.
+  noise:
+    restMult: 0.7
+    wakeChance: 0.003
+    cost: 1
+    thought: kept_up
+    affection: -3
 
 bladder:
   criticalBelow: 10      # proposal: below this it overrides everything and they head for a toilet

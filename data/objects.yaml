@@ -27,11 +27,11 @@ types:
     actions:
       - { id: sleep, label: sleeps in the suite, kind: sleep, quality: 1.2, comfort: 85, assigned: true, thought: slept_suite, tags: [solitary, comforting] }
   bed_good:
-    capacity: 1
+    capacity: 2                 # every bed sleeps two (john, Oct 21)
     actions:
       - { id: sleep, label: sleeps, kind: sleep, quality: 1.0, comfort: 70, assigned: true, tags: [solitary, comforting] }
   bed_dorm:
-    capacity: 1
+    capacity: 2                 # every bed sleeps two (john, Oct 21)
     actions:
       - { id: sleep, label: sleeps in a bunk, kind: sleep, quality: 0.8, comfort: 50, assigned: true, thought: slept_dorm, tags: [solitary, comforting] }
   fishbowl_floor:

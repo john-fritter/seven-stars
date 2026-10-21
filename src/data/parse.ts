@@ -177,6 +177,15 @@ function crossCheck(d: GameData, dir: string): void {
   thought(ro.proposition.turnedDown, 'romance.yaml: proposition.turnedDown');
   thought(ro.proposition.thought, 'romance.yaml: proposition.thought');
   thought(ro.proposition.disturbed, 'romance.yaml: proposition.disturbed');
+  thought(ro.proposition.here.witnessThought, 'romance.yaml: proposition.here.witnessThought');
+  if (ro.proposition.minutes[0] > ro.proposition.minutes[1]) errors.push(`${dir}/romance.yaml: proposition.minutes: the shortest comes first`);
+  const sl = d.needs.sleep;
+  thought(sl.share.refused, 'needs.yaml: sleep.share.refused');
+  thought(sl.share.good, 'needs.yaml: sleep.share.good');
+  thought(sl.share.bad, 'needs.yaml: sleep.share.bad');
+  thought(sl.noise.thought, 'needs.yaml: sleep.noise.thought');
+  thought(d.actions.modestyThought, 'actions.yaml: modestyThought');
+  for (const q of Object.keys(d.booze.carry.quirks)) if (!d.generator.quirks[q]) errors.push(`${dir}/booze.yaml: carry.quirks: no quirk "${q}" in generator.yaml`);
   thought(ro.exclusive.thought, 'romance.yaml: exclusive.thought');
   thought(ro.exclusive.refused, 'romance.yaml: exclusive.refused');
   thought(ro.breakup.dumped, 'romance.yaml: breakup.dumped');

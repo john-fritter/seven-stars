@@ -3,6 +3,7 @@ noise: [0.85, 1.15]
 topChoices: 3                 # a weighted pick among the best few
 walkCostPerMinute: 0.05       # proposal
 modestyCost: 1.0              # proposal: × modesty / 10, for exposed actions with others in the room
+modestyThought: no_privacy    # proposal: finishing an exposed action with someone awake watching (scaled by modesty)
 recreationTaste:              # proposal: fun gains × this
   favorite: 1.5
   other: 0.8

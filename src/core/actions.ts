@@ -6,14 +6,16 @@
 import type { ActionDef, MealDef, Need } from '../data/schema.js';
 import { drinkFun, drinkPull, finishDrink, qualityFor, soberFactor, stageMult } from './booze.js';
 import { breakArrive, breakMinute, endBreak } from './breaks.js';
-import { accessRank, canEnter, dayOf, effectOn, effectsToday, inRanks, isNight, log, timeOfDay, type Ctx } from './context.js';
+import { accessRank, canEnter, dayOf, effectOn, effectsToday, inRanks, isNightFor, log, noisy, timeOfDay, type Ctx } from './context.js';
 import { gathering } from './schedule.js';
 import { gainsOf, personalityOf } from './derived.js';
+import { feel, rel } from './ledger.js';
 import { addNeed, needUrgency } from './needs.js';
-import { between, weightedIndex } from './rng.js';
+import { between, chance, weightedIndex } from './rng.js';
+import { labelOf, lovinArrive } from './romance.js';
 import { walkMinutes, type ObjectInstance } from './station.js';
 import { caughtIn, infraction, sneakCost } from './show.js';
-import { companyPull, expectedKnockOdds, knock, occupants } from './social.js';
+import { askToShare, companyPull, expectedKnockOdds, guestOf, knock, occupants } from './social.js';
 import { discomfortAt, preferredSetting, setThermostat, situationComfort } from './temperature.js';
 import { think } from './thoughts.js';
 import type { Activity, Contestant } from './types.js';
@@ -80,13 +82,13 @@ function company(ctx: Ctx, c: Contestant): Map<string, number> {
   return m;
 }
 
-function scoreAction(ctx: Ctx, c: Contestant, def: ActionDef, room: string, others: Map<string, number>, critical: boolean, night: boolean, pull: number): number {
+function scoreAction(ctx: Ctx, c: Contestant, def: ActionDef, room: string, others: Map<string, number>, critical: boolean, night: boolean, pull: number, extra = 0): number {
   const a = ctx.data.actions;
   const walk = walkMinutes(ctx.st, c.room, room);
   if (critical) return def.kind === 'toilet' ? 100 - walk : 0; // nearest toilet wins
 
   let needs = 0;
-  let pulls = def.kind === 'sleep' || def.kind === 'toilet' ? 0 : pull;
+  let pulls = (def.kind === 'sleep' || def.kind === 'toilet' ? 0 : pull) + extra;
   for (const [n, g] of gainsOf(ctx.data, c, def)) {
     if (n === 'social' && def.company && !others.get(room)) continue;
     needs += needTerm(ctx, c, n, g);
@@ -145,6 +147,40 @@ function bedAllowed(ctx: Ctx, c: Contestant, o: ObjectInstance, host: Contestant
   return !!host && host.bed === o.id && o.capacity > 1;
 }
 
+/** Whose bed this is, if anyone's. */
+function ownerOf(ctx: Ctx, o: ObjectInstance): Contestant | undefined {
+  return ctx.w.contestants.find((x) => x.bed === o.id);
+}
+
+/**
+ * How `c` feels about sharing a bed with `mate`: welcome with someone they fancy, unwelcome
+ * otherwise. pull × (attraction − neutral) ÷ 10 + a bonus for their label.
+ */
+export function bedmateFeeling(ctx: Ctx, c: Contestant, mate: Contestant): number {
+  const s = ctx.data.needs.sleep.share;
+  return (s.pull * ((rel(c, mate)?.attraction ?? 0) - s.neutral)) / 10 + (s.labels[labelOf(c, mate)] ?? 0);
+}
+
+/** Who'd be in this bed with them: whoever's in it or heading there, and its owner if it isn't theirs. */
+function bedmates(ctx: Ctx, c: Contestant, o: ObjectInstance): Contestant[] {
+  const ids = new Set(ctx.w.objects[o.id]!.filter((id) => id !== c.id));
+  const owner = ownerOf(ctx, o);
+  if (owner && owner !== c) ids.add(owner.id);
+  return ctx.w.contestants.filter((x) => ids.has(x.id));
+}
+
+/**
+ * Extra pull on a bed: how they feel about the bedmates (choosing where to spend the night, not
+ * a nap), and the cost of someone noisy in there right now.
+ */
+function bedExtra(ctx: Ctx, c: Contestant, o: ObjectInstance, def: ActionDef, night: boolean): number {
+  if (def.kind !== 'sleep') return 0;
+  let x = 0;
+  if (def.assigned && night) for (const m of bedmates(ctx, c, o)) x += bedmateFeeling(ctx, c, m);
+  if (ctx.w.contestants.some((n) => n !== c && n.room === o.room && noisy(ctx, n))) x -= ctx.data.needs.sleep.noise.cost;
+  return x;
+}
+
 function hostOf(ctx: Ctx, c: Contestant): Contestant | undefined {
   const g = c.guest;
   return g ? ctx.w.contestants.find((o) => o.id === g.host) : undefined;
@@ -154,7 +190,7 @@ function candidates(ctx: Ctx, c: Contestant): Candidate[] {
   const out: Candidate[] = [];
   const others = company(ctx, c);
   const critical = c.needs.bladder < ctx.data.needs.bladder.criticalBelow;
-  const night = isNight(ctx, ctx.w.t);
+  const night = isNightFor(ctx, c, ctx.w.t);
   const host = hostOf(ctx, c);
   for (const room of ctx.st.rooms) {
     // Rooms above their rank are a choice too, at the risk of an infraction; never when the
@@ -163,23 +199,26 @@ function candidates(ctx: Ctx, c: Contestant): Candidate[] {
     if (sneak && (critical || c.confined || room.access === 'robots')) continue;
     const risk = sneak && !caughtIn(ctx, c, room.id) ? sneakCost(ctx, c) : 0;
     const pull = critical ? 0 : companyPull(ctx, c, room.id);
-    const guest = c.guest?.room === room.id && !(c.bed !== null && ctx.st.object.get(c.bed)!.room === room.id);
+    const guestHere = c.guest?.room === room.id;
+    const guest = guestHere && !(c.bed !== null && ctx.st.object.get(c.bed)!.room === room.id);
     for (const o of ctx.st.objectsInRoom.get(room.id)!) {
       const users = ctx.w.objects[o.id]!;
       if (users.length >= o.capacity && !users.includes(c.id)) continue;
       for (const def of o.actions) {
-        if (def.assigned && !bedAllowed(ctx, c, o, guest ? host : undefined)) continue;
+        if (def.assigned && !bedAllowed(ctx, c, o, guestHere ? host : undefined)) continue;
         if (def.kind === 'thermostat' && (sneak || guest || preferredSetting(ctx, c) === ctx.w.rooms[room.id]!.setting)) continue;
         if (!usable(ctx, c, def)) continue;
         // The night pull is for a bed of their own (or their host's), not the nearest couch.
         const bedtime = night && (def.assigned || o.id === c.bed);
-        const score = scoreAction(ctx, c, def, room.id, others, critical, bedtime, pull) - risk;
+        const score = scoreAction(ctx, c, def, room.id, others, critical, bedtime, pull, bedExtra(ctx, c, o, def, night)) - risk;
         out.push({ def, object: o, room: room.id, score });
       }
     }
   }
   if (critical) return out;
-  if (!c.confined) knockCandidates(ctx, c, others, night, out);
+  // One invitation at a time: a guest leaves before knocking anywhere else.
+  if (!c.confined && !(c.guest && c.room === c.guest.room)) knockCandidates(ctx, c, others, night, out);
+  if (!c.confined && !c.guest) shareCandidates(ctx, c, others, night, out);
   for (const def of ctx.st.personal) {
     if (usable(ctx, c, def)) out.push({ def, object: null, room: c.room, score: scoreAction(ctx, c, def, c.room, others, false, night, companyPull(ctx, c, c.room)) });
   }
@@ -209,9 +248,30 @@ function knockCandidates(ctx: Ctx, c: Contestant, others: Map<string, number>, n
       for (const def of o.actions) {
         if (def.assigned && !bedAllowed(ctx, c, o, host)) continue;
         if (!k.actions.includes(def.id) || !usable(ctx, c, def)) continue;
-        const score = scoreAction(ctx, c, def, room.id, others, false, night, pull) * odds - k.cost;
+        const score = scoreAction(ctx, c, def, room.id, others, false, night, pull, bedExtra(ctx, c, o, def, night)) * odds - k.cost;
         if (score > 0) out.push({ def, object: o, room: room.id, knock: host.id, score });
       }
+    }
+  }
+}
+
+/**
+ * Roommates' beds: every bed sleeps two, so they can ask to climb in. Scored like a knock: the
+ * bed's score × the odds they expect, minus the awkwardness of asking.
+ */
+function shareCandidates(ctx: Ctx, c: Contestant, others: Map<string, number>, night: boolean, out: Candidate[]): void {
+  if (c.bed === null) return;
+  const k = ctx.data.social.knock;
+  const roomId = ctx.st.object.get(c.bed)!.room;
+  const pull = companyPull(ctx, c, roomId);
+  for (const host of occupants(ctx, roomId, c)) {
+    const o = ctx.st.object.get(host.bed!)!;
+    if (o.id === c.bed || ctx.w.objects[o.id]!.length >= o.capacity || guestOf(ctx, host)) continue;
+    const odds = expectedKnockOdds(ctx, c, host);
+    for (const def of o.actions) {
+      if (def.kind !== 'sleep' || !usable(ctx, c, def)) continue;
+      const score = scoreAction(ctx, c, def, roomId, others, false, night, pull, bedExtra(ctx, c, o, def, night)) * odds - k.cost;
+      if (score > 0) out.push({ def, object: o, room: roomId, knock: host.id, score });
     }
   }
 }
@@ -247,7 +307,8 @@ export function decide(ctx: Ctx, c: Contestant): void {
     const def = choice.def!;
     if (choice.knock) {
       const host = ctx.w.contestants.find((o) => o.id === choice.knock)!;
-      if (!knock(ctx, c, host, choice.room)) {
+      const asked = canEnter(ctx, c, choice.room) ? askToShare(ctx, c, host, choice.room) : knock(ctx, c, host, choice.room, def.kind === 'sleep');
+      if (!asked) {
         begin(ctx, c, { action: AT_DOOR, object: null, room: c.room, minutes: ctx.data.social.knock.waitMinutes });
         return;
       }
@@ -265,6 +326,7 @@ export interface Plan {
   meal?: MealDef;
   food?: string;
   partner?: string;
+  length?: number;
 }
 
 export function begin(ctx: Ctx, c: Contestant, p: Plan): void {
@@ -283,6 +345,7 @@ export function begin(ctx: Ctx, c: Contestant, p: Plan): void {
   if (p.meal) a.meal = p.meal.id;
   if (p.food) a.food = p.food;
   if (p.partner) a.partner = p.partner;
+  if (p.length) a.length = p.length;
   const def = p.object ? ctx.st.object.get(p.object)!.actions.find((d) => d.id === p.action) : undefined;
   if (def?.kind === 'drink') a.booze = qualityFor(ctx, c, def.booze!);
   if (p.object) ctx.w.objects[p.object]!.push(c.id);
@@ -306,6 +369,7 @@ function arrive(ctx: Ctx, c: Contestant): void {
   if (a.action === MEAL) c.eaten[ctx.data.schedule.meals.find((m) => m.id === a.meal)!.group] = dayOf(ctx.w.t);
   const def = actionDef(ctx, a);
   if (def?.kind === 'sleep') c.asleep = true;
+  if (a.action === LOVIN) lovinArrive(ctx, c);
   if (c.breakdown && a.action === c.breakdown.kind) breakArrive(ctx, c);
 }
 
@@ -325,9 +389,10 @@ export function endActivity(ctx: Ctx, c: Contestant, how: 'done' | 'interrupted'
     }
     if (def?.logs) log(ctx, def.logs, [c.id], a.room);
     if (def?.thought && def.kind !== 'sleep') think(ctx, c, def.thought);
+    // Seen in the shower (or on an open toilet): the modest mind.
+    if (def?.tags.includes('exposed') && !def.private && ctx.w.contestants.some((o) => o !== c && o.room === c.room && !o.asleep)) think(ctx, c, ctx.data.actions.modestyThought);
   }
-  // A night (or a long nap) leaves a thought about where they slept.
-  if (def?.kind === 'sleep' && def.thought && ctx.w.t - a.arriveAt >= ctx.data.thoughts.sleepMinutes) think(ctx, c, def.thought);
+  if (def?.kind === 'sleep') wokeUp(ctx, c, a, def);
   if (c.breakdown && a.action === c.breakdown.kind) endBreak(ctx, c);
   if (a.object) {
     const users = ctx.w.objects[a.object]!;
@@ -339,9 +404,35 @@ export function endActivity(ctx: Ctx, c: Contestant, how: 'done' | 'interrupted'
   log(ctx, 'act.end', [c.id], a.room, { action: a.action, how, minutes: doing, walk: walked });
   if (c.asleep) {
     c.asleep = false;
-    log(ctx, 'wake', [c.id], a.room, { rest: Math.round(c.needs.rest) });
+    const mate = a.bedmate ? ctx.w.contestants.find((o) => o.id === a.bedmate) : undefined;
+    log(ctx, 'wake', [c.id], a.room, {
+      rest: Math.round(c.needs.rest),
+      slept: doing,
+      ...(mate ? { bedmate: mate.id, glad: bedmateFeeling(ctx, c, mate) >= 0 } : {}),
+      ...(a.kept ? { kept: a.kept } : {}),
+    });
   }
   c.activity = null;
+  // Lovin' takes two: if one of them is called away, it's off for both.
+  if (a.action === LOVIN && how !== 'done') {
+    const p = ctx.w.contestants.find((o) => o.id === a.partner);
+    if (p?.activity?.action === LOVIN && p.activity.partner === c.id) endActivity(ctx, p, how);
+  }
+}
+
+/** Thoughts on waking: where they slept, who beside them, and who kept them up. */
+function wokeUp(ctx: Ctx, c: Contestant, a: Activity, def: ActionDef): void {
+  const night = ctx.w.t - a.arriveAt >= ctx.data.thoughts.sleepMinutes;
+  // A night (or a long nap) leaves a thought about where they slept.
+  if (def.thought && night) think(ctx, c, def.thought);
+  const s = ctx.data.needs.sleep;
+  const mate = a.bedmate ? ctx.w.contestants.find((o) => o.id === a.bedmate) : undefined;
+  if (mate && night) think(ctx, c, bedmateFeeling(ctx, c, mate) >= 0 ? s.share.good : s.share.bad, mate.id);
+  const culprit = a.kept ? ctx.w.contestants.find((o) => o.id === a.kept) : undefined;
+  if (culprit) {
+    think(ctx, c, s.noise.thought, culprit.id);
+    feel(ctx, c, culprit, 'affection', s.noise.affection, 'kept_up');
+  }
 }
 
 /** One minute of whatever the contestant is doing. */
@@ -358,15 +449,19 @@ export function runActivity(ctx: Ctx, c: Contestant): void {
     return;
   }
   const def = actionDef(ctx, a);
-  if (a.action === MEAL) {
+  if (a.action === LOVIN) {
+    // Waiting for the other one: if they've gone off and done something else, it's off.
+    const p = ctx.w.contestants.find((o) => o.id === a.partner);
+    if (a.endAt === null && (p?.activity?.action !== LOVIN || p.activity.partner !== c.id)) endActivity(ctx, c, 'interrupted');
+  } else if (a.action === MEAL) {
     addNeed(c, 'hunger', ctx.data.ranks.food[a.food!]!.hunger / ctx.data.schedule.mealMinutes);
   } else if (c.breakdown && a.action === c.breakdown.kind) {
     breakMinute(ctx, c);
   } else if (def) {
     if (def.kind === 'drink') addNeed(c, 'fun', ctx.data.booze.qualities[a.booze!]!.fun / def.minutes!);
     if (def.kind === 'sleep') {
-      addNeed(c, 'rest', (ctx.data.needs.sleep.restPerHour * def.quality!) / 60);
-      if (c.needs.rest >= 100 && !isNight(ctx, t)) endActivity(ctx, c, 'done');
+      if (sleepMinute(ctx, c, a, def)) return;
+      if (c.needs.rest >= 100 && !isNightFor(ctx, c, t)) endActivity(ctx, c, 'done');
     } else if (def.minutes) {
       const gains = gainsOf(ctx.data, c, def);
       if (gains.length === 0) return;
@@ -377,6 +472,31 @@ export function runActivity(ctx: Ctx, c: Contestant): void {
       }
     }
   }
+}
+
+/**
+ * A minute asleep: rest, unless someone noisy in the room is cutting into it (and might wake
+ * them). Notes who's beside them. Returns true if they were woken.
+ */
+function sleepMinute(ctx: Ctx, c: Contestant, a: Activity, def: ActionDef): boolean {
+  const s = ctx.data.needs.sleep;
+  let gain = (s.restPerHour * def.quality!) / 60;
+  if (a.object && def.assigned && !a.bedmate) {
+    const mate = ctx.w.objects[a.object]!.find((id) => id !== c.id && ctx.w.contestants.find((o) => o.id === id)?.asleep);
+    if (mate) a.bedmate = mate;
+  }
+  const culprit = ctx.w.contestants.find((o) => o !== c && o.room === c.room && noisy(ctx, o));
+  if (culprit) {
+    gain *= s.noise.restMult;
+    a.kept = culprit.id;
+    if (chance(ctx.w.rng, s.noise.wakeChance)) {
+      log(ctx, 'kept_up', [c.id, culprit.id], c.room, { quirk: culprit.quirk });
+      endActivity(ctx, c, 'woke');
+      return true;
+    }
+  }
+  addNeed(c, 'rest', gain);
+  return false;
 }
 
 /** Comfort drifts toward the comfort of the current situation, over `minutes`. */

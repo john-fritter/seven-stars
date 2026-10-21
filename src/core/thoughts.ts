@@ -5,7 +5,7 @@ import type { Ctx } from './context.js';
 import { axisFactor } from './needs.js';
 import { derived } from './derived.js';
 import { clothingWarmth, discomfortAt } from './temperature.js';
-import type { Contestant } from './types.js';
+import type { Axis, Contestant } from './types.js';
 
 /**
  * A thought's value for this contestant: personality, volatility and species applied. `base`
@@ -15,8 +15,9 @@ export function thoughtValue(ctx: Ctx, c: Contestant, id: string, base?: number)
   const th = ctx.data.thoughts;
   const def = th.thoughts[id]!;
   let v = (base ?? def.species[c.species] ?? def.value) * axisFactor(th.volatileK, c.personality.calm) * (th.species[c.species]?.[def.source] ?? 1);
-  for (const s of def.scale) v *= axisFactor(s.k, c.personality[s.axis]);
-  for (const s of th.sources[def.source] ?? []) v *= axisFactor(s.k, c.personality[s.axis]);
+  const of = (a: Axis | 'modesty') => (a === 'modesty' ? c.modesty : c.personality[a]);
+  for (const s of def.scale) v *= axisFactor(s.k, of(s.axis));
+  for (const s of th.sources[def.source] ?? []) v *= axisFactor(s.k, of(s.axis));
   return v;
 }
 

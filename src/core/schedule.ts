@@ -1,7 +1,7 @@
 // The daily schedule: arrivals, the wake chime, trials, meals, the daily event, lights-dim and the
 // ceremony. DESIGN.md Part two, Clock and daily schedule.
 import { actionDef, CEREMONY, endActivity, EVENT, onToilet, openMeals, TRIAL, type Plan } from './actions.js';
-import { canEnter, dayOf, log, timeOfDay, type Ctx } from './context.js';
+import { canEnter, dayOf, isNightFor, log, timeOfDay, type Ctx } from './context.js';
 import { eventToday, openEvent, resolveEvent, revealButton } from './events.js';
 import { announceBodies, findBodies, holdTrials, trialsToday } from './trials.js';
 import { spinWheel, unswapBeds } from './wheel.js';
@@ -34,7 +34,8 @@ export function runSchedule(ctx: Ctx): void {
   if (m === s.wakeChime.at) {
     log(ctx, 'wake_chime', []);
     if (ctx.w.show.bedSwap) backToBed(ctx);
-    for (const c of ctx.w.contestants) if (c.asleep && c.needs.rest > s.wakeChime.minRest) endActivity(ctx, c, 'woke');
+    // Night owls sleep through it: their night isn't over yet.
+    for (const c of ctx.w.contestants) if (c.asleep && c.needs.rest > s.wakeChime.minRest && !isNightFor(ctx, c, ctx.w.t)) endActivity(ctx, c, 'woke');
     guestsOut(ctx);
     for (const c of ctx.w.contestants) {
       fadeLedger(ctx, c);
@@ -123,7 +124,10 @@ function guestsOut(ctx: Ctx): void {
     const g = c.guest;
     if (!g) continue;
     c.guest = null;
-    if (c.room === g.room || c.activity?.room === g.room) {
+    // A roommate who shared a bunk just goes back to their own.
+    const home = c.bed !== null && ctx.st.object.get(c.bed)!.room === g.room;
+    if (home && c.activity?.object && c.activity.object !== c.bed) endActivity(ctx, c, 'woke');
+    else if (!home && (c.room === g.room || c.activity?.room === g.room)) {
       endActivity(ctx, c, 'woke');
       if (!canEnter(ctx, c, c.room)) c.room = ctx.data.schedule.ceremony.room;
     }
@@ -137,7 +141,7 @@ function arrivals(ctx: Ctx): void {
   while (w.contestants.length < CAST_SIZE) {
     const c = cast(ctx.data, w.rng, w.contestants, `c${w.nextId++}`, w.t);
     w.contestants.push(c);
-    log(ctx, 'arrive', [c.id], c.room, { name: c.name, species: c.species, pronouns: c.pronouns });
+    log(ctx, 'arrive', [c.id], c.room, { name: c.name, species: c.species, pronouns: c.pronouns, quirk: c.quirk });
     think(ctx, c, ctx.data.thoughts.trapped);
   }
 }

@@ -108,6 +108,10 @@ The record of what John has decided. DESIGN.md describes how things work; this f
   5. **Aquatic:** sleek, smooth-skinned, striking eyes, delicate gills, maybe bioluminescent markings.
   6. **Reptilian:** fine scales, angular features, unusual pupils, colorful crests or markings; sophisticated, not crocodile-headed. Prefers heat, sleeps more, less bothered by social debuffs.
 - **D-102 (Oct 18)** The aquatic species' difference lives in hygiene: it drains faster and any water refills it, cold included. Felines groom instead of showering. The elfin beauty bonus stays small. Snoring stays as an individual quirk anyone can roll.
+- **D-104 (Oct 21)** Every bed is shareable. People want to share a bed with someone they're attracted to and dislike sharing with someone they aren't.
+- **D-105 (Oct 21)** The bed is the default place for lovin'. Lovin' outside the bedroom isn't forbidden, but it's taboo: it affects whoever witnesses it, and personality (modesty above all) decides who risks it. Lovin' lasts a variable time, about five to thirty minutes.
+- **D-106 (Oct 21)** Modesty drives the desire for privacy, for lovin' and for showering and the like.
+- **D-107 (Oct 21)** The occasional night owl: a quirk that shifts the hours they like to be awake. People can disturb each other's sleep.
 
 ## Viewers
 
@@ -194,7 +198,7 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Crimes of passion: the attacker's first blow is +3 on the roll, only a winning attacker can kill, the victim isn't charged with fighting, and witnesses fear the killer +30.
 - [ ] Booze pulls 0.15 taste, 0.1 social, 0.25 self-medication; a drink's appeal × 1 − intoxication ÷ 100; hangover weights 1 / 1.5 / 2.5 / 3.5 by quality, and 3 makes a hangover; hammered walking 1.5×; the drinker's stage multiplies flirts, kisses and propositions alike.
 - [ ] Carrying drinks: 10% after a drink (× kindness, × 3 for hoarders), up to two; gifts are drunk on the spot.
-- [ ] Romance weights: kiss 0.02, proposition 0.03, exclusive 0.02, breakup 0.05. Lovin' happens in place for 30 minutes in a room of apparent privacy 0.5+. It moves labels to dating (monogamy 5+) or fling. Loyal people's romance moves toward someone other than their partner × 1 − 0.8 × loyal ÷ 10.
+- [ ] Romance weights: kiss 0.02, proposition 0.03, exclusive 0.02, breakup 0.05. Lovin' happens in place for 30 minutes in a room of apparent privacy 0.5+ (*now a bed by default, 5–30 minutes: D-105*). It moves labels to dating (monogamy 5+) or fling. Loyal people's romance moves toward someone other than their partner × 1 − 0.8 × loyal ÷ 10.
 - [ ] Betrayal only for an exclusive label; flirting, fling, dating or ex is jealousy (−10 affection). A betrayed contestant confronts on the spot half the time. Breakups need affection at 0 or below, or feeling betrayed.
 - [ ] Crushes pull harder toward believed-private rooms (× 1 + 2 × privacy).
 - [ ] Note for tuning: hookups barely happen (0.06 a week) because attraction 6+ both ways is rare: about 0.2 pairs a day clear it. Mood also runs low enough that extreme breaks are as common as major ones.
@@ -226,3 +230,15 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] An accuser who witnessed the murder testifies: voters hold the accused 20 + 0.5 × trust in the accuser lower. Wrong verdicts fell from about 40% to under 20%.
 - [ ] Still open from tuning: mood averages about 38 and sits much lower for ranks 5–7 (rank 7 about 18), so extreme breaks (about 10 a week) outnumber minor ones. The weight is the death dread: watching an execution, someone died and a friend died land on everyone nearly every night. Lighter death thoughts or fewer of them stacking would fix it, but that changes the dread D-007 asks for.
 - [ ] Rivals are rare, about 1% of pairs.
+
+**Proposed while building beds, lovin' and privacy (Oct 21).** Numbers are in `data/needs.yaml` (sleep), `data/romance.yaml` (proposition), `data/generator.yaml` (quirks), `data/actions.yaml` and `data/thoughts.yaml`. With them, a 200-seed, 30-day run still hits all nine targets (deaths 2.48 a week, stay 2.7 weeks, breaks 3.75 a day, fights 4.1 a week, 0.75 brawls per hookup, hookups 2.2 a week).
+
+- [ ] Sharing a bed: how someone feels about a bedmate is 3 × (attraction − 5) ÷ 10, plus 0.5 for a fling, 1 dating, 1.5 exclusive. It adds to a bed's score at night only (not naps). Waking after a real night beside someone leaves "slept beside them" +4 if that came out at 0 or more, "had to share a bed with them" −5 otherwise.
+- [ ] Getting into someone else's bed takes asking: a knock from outside (as before) or asking a roommate, with the knock odds, × 0.3 when the host would rather not sleep beside them. A no gives "wouldn't share a bed" −3 for 12 hours (milder than being turned away at the door, which pushed brawls to 0.95 per hookup). A roommate who shared goes back to their own bunk at the wake chime.
+- [ ] A proposition can now be made in a believed-private spot (0.5+) as before, or in your own bedroom whatever its privacy. On a yes the pair head for whichever of their two beds scores best (privacy − 0.05 × walk minutes − 0.3 × anyone else there; never the couch), and the visitor is let in as a guest. It starts when both are there and lasts 5–30 minutes (uniform). If either is called away first, it's off.
+- [ ] Right here instead: 10% × both partners' boldness, where boldness is (1 − (modesty − 5) ÷ 5) × (1 + 0.5 × (brave − 5) ÷ 5), × 2 drunk and × 3 hammered. A fully modest partner never does. With no bed to go to the base is 50%, and a no is a rain check with no hard feelings.
+- [ ] Outside a bedroom, everyone awake who sees it gets "saw them going at it in public" −4 × modesty ÷ 5 (0 for the shameless, −8 for the most modest), on top of the usual jealousy and betrayal. It scores as lovin' always has, so the witness multiplier pays more for a crowd.
+- [ ] Showers and open toilets: the old modesty cost in scoring stays; finishing one with someone awake in the room now leaves "no privacy" −3 × modesty ÷ 5 for 6 hours. Lockable stalls don't count.
+- [ ] Quirks are weighted: snores, hums, hoards, sleepwalks 1 each, night owl 0.5 (about one contestant in nine). Snoring (asleep) and humming (awake) in the room cut other sleepers' rest to 70% and wake them with a 0.3% chance a minute; a bed with someone noisy in the room costs 1 in scoring; waking leaves "they kept me up" −4 and affection −3 toward them.
+- [ ] A night owl's night runs 2.5 hours later (01:30 to 09:30). The wake chime doesn't wake them; summonses (trials, events, the ceremony) still do. They get up around 09:00 on average against 06:54 for everyone else.
+- [ ] Sleepwalking still has no hook. It could wander someone into a room above their rank (an infraction they didn't choose); left for later.

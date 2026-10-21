@@ -21,6 +21,9 @@ export interface Activity {
   food?: string; // what they were served
   booze?: string; // what they're drinking
   partner?: string; // who they're having lovin' with
+  length?: number; // how long the lovin' lasts once both are there
+  bedmate?: string; // who slept beside them
+  kept?: string; // who kept them up (a snorer, a hummer)
 }
 
 export interface Contestant {

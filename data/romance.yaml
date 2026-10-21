@@ -23,10 +23,19 @@ proposition:
   # they're dating or exclusive with someone else (scaled like the flirting penalty below).
   successScale: 1
   turnedDown: turned_down
-  minutes: 30                     # proposal: lumps under the covers
+  minutes: [5, 30]                # john, Oct 21: anywhere from five to thirty minutes
+  # Where (john, Oct 21): the bed is the default. On a yes they head for a bed, either one's (the
+  # other is let in as a guest), picking the best by privacy − walkCost × walk minutes − crowd ×
+  # anyone else there. Sometimes they don't bother: `here` is the chance of right here, right now,
+  # × each partner's boldness, 1 + modestyK × (modesty − 5) ÷ 5 (a fully modest partner never) ×
+  # 1 + braveK × (brave − 5) ÷ 5 × their drunkenness (booze.yaml moves.here). With no bed to go
+  # to, the chance is `noBed` instead, and a no means a rain check. Outside a bedroom, everyone
+  # awake who sees it gets `witnessThought` (scaled by their modesty). All proposal.
+  bed: { walkCost: 0.05, crowd: 0.3 }
+  here: { chance: 0.1, noBed: 0.5, modestyK: -1, braveK: 0.5, witnessThought: saw_lovin }
   thought: lovin                  # both, "mood +10 for a day"
   bond: 10                        # affection, both ways
-  disturbed: disturbed            # anyone asleep in the room
+  disturbed: disturbed            # anyone asleep in the room, when it starts
   # Proposal: lovin' moves a label of none, flirting or ex to dating for someone whose monogamy is
   # at least datingAt, otherwise to fling. Mismatched expectations happen without anyone lying.
   datingAt: 5
