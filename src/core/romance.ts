@@ -7,10 +7,12 @@
 // Lovin' is always consensual and always offscreen: two people choose it, and the log says so.
 import type { InteractionDef, Label } from '../data/schema.js';
 import { begin, endActivity, LOVIN } from './actions.js';
-import { log, type Ctx } from './context.js';
+import { axis, moveMult } from './booze.js';
+import { canEnter, log, type Ctx } from './context.js';
 import { feel, rel, relation } from './ledger.js';
 import { axisFactor } from './needs.js';
-import { chance } from './rng.js';
+import { between, chance } from './rng.js';
+import { walkMinutes, type ObjectInstance } from './station.js';
 import { interact } from './social.js';
 import { think } from './thoughts.js';
 import type { Contestant } from './types.js';
@@ -35,8 +37,11 @@ export function attachedMult(ctx: Ctx, c: Contestant, o: Contestant): number {
 export function moveAllowed(ctx: Ctx, c: Contestant, o: Contestant, def: InteractionDef): boolean {
   const ro = ctx.data.romance;
   switch (def.move) {
-    case 'proposition':
-      return ctx.st.room.get(c.room)!.privacy >= ro.proposition.privacy;
+    case 'proposition': {
+      // Somewhere they believe is private, or their own bedroom.
+      const room = ctx.st.room.get(c.room)!;
+      return room.privacy >= ro.proposition.privacy || (room.access === 'occupants' && canEnter(ctx, c, room.id));
+    }
     case 'breakup': {
       const r = rel(c, o)!;
       return r.affection <= ro.breakup.affectionBelow || c.thoughts.some((x) => x.id === ro.betrayal.thought && x.about === o.id);
@@ -86,11 +91,82 @@ export function proposition(ctx: Ctx, c: Contestant, o: Contestant): void {
     log(ctx, 'turned_down', [c.id, o.id], c.room, { odds: round2(odds) });
     return;
   }
-  lovin(ctx, c, o);
+  // The bed is the default; the bold (or drunk) sometimes don't bother.
+  const bed = bedFor(ctx, c, o);
+  const here = chance(ctx.w.rng, hereOdds(ctx, c, o, !!bed));
+  if (here || !bed) {
+    if (here) lovin(ctx, c, o);
+    else log(ctx, 'rain_check', [c.id, o.id], c.room); // nowhere to go
+    return;
+  }
+  lovin(ctx, c, o, bed);
 }
 
-/** Lumps under the covers. Both stop what they're doing; anyone asleep nearby is kept up. */
-export function lovin(ctx: Ctx, c: Contestant, o: Contestant): void {
+/** How ready someone is to skip the bed: shameless, brave and drunk help. */
+export function boldness(ctx: Ctx, c: Contestant): number {
+  const h = ctx.data.romance.proposition.here;
+  return Math.max(0, axisFactor(h.modestyK, c.modesty)) * Math.max(0, axisFactor(h.braveK, axis(ctx, c, 'brave'))) * moveMult(ctx, c, 'here');
+}
+
+/** The odds a couple with a yes do it right where they are: both have to be up for it. */
+export function hereOdds(ctx: Ctx, c: Contestant, o: Contestant, bedToGo: boolean): number {
+  const h = ctx.data.romance.proposition.here;
+  return clamp((bedToGo ? h.chance : h.noBed) * boldness(ctx, c) * boldness(ctx, o), 0, 1);
+}
+
+/**
+ * The bed they head for: either one's, if it has room for two and nobody else in it, picked by
+ * the room's privacy, the walk and who else is there. Null when neither has a bed to go to.
+ */
+export function bedFor(ctx: Ctx, c: Contestant, o: Contestant): ObjectInstance | null {
+  const b = ctx.data.romance.proposition.bed;
+  if (c.confined || o.confined) return null;
+  let best: ObjectInstance | null = null;
+  let score = -Infinity;
+  for (const owner of [c, o]) {
+    if (owner.bed === null || (owner === o && c.bed === o.bed)) continue;
+    const bed = ctx.st.object.get(owner.bed)!;
+    if (bed.capacity < 2 || ctx.w.objects[bed.id]!.some((id) => id !== c.id && id !== o.id)) continue; // not the couch
+    const room = ctx.st.room.get(bed.room)!;
+    const crowd = ctx.w.contestants.filter((x) => x !== c && x !== o && (x.activity?.room ?? x.room) === bed.room).length;
+    const s = room.privacy - b.walkCost * (walkMinutes(ctx.st, c.room, bed.room) + walkMinutes(ctx.st, o.room, bed.room)) - b.crowd * crowd;
+    if (s > score) [best, score] = [bed, s];
+  }
+  return best;
+}
+
+/**
+ * Lumps under the covers. Both stop what they're doing and head for the bed (whoever's bed it
+ * isn't is let in as a guest), or start right here. It begins when both are there (lovinArrive).
+ */
+export function lovin(ctx: Ctx, c: Contestant, o: Contestant, bed: ObjectInstance | null = null): void {
+  const [lo, hi] = ctx.data.romance.proposition.minutes;
+  const length = Math.round(between(ctx.w.rng, lo, hi));
+  const room = bed ? bed.room : c.room;
+  for (const a of [c, o]) endActivity(ctx, a, 'interrupted');
+  if (bed) {
+    const owner = c.bed === bed.id ? c : o;
+    const other = owner === c ? o : c;
+    if (!canEnter(ctx, other, room)) other.guest = { room, host: owner.id, since: ctx.w.t };
+    log(ctx, 'off_to_bed', [c.id, o.id], c.room, { bed: bed.id, to: room });
+  }
+  for (const [a, b] of [[c, o], [o, c]] as const) begin(ctx, a, { action: LOVIN, object: bed?.id ?? null, room, partner: b.id, length });
+}
+
+/** Arriving for lovin': once both are there, it starts. */
+export function lovinArrive(ctx: Ctx, c: Contestant): void {
+  const a = c.activity!;
+  const o = ctx.w.contestants.find((x) => x.id === a.partner);
+  const b = o?.activity;
+  if (!o || b?.action !== LOVIN || b.partner !== c.id || b.phase !== 'do') return;
+  const end = ctx.w.t + Math.max(a.length ?? 0, b.length ?? 0);
+  a.endAt = end;
+  b.endAt = end;
+  consummate(ctx, o, c);
+}
+
+/** It's happening: labels, bonds and thoughts; sleepers kept up; anyone watching sees it. */
+function consummate(ctx: Ctx, c: Contestant, o: Contestant): void {
   const p = ctx.data.romance.proposition;
   const room = c.room;
   const first = relation(ctx, c, o).lovin === 0;
@@ -100,11 +176,12 @@ export function lovin(ctx: Ctx, c: Contestant, o: Contestant): void {
     if (r.label === 'none' || r.label === 'flirting' || r.label === 'ex') r.label = a.monogamy >= p.datingAt ? 'dating' : 'fling';
     feel(ctx, a, b, 'affection', p.bond, 'lovin');
     think(ctx, a, p.thought, b.id);
-    endActivity(ctx, a, 'interrupted');
   }
-  for (const [a, b] of [[c, o], [o, c]] as const) begin(ctx, a, { action: LOVIN, object: null, room, minutes: p.minutes, partner: b.id });
   for (const x of ctx.w.contestants) if (x !== c && x !== o && x.room === room && x.asleep) think(ctx, x, p.disturbed);
-  log(ctx, 'lovin', [c.id, o.id], room, { first });
+  const inBed = c.activity?.object != null;
+  const exposed = ctx.st.room.get(room)!.access !== 'occupants'; // outside a bedroom: a show
+  log(ctx, 'lovin', [c.id, o.id], room, { first, minutes: (c.activity?.endAt ?? ctx.w.t) - ctx.w.t, where: inBed ? 'bed' : exposed ? 'public' : 'bedroom' });
+  if (exposed) for (const x of ctx.w.contestants) if (x !== c && x !== o && x.room === room && !x.asleep) think(ctx, x, p.here.witnessThought, c.id);
   aftermath(ctx, c, o, 'lovin');
 }
 

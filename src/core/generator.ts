@@ -14,6 +14,7 @@ function rollPersonality(data: GameData, rng: Rng): Personality {
 
 export function rollContestant(data: GameData, rng: Rng, id: string, t: number, takenNames: Set<string>): Contestant {
   const g = data.generator;
+  const quirkIds = Object.keys(g.quirks);
   const speciesIds = Object.keys(data.species.species);
   const species = speciesIds[weightedIndex(rng, speciesIds.map((s) => data.species.species[s]!.weight))]!;
   const sp = data.species.species[species]!;
@@ -51,7 +52,7 @@ export function rollContestant(data: GameData, rng: Rng, id: string, t: number, 
     favoriteRecreation: shuffle(rng, [...g.recreation]).slice(0, g.favoriteRecreations).sort(),
     drinking: stat('drinking'),
     modesty: stat('modesty'),
-    quirk: pick(rng, g.quirks),
+    quirk: quirkIds[weightedIndex(rng, quirkIds.map((q) => g.quirks[q]!.weight))]!,
 
     arrivedAt: t,
     rank: null,

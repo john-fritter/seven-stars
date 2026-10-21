@@ -117,6 +117,15 @@ function printReport(r: Report, ms: number): void {
   console.log(top(ro.perWeek, 12, (v) => v.toFixed(2)));
   console.log(`  ${'couples'.padEnd(16)} ${ro.couplesAtNight.toFixed(2)} at the end of an average day; ${ro.mismatchedAtNight.toFixed(2)} pairs whose labels disagree`);
   console.log(`  labels held, per contestant: ${Object.entries(ro.labelsAtNight).map(([k, v]) => `${k} ${v.toFixed(2)}`).join(', ') || 'none'}`);
+  const bd = r.beds;
+  const clock = (m: number | null) => (m === null ? '—' : `${String(Math.floor(Math.round(m) / 60)).padStart(2, '0')}:${String(Math.round(m) % 60).padStart(2, '0')}`);
+  console.log('\nBeds, lovin\' and sleep');
+  console.log(`  lovin' a week      in a bed ${bd.lovinPerWeek.bed!.toFixed(2)}, in a bedroom ${bd.lovinPerWeek.bedroom!.toFixed(2)}, in public ${bd.lovinPerWeek.public!.toFixed(2)}; ${fmt(bd.lovinMinutes, 1)} minutes on average`);
+  console.log(`  off to bed         ${bd.offToBedPerWeek.toFixed(2)} a week; ${bd.rainChecksPerWeek.toFixed(2)} rain checks (a yes with nowhere to go)`);
+  console.log(`  asked to share     ${bd.shareAsks.perWeek.toFixed(2)} a week, ${bd.shareAsks.yesShare === null ? '—' : pct(bd.shareAsks.yesShare)} yes`);
+  console.log(`  nights shared      ${bd.sharedNightShare === null ? '—' : pct(bd.sharedNightShare)} of nights; ${bd.sorryShare === null ? '—' : pct(bd.sorryShare)} of those with someone they'd rather not`);
+  console.log(`  noise              ${bd.disturbedNightShare === null ? '—' : pct(bd.disturbedNightShare)} of nights disturbed by a snorer or hummer; ${bd.keptUpWakingsPerWeek.toFixed(2)} woken a week`);
+  console.log(`  morning wake       night owls ${clock(bd.wakeTime.owl)}, everyone else ${clock(bd.wakeTime.other)}`);
   console.log('\nThe Wheel, spins a week by segment');
   console.log(top(r.wheel, 12, (v) => v.toFixed(2)));
   const ev = r.events;

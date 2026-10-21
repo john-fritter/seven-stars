@@ -20,7 +20,17 @@ pronouns:
 recreation: [dancing, music, views, games, spa, nature]
 favoriteRecreations: 2
 
-quirks: [snores, hums, hoards, sleepwalks]
+# Quirks: weight in the roll, and any mechanical hook.
+#   noise: asleep (snoring) or awake (humming) keeps sleepers in the same room up (needs.yaml sleep.noise)
+#   nightShift: minutes their night runs later than lights-dim to the wake chime (proposal: a night
+#               owl's night runs 01:30 to 09:30; the wake chime doesn't wake them, summonses still do)
+# Hoarders carry more drinks (booze.yaml carry). Sleepwalking has no hook yet.
+quirks:
+  snores:     { weight: 1, noise: asleep }
+  hums:       { weight: 1, noise: awake }
+  hoards:     { weight: 1 }
+  sleepwalks: { weight: 1 }
+  night_owl:  { weight: 0.5, nightShift: 150 }   # proposal: "the occasional night owl"
 
 names: [Aldo, Astra, Bix, Cassio, Cleo, Dax, Delphine, Ezra, Faye, Gideon, Halo, Ines, Jax, Juno,
   Kasimir, Lark, Leo, Lyra, Mars, Mina, Nico, Nova, Odile, Orion, Pax, Quinn, Rhea, Rook, Sola,

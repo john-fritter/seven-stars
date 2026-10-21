@@ -20,15 +20,16 @@ bladderPerDrink: 15                # "+15 per drink"
 
 # Stages, highest first wins. Multipliers apply to the drinker:
 #   interaction: chance of starting an interaction; social: social gained from interactions
-#   moves: interaction weights by id (flirting ×1.5 tipsy, ×2 drunk; insults ×3 drunk)
+#   moves: interaction weights by id (flirting ×1.5 tipsy, ×2 drunk; insults ×3 drunk), and `here`:
+#          boldness about lovin' right where they are (romance.yaml here; proposal)
 #   fight: an insult's chance of a fight (the larger of the two people's)
 #   axes: personality points subtracted while in this stage ("honesty and kindness act 2 lower")
 #   walk: walking time (hammered stumbling; proposal ×1.5)
 stages:
   - { id: hammered, at: 80, interaction: 1.5, social: 1.5, fight: 3, walk: 1.5,
-      moves: { flirt: 2, kiss: 2, proposition: 2, insult: 3 }, axes: { honest: -2, kind: -2 } }
+      moves: { flirt: 2, kiss: 2, proposition: 2, insult: 3, here: 3 }, axes: { honest: -2, kind: -2 } }
   - { id: drunk, at: 50, interaction: 1.5, social: 1.5, fight: 2,
-      moves: { flirt: 2, kiss: 2, proposition: 2, insult: 3 }, axes: { honest: -2, kind: -2 } }
+      moves: { flirt: 2, kiss: 2, proposition: 2, insult: 3, here: 2 }, axes: { honest: -2, kind: -2 } }
   - { id: tipsy, at: 25, interaction: 1.5, social: 1.5,
       moves: { flirt: 1.5, kiss: 1.5, proposition: 1.5 } }
 

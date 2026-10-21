@@ -1,7 +1,7 @@
 // Social interactions, flirting, fights and knocking. DESIGN.md Part two, Social interactions
 // and romance, and Rank, privileges, rules and punishments (Getting let in).
 import type { InteractionDef } from '../data/schema.js';
-import { actionDef, begin, endActivity, FIGHT } from './actions.js';
+import { actionDef, bedmateFeeling, begin, endActivity, FIGHT } from './actions.js';
 import { axis, giftDrink, moveMult, stageMult } from './booze.js';
 import { log, type Ctx } from './context.js';
 import { askExclusive, attachedMult, breakUp, evidence, kiss, moveAllowed, proposition } from './romance.js';
@@ -285,12 +285,18 @@ export function occupants(ctx: Ctx, roomId: string, c: Contestant): Contestant[]
 }
 
 /** The guest a host currently has, if any. */
-function guestOf(ctx: Ctx, host: Contestant): Contestant | undefined {
+export function guestOf(ctx: Ctx, host: Contestant): Contestant | undefined {
   return ctx.w.contestants.find((g) => g.guest?.host === host.id);
 }
 
+/** A host asked to share their bed is far less willing with someone they'd rather not sleep beside. */
+export function shareOdds(ctx: Ctx, host: Contestant, c: Contestant): number {
+  const odds = knockOdds(ctx, host, c);
+  return bedmateFeeling(ctx, host, c) < 0 ? odds * ctx.data.needs.sleep.share.reluctant : odds;
+}
+
 /** Buzzes a host. Returns whether the knocker is let in; if so they're now a legal guest. */
-export function knock(ctx: Ctx, c: Contestant, host: Contestant, roomId: string): boolean {
+export function knock(ctx: Ctx, c: Contestant, host: Contestant, roomId: string, forBed = false): boolean {
   const k = ctx.data.social.knock;
   const t = ctx.w.t;
   relation(ctx, host, c);
@@ -309,7 +315,7 @@ export function knock(ctx: Ctx, c: Contestant, host: Contestant, roomId: string)
     // Seeing who's in there is evidence for whatever the knocker believes about the host.
     if (other.room === roomId && host.room === roomId) data.saw = other.id;
   } else {
-    odds = knockOdds(ctx, host, c);
+    odds = forBed ? shareOdds(ctx, host, c) : knockOdds(ctx, host, c);
     yes = chance(ctx.w.rng, odds);
   }
   data.odds = round2(odds);
@@ -317,7 +323,26 @@ export function knock(ctx: Ctx, c: Contestant, host: Contestant, roomId: string)
   log(ctx, 'knock', [c.id, host.id], roomId, data);
   if (other && data.saw) evidence(ctx, c, host, other, 'guest');
   if (yes) c.guest = { room: roomId, host: host.id, since: t };
-  else think(ctx, c, k.turnedAway, host.id);
+  else think(ctx, c, forBed && !other ? ctx.data.needs.sleep.share.refused : k.turnedAway, host.id);
+  return yes;
+}
+
+/**
+ * Asks a roommate to share their bed. Odds as for a knock. On a yes they're the roommate's guest
+ * for the night (shown back to their own bunk at the wake chime).
+ */
+export function askToShare(ctx: Ctx, c: Contestant, host: Contestant, roomId: string): boolean {
+  const k = ctx.data.social.knock;
+  relation(ctx, host, c);
+  const last = c.knocked[host.id];
+  const pestering = last !== undefined && ctx.w.t - last < k.pesterHours * 60;
+  if (pestering) feel(ctx, host, c, 'affection', k.pesterAffection, 'pestered');
+  c.knocked[host.id] = ctx.w.t;
+  const odds = shareOdds(ctx, host, c);
+  const yes = chance(ctx.w.rng, odds);
+  log(ctx, 'share_ask', [c.id, host.id], roomId, { odds: round2(odds), asleep: host.asleep, answer: yes ? 'yes' : 'no' });
+  if (yes) c.guest = { room: roomId, host: host.id, since: ctx.w.t };
+  else think(ctx, c, ctx.data.needs.sleep.share.refused, host.id);
   return yes;
 }
 

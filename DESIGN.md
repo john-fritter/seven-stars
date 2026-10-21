@@ -483,7 +483,7 @@ The station is a graph of rooms with walking times between them; exact geometry 
 
 | Object | Uses at once | Offers | Duration |
 | --- | --- | --- | --- |
-| Bed (by quality) | 1, or 2 if double | Rest, comfort | Until rested |
+| Bed (by quality) | 2: every bed sleeps two (D-104) | Rest, comfort | Until rested |
 | Couch | 1 | Rest at 0.6 quality, comfort | Until rested |
 | Shower, hot | 1 | Hygiene +60, comfort | 15 min |
 | Shower, cold | 1 | Hygiene +40, "cold shower" thought (not aquatics) | 10 min |
@@ -521,7 +521,7 @@ Using an object in a room above your rank is an infraction, whether you walked i
 | Drawn to femininity, to masculinity | 0–10 each | Also stands in for desire |
 | Monogamy | 0–10 | Default expectation of exclusivity |
 | Tastes | Favorite recreation types, drinking appetite 0–10, modesty 0–10 |  |
-| Quirk | One from a list | Snores, hums, hoards, sleepwalks |
+| Quirk | One from a weighted list | Snores, hums, hoards, sleepwalks, night owl (rarer). Snoring and humming disturb sleep, hoarders carry more drinks, a night owl's night runs later; sleepwalking has no hook yet |
 | Live state | Needs, mood, thoughts, health, intoxication, meter, lifetime points, rank, ledger, labels, inventory, immunity |  |
 
 **Species.** Mechanics are deliberately light; looks are in Part one. Comfort ranges are in °F before clothing.
@@ -552,6 +552,14 @@ Needs run 0 (desperate) to 100 (satisfied).
 | Comfort | No drain; set by surroundings | 0.5 | Good furniture, quiet, the right temperature |
 
 Low needs add bad thoughts (hungry, exhausted, filthy, lonely, bored), which is how they reach mood. Hunger never kills.
+
+**Beds and sleep, as built (proposed; `data/needs.yaml` sleep, `data/generator.yaml` quirks).**
+
+- **Every bed sleeps two** (the couch and the fishbowl floor don't count). How someone feels about a bedmate is 3 × (attraction − 5) ÷ 10, plus 0.5 for a fling, 1 dating, 1.5 exclusive: welcome with a crush, unwelcome otherwise. When choosing where to spend the night (not a nap), that feeling adds to the bed's score for whoever's in it or heading there, and for a bed's owner if it isn't theirs.
+- **Getting in** takes asking: knocking from outside (Getting let in) or asking a roommate. Both use the knock odds, × 0.3 when the host would rather not have them beside them. A no gives "wouldn't share a bed" (−3, 12 hours). At the wake chime a roommate who shared goes back to their own bunk.
+- **Waking** after three hours or more beside someone leaves "slept beside them" (+4) if the feeling came out at 0 or more, otherwise "had to share a bed with them" (−5).
+- **Noise:** a snorer asleep or a hummer awake in the room cuts other sleepers' rest gain to 70% and wakes them with a 0.3% chance a minute. A bed in a room with someone noisy in it right now costs 1 in scoring. Waking leaves "they kept me up" (−4) and affection −3 toward the culprit.
+- **Night owls** (about one in nine) have a night 2.5 hours later than everyone's, 01:30 to 09:30: their sleep pull, when they stop sleeping, and the wake chime, which doesn't wake them. Summonses still do.
 
 ## Temperature
 
@@ -609,6 +617,7 @@ A contestant re-decides when an action ends, every 30 minutes during long ones, 
 
 - **Pulls:** people present whom they like or are attracted to (negative for people they avoid or fear), a believed-private spot when they're up to something, the bar's drinking pull.
 - **Costs:** walking time, a queue or a full object, a cold shower, modesty in a public bathroom, the risk of an infraction (scaled by honesty and bravery).
+- **Privacy:** an exposed action (a shower, an open toilet, a sink bath) with others in the room costs modesty ÷ 10 in scoring. Finishing one with someone awake watching leaves "no privacy" (−3 × modesty ÷ 5, 6 hours); a lockable stall doesn't count.
 - **Personality:** the grid's multipliers for that action's tags.
 - **Mood:** below 40, solitary and comforting actions ×1.3, social ones ×0.7.
 - **Noise:** ×0.85 to 1.15, then a weighted pick among the top three.
@@ -659,9 +668,9 @@ Every 10 minutes that two contestants share a room and aren't absorbed in someth
 
 **Romance, as built (proposed; outcomes in `data/romance.yaml`, the moves' weights and gates in `data/social.yaml`).**
 
-- **The moves are interactions** with a `move`: flirt, kiss (weight 0.02, attraction 6+ and a landed flirt between them before), proposition (0.2, tuned from 0.03; attraction and affection 20+, only in a room of apparent privacy 0.5 or more), ask to be exclusive (0.02, the asker's label at dating) and break up (0.05, a label of flirting or beyond and either affection at 0 or below or a "betrayed" thought about them). Drunkenness multiplies them (Booze). Toward anyone but whoever they're dating or exclusive with, romance moves are × 1 − 0.8 × loyal ÷ 10.
+- **The moves are interactions** with a `move`: flirt, kiss (weight 0.02, attraction 6+ and a landed flirt between them before), proposition (0.2, tuned from 0.03; attraction and affection 20+, only in a room of apparent privacy 0.5 or more or in their own bedroom), ask to be exclusive (0.02, the asker's label at dating) and break up (0.05, a label of flirting or beyond and either affection at 0 or below or a "betrayed" thought about them). Drunkenness multiplies them (Booze). Toward anyone but whoever they're dating or exclusive with, romance moves are × 1 − 0.8 × loyal ÷ 10.
 - **Kiss** odds are the target's attraction ÷ 10 × (1 + their affection ÷ 100). A kiss gives both "kissed" (+6, a day) and moves a label of none to flirting; a rebuff gives the kisser "kiss rebuffed" (−12).
-- **Proposition:** the target says yes with odds of their attraction ÷ 10, only if they're at attraction 6+ and affection 20+ themselves, × the attached factor above if they're seeing someone. Lovin' is 30 minutes in place for both (lumps under the covers): "lovin'" +10 for a day, affection +10 both ways, and anyone asleep in the room gets "kept up by the roommates" (−3). It moves a label of none, flirting or ex to dating for someone with monogamy 5 or more, otherwise to fling, so expectations can mismatch without anyone lying. A no gives "turned down" (−10).
+- **Proposition:** the target says yes with odds of their attraction ÷ 10, only if they're at attraction 6+ and affection 20+ themselves, × the attached factor above if they're seeing someone. On a yes they head for a bed (D-105): whichever of their two beds scores best on privacy − 0.05 × walk minutes − 0.3 × anyone else there, and the visitor is let in as a guest. Sometimes they don't bother: right here, with odds 10% × both partners' boldness, where boldness is (1 − (modesty − 5) ÷ 5) × (1 + 0.5 × (brave − 5) ÷ 5), × 2 drunk and × 3 hammered, so a fully modest partner never does. With no bed to go to the base is 50%, and a no is a rain check. Lovin' starts once both are there and lasts 5–30 minutes; if either is called away first, it's off for both. Lumps under the covers: "lovin'" +10 for a day, affection +10 both ways, and anyone asleep in the room gets "kept up by the roommates" (−3). Outside a bedroom, everyone awake who sees it also gets "saw them going at it in public" (−4 × modesty ÷ 5, so nothing for the shameless and −8 for the most modest). It moves a label of none, flirting or ex to dating for someone with monogamy 5 or more, otherwise to fling, so expectations can mismatch without anyone lying. A no gives "turned down" (−10).
 - **Exclusivity** odds are the target's attraction ÷ 10 × (0.5 + monogamy ÷ 10) × (1 + 0.5 × (loyal − 5) ÷ 5). A yes makes the asker's label exclusive; the target's too, unless the deceptive-fling roll in the table above comes up, in which case they privately record a fling. A no gives "won't commit" (−10).
 - **Break up:** both labels go to ex; the dumped one gets "dumped" (−20, three days).
 - **Evidence:** everyone awake in the room sees a kiss or lovin', and a knocker who finds someone else in the host's room sees that. If A's label for B is exclusive, it's a betrayal: affection −40, "betrayed" (−20 for a week, loyal people feel it more), 10 points each to A, B and the third party, and a 50% chance A confronts B on the spot with an insult. A label of flirting, fling, dating or ex makes it jealousy instead (affection −10, "jealous" −5). Whoever kisses or beds someone while believing they're exclusive with someone else gets "cheating on them" (−5).
@@ -809,7 +818,7 @@ Ranks are assigned at the ceremony by meter, ties broken by lifetime points, and
 - **Pestering:** knocking on the same person again within 3 hours costs affection −3 per repeat; being refused gives "turned away at the door" (−5).
 - **Guests** are there legally: bathroom, shower and bed included, overnight too. Guest status ends when the guest leaves, or at 07:00 after a night.
 - Being inside without an invitation is entering above your rank. Slipping in behind someone still counts.
-- **How the build does it (proposed, `data/social.yaml`).** Odds of yes = (0.15 + 0.01 × affection + 0.04 × attraction) × (1 + 0.5 × (kind − 5) ÷ 5), × 0.3 if asleep. Contestants knock only for a shower, a cold shower or a bed (their host's, and only if it sleeps two). When scoring, a knock option is the action's score × the odds the knocker expects (they assume the host feels about them as they feel about the host; × 0.25 for someone they knocked on in the last 3 hours) − 0.6 for the awkwardness of asking. A refused knocker stands at the door for 2 minutes. At 07:00 any guest still inside is shown out to the common room.
+- **How the build does it (proposed, `data/social.yaml`).** Odds of yes = (0.15 + 0.01 × affection + 0.04 × attraction) × (1 + 0.5 × (kind − 5) ÷ 5), × 0.3 if asleep. Contestants knock only for a shower, a cold shower or a bed (their host's; every bed sleeps two, and a host who'd rather not share says yes × 0.3 as often). When scoring, a knock option is the action's score × the odds the knocker expects (they assume the host feels about them as they feel about the host; × 0.25 for someone they knocked on in the last 3 hours) − 0.6 for the awkwardness of asking. A refused knocker stands at the door for 2 minutes. At 07:00 any guest still inside is shown out to the common room.
 
 **Rules.** Never enter an area above your rank; never take what belongs to another; never damage the set; attend every ceremony and event; never interfere with the cameras. Killing isn't against the rules.
 
@@ -934,6 +943,7 @@ sim sweep --param meter.drain --from 0.8 --to 1.4 --step 0.1 --days 30 --seeds 1
 - deaths per week by cause, and average stay (contestant-weeks aboard per death, since in a 30-day run only short stays get to finish; the plain average of finished stays is printed alongside)
 - breaks per contestant-day by type
 - fights, flirts, kisses, hookups, breakups and betrayals per week
+- lovin' by place (a bed, a bedroom, in public) and its average length; asks to share a bed; the share of nights spent beside someone, and with someone they'd rather not; nights disturbed by noise; when night owls get up
 - infractions and sentences per day; the Wheel's outcomes
 - rank changes per ceremony, and how long people stay on the couch
 - drinks per day by quality, and time spent tipsy, drunk and hammered

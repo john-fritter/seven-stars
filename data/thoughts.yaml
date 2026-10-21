@@ -90,6 +90,15 @@ thoughts:
   lovin:         { label: "Lovin' with {who}", value: 10, hours: 24, stack: 1, source: romance }
   turned_down:   { label: "Turned down by {who}", value: -10, hours: 24, stack: 1, source: rejection } # hours: proposal
   disturbed:     { label: "Kept up by the roommates", value: -3, hours: 12, stack: 1, source: discomfort } # proposal
+  saw_lovin:     { label: "Saw {who} going at it in public", value: -4, hours: 12, stack: 1, source: person,  # proposal
+                   scale: [{ axis: modesty, k: 1 }] }                                                      # the shameless don't mind
+
+  # Beds, sleep and privacy (needs.yaml sleep). All proposal.
+  slept_beside:  { label: "Slept beside {who}", value: 4, hours: 24, stack: 1, source: romance }
+  shared_bed:    { label: "Had to share a bed with {who}", value: -5, hours: 24, stack: 1, source: person }
+  share_refused: { label: "{who} wouldn't share a bed", value: -3, hours: 12, stack: 1, source: rejection }
+  kept_up:       { label: "{who} kept me up", value: -4, hours: 24, stack: 1, source: discomfort }
+  no_privacy:    { label: "No privacy", value: -3, hours: 6, stack: 1, source: humiliation, scale: [{ axis: modesty, k: 1 }] }
   exclusive:     { label: "Exclusive with {who}", value: 5, hours: 48, stack: 1, source: romance }     # proposal
   not_exclusive: { label: "{who} won't commit", value: -10, hours: 24, stack: 1, source: rejection }   # "Hurt: −10"
   dumped:        { label: "Dumped by {who}", value: -20, hours: 72, stack: 1, source: rejection }      # hours: proposal
