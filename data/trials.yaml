@@ -24,4 +24,8 @@ accused: { thought: accused, affection: -30 }   # proposal: how the accused take
 # else condemns whichever side scores lower on affection − fearNudge × fear: the one they like
 # less, nudged toward someone they fear. Ties on votes break on the meter, then lifetime points.
 fearNudge: 0.5          # proposal
+# M8 tuning proposal: an accuser who witnessed the murder testifies. Voters hold the accused
+# `base` + `trust` × their trust in the accuser lower. Without it, 40% of trials spaced the
+# wrong person, mostly eyewitnesses whom the room happened to like less than the killer.
+testimony: { base: 20, trust: 0.5 }
 survivedThought: survived_trial

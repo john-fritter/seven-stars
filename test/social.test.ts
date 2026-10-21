@@ -4,13 +4,14 @@ import { attractionTarget, feel, genderFit, meet, personalityFit, rel } from '..
 import { fight, fightChance, flirtOdds, interactionChance, interactionWeight, knock, knockOdds } from '../src/core/social.js';
 import { think } from '../src/core/thoughts.js';
 import type { Contestant } from '../src/core/types.js';
+import { station } from '../src/core/station.js';
 import { ctxFor, data } from './helpers.js';
 
 /** A world with the first cast aboard, and a context for calling systems directly. */
-function aboard(seed = 11) {
-  const w = createWorld(data, seed);
+function aboard(seed = 11, d = data) {
+  const w = createWorld(d, seed);
   step(w, 8 * 60);
-  return { w, ctx: ctxFor(w), cast: w.contestants };
+  return { w, ctx: { ...ctxFor(w), data: d, st: station(d) }, cast: w.contestants };
 }
 
 const flat = (x: number) => ({ outgoing: x, kind: x, honest: x, calm: x, loyal: x, brave: x, vain: x, playful: x });
@@ -59,8 +60,10 @@ describe('attraction', () => {
     expect(genderFit(a, b)).toBeCloseTo(0.5);
   });
 
-  it('is 10 × genderFit × (0.4 beauty + 0.6 perceived fit + chemistry), first impressions on looks', () => {
-    const { ctx, cast } = aboard();
+  it('is scale × genderFit × (0.4 beauty + 0.6 perceived fit + chemistry), first impressions on looks', () => {
+    const ten = structuredClone(data);
+    ten.social.attraction.scale = 10;
+    const { ctx, cast } = aboard(undefined, ten);
     const [a, b] = cast as [Contestant, Contestant];
     Object.assign(a, { drawnToFeminine: 10, drawnToMasculine: 10, ideal: { ...flat(5), honest: 10 } });
     Object.assign(b, { gender: 5, beauty: 7, rank: 4, personality: { ...flat(5), honest: 10 } }); // rank 4 clothes: beauty +0

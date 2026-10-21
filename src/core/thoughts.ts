@@ -62,10 +62,14 @@ export function condition(ctx: Ctx, c: Contestant, id: string, base: number | nu
   }
 }
 
-/** Every ten minutes: low needs and the temperature reach mood. */
+/** Every ten minutes: low (and well-met) needs and the temperature reach mood. */
 export function conditions(ctx: Ctx, c: Contestant): void {
   const th = ctx.data.thoughts;
-  for (const n of th.needs) condition(ctx, c, n.thought, c.needs[n.need] < n.below ? th.thoughts[n.thought]!.value : null);
+  for (const n of th.needs) {
+    const v = c.needs[n.need];
+    const on = n.below !== undefined ? v < n.below : v > n.above!;
+    condition(ctx, c, n.thought, on ? th.thoughts[n.thought]!.value : null);
+  }
   const tp = th.temperature;
   const temp = ctx.w.rooms[c.room]!.temp;
   const off = discomfortAt(ctx, c, temp);

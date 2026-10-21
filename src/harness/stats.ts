@@ -247,6 +247,7 @@ export interface Report {
   metrics: Metric[];
   perWeek: Record<string, number>;
   deathsByCausePerWeek: Record<string, number>;
+  finishedStayWeeks: number | null; // the plain average of stays that ended inside the run (biased short)
   timeByRoom: Record<string, number>; // share of contestant time
   timeByAction: Record<string, number>;
   walkingShare: number;
@@ -309,7 +310,9 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
 
   const value: Record<string, number | null> = {
     deathsPerWeek: perWeek(events.death ?? 0),
-    averageStayWeeks: stays.length ? stays.reduce((a, b) => a + b, 0) / stays.length / (MINUTES_PER_DAY * 7) : null,
+    // Contestant-weeks aboard per departure. Averaging only the stays that ended inside the run
+    // would undercount: in a 30-day run only short stays get to finish.
+    averageStayWeeks: events.death ? cDays / events.death / 7 : null,
     breaksPerDay: (events.break ?? 0) / days,
     fightsPerWeek: perWeek(events.fight ?? 0),
     hookupsPerWeek: perWeek(events.lovin ?? 0),
@@ -338,6 +341,7 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
     days: days / Math.max(1, seeds.length),
     metrics,
     perWeek: sortDesc(Object.fromEntries(Object.entries(events).filter(([k]) => !k.startsWith('act.')).map(([k, v]) => [k, perWeek(v)]))),
+    finishedStayWeeks: stays.length ? stays.reduce((a, b) => a + b, 0) / stays.length / (MINUTES_PER_DAY * 7) : null,
     deathsByCausePerWeek: Object.fromEntries(Object.entries(sum((s) => s.deathsByCause)).map(([k, v]) => [k, perWeek(v)])),
     timeByRoom: share(byRoom),
     timeByAction: share(byAction),

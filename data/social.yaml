@@ -38,7 +38,7 @@ partner: { affection: 1, attraction: 1, min: 0.2 }
 factorRange: [0.1, 5]
 interactions:
   - { id: chitchat, weight: 1, social: 8, knows: 0.02,
-      actor: { affection: 0.5 }, target: { affection: 0.5 } }
+      actor: { affection: 0.25 }, target: { affection: 0.25 } }   # M8: was 0.5; 37% of pairs were friends
   - { id: deep_talk, weight: 0.075, scale: [{ by: chemistry, k: 5 }], social: 12, knows: 0.25,
       actor: { affection: 10, trust: 3 }, target: { affection: 10, trust: 3 } }   # trust: proposal
   - { id: kind_words, weight: 0.02, scale: [{ by: kind }], social: 4,
@@ -56,7 +56,7 @@ interactions:
   # Romance moves (romance.yaml). Weights are proposals.
   - { id: kiss, weight: 0.02, move: kiss, needs: { attraction: 6, flirted: true }, social: 4,
       scale: [{ by: attraction }, { by: privacy, k: 1 }, { by: brave, k: 0.5 }] }
-  - { id: proposition, weight: 0.03, move: proposition, needs: { attraction: 6, affection: 20 }, social: 4,
+  - { id: proposition, weight: 0.2, move: proposition, needs: { attraction: 6, affection: 20 }, social: 4,
       scale: [{ by: attraction }, { by: brave, k: 0.5 }] }
   - { id: ask_exclusive, weight: 0.02, move: exclusive, needs: { labels: [dating] }, social: 4,
       scale: [{ by: monogamy, k: 1 }, { by: affection, k: 1 }] }
@@ -112,13 +112,14 @@ ledger:
   crushAt: 6
 
 # Attraction, each direction separately:
-#   target = 10 × genderFit × (looks × beauty + personality × perceived fit + chemistry)
+#   target = scale × genderFit × (looks × beauty + personality × perceived fit + chemistry)
 # genderFit = (drawnToFeminine × (10 − gender) + drawnToMasculine × gender) ÷ 100.
 # Beauty is (beauty + clothing beauty) ÷ 10. Fit = 1 − mean |ideal − shown personality| ÷ fitScale.
 # Perceived fit starts at the beauty value (first impressions run on looks) and moves to the
 # real fit as `knows` grows. A deceptive person shows a better fit than they are:
 #   shown = fit + (1 − fit) × deception × (10 − honest) ÷ 10.
 attraction:
+  scale: 16                     # M8 tuning: DESIGN.md had × 10, which made mutual attraction 6+ (the bar for lovin') rare
   looks: 0.4
   personality: 0.6
   chemistrySd: 0.15             # proposal: hidden per-pair roll

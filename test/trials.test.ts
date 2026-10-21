@@ -124,6 +124,18 @@ describe('trials', () => {
     expect(voteOf(ctx, { ...trial, witnesses: [v.id] }, v, accuser, accused)).toBe(accused); // they saw it
   });
 
+  it('an eyewitness accuser is believed as far as the voter trusts them', () => {
+    const { ctx, accuser, accused, voters, trial } = setup();
+    const [v] = voters as [Contestant];
+    const seen = { ...trial, witnesses: [accuser.id] };
+    relation(ctx, v, accused).affection = 30;
+    relation(ctx, v, accuser).affection = 5; // 30 − 20 = 10 > 5: still sides with the accused
+    expect(voteOf(ctx, seen, v, accuser, accused)).toBe(accuser);
+    relation(ctx, v, accuser).trust = 40; // 30 − 20 − 20 = −10 < 5
+    expect(voteOf(ctx, seen, v, accuser, accused)).toBe(accused);
+    expect(voteOf(ctx, trial, v, accuser, accused)).toBe(accuser); // no eyewitness, no testimony
+  });
+
   it('spaces the loser, pays the survivor and leaves the accuser and accused out of the vote', () => {
     const { w, ctx, accuser, accused, voters } = setup();
     for (const v of voters) relation(ctx, v, accused).affection = -40;

@@ -620,7 +620,7 @@ Every 10 minutes that two contestants share a room and aren't absorbed in someth
 
 | Interaction | Base weight | Scaled by | Result |
 | --- | --- | --- | --- |
-| Chitchat | 1 | — | Social +8; affection +0.5 |
+| Chitchat | 1 | — | Social +8; affection +0.25 (tuned from +0.5) |
 | Deep talk | 0.075 | Hidden chemistry | Affection +10; learns the other's personality better |
 | Gossip | 0.05 | Only when holding a rumor | Passes a rumor on; may garble it |
 | Gift | 0.03 | Kindness, affection, having something to give | Affection +5 to +15 by value |
@@ -650,7 +650,7 @@ Every 10 minutes that two contestants share a room and aren't absorbed in someth
 - **Rounds.** Every 10 minutes, each contestant who is awake, has arrived and isn't walking, asleep, on the toilet, showering or fighting rolls the chance above once (social urgency here is ((100 − social) ÷ 100)², 0 to 1). The partner is a weighted pick among the others in the room, favoring those they like or fancy. Interactions are instant; both sides gain the social amount (chitchat 8, deep talk 12, others 4).
 - **Scaling.** "Scaled by" in the table is a multiplier per factor, each kept between 0.1 and 5: an axis is 1 + k × (axis − 5) ÷ 5; affection is 1 + k × affection ÷ 100 (k −2 for slights and insults, so dislike doubles them at −50); attraction is attraction ÷ 5; chemistry is 1 + 5 × chemistry; privacy is 1 + the room's apparent privacy. Flirts need attraction 4+. Gifts wait for inventory and gossip for rumors.
 - **The ledger** holds affection (−100 to 100), trust and fear (0 to 100) and attraction (0 to 10) per direction, plus the last 12 dated reasons (repeats merge, "chitchat ×14"). Deep talk adds trust +3, an insult adds fear +3, losing a fight fear +10. Once a day at the wake chime affection fades 10% toward zero (× 1 − 0.5 × (loyal − 5) ÷ 5, so loyal people hold on), trust 2% and fear 10%.
-- **Attraction** is the formula above with beauty and fit on 0–1 and the result × 10. Fit is 1 − the mean gap between ideal and personality ÷ 5. Perceived fit is (1 − knows) × beauty + knows × the fit they show, where a deceptive person shows fit + (1 − fit) × 0.5 × (10 − honest) ÷ 10. Knows grows 0.02 per chitchat and 0.25 per deep talk. Chemistry is a per-pair roll with a 0.15 spread. On meeting, attraction starts at 0.6 × its target, and every interaction moves it 10% of the rest of the way.
+- **Attraction** is the formula above with beauty and fit on 0–1 and the result × 16 (tuned up from × 10, which left mutual attraction 6+ too rare for lovin'), capped at 10. Fit is 1 − the mean gap between ideal and personality ÷ 5. Perceived fit is (1 − knows) × beauty + knows × the fit they show, where a deceptive person shows fit + (1 − fit) × 0.5 × (10 − honest) ÷ 10. Knows grows 0.02 per chitchat and 0.25 per deep talk. Chemistry is a per-pair roll with a 0.15 spread. On meeting, attraction starts at 0.6 × its target, and every interaction moves it 10% of the rest of the way.
 - **Flirts** land with the target's attraction back ÷ 10. Success: both affection +5 and attraction +0.5. A rebuff gives the flirter "rebuffed" (−8) and the target "awkward" (−3, 12 hours). Kisses, lovin' and labels come with romance.
 - **Fights** start from insults: the insulted one swings. Power is strength + stamina × 0.5 + a d6; the loser takes 10–30 (a 5% serious injury adds 20) but never drops below 10 health from a fight; health recovers 2 an hour. Both stop for 3 minutes. Then the coin flip, ±20 affection both ways, "won a fight" +3 and "lost a fight" −8. The event records the witnesses and whether it was outside the cage, for the show milestone to sentence.
 - **Company** pulls on action scoring: per person in the room, + 0.3 × affection ÷ 100 + 0.3 × attraction ÷ 10 − 0.3 × fear ÷ 100 (not for sleeping or the toilet).
@@ -658,7 +658,7 @@ Every 10 minutes that two contestants share a room and aren't absorbed in someth
 
 **Romance, as built (proposed; outcomes in `data/romance.yaml`, the moves' weights and gates in `data/social.yaml`).**
 
-- **The moves are interactions** with a `move`: flirt, kiss (weight 0.02, attraction 6+ and a landed flirt between them before), proposition (0.03, attraction and affection 20+, only in a room of apparent privacy 0.5 or more), ask to be exclusive (0.02, the asker's label at dating) and break up (0.05, a label of flirting or beyond and either affection at 0 or below or a "betrayed" thought about them). Drunkenness multiplies them (Booze). Toward anyone but whoever they're dating or exclusive with, romance moves are × 1 − 0.8 × loyal ÷ 10.
+- **The moves are interactions** with a `move`: flirt, kiss (weight 0.02, attraction 6+ and a landed flirt between them before), proposition (0.2, tuned from 0.03; attraction and affection 20+, only in a room of apparent privacy 0.5 or more), ask to be exclusive (0.02, the asker's label at dating) and break up (0.05, a label of flirting or beyond and either affection at 0 or below or a "betrayed" thought about them). Drunkenness multiplies them (Booze). Toward anyone but whoever they're dating or exclusive with, romance moves are × 1 − 0.8 × loyal ÷ 10.
 - **Kiss** odds are the target's attraction ÷ 10 × (1 + their affection ÷ 100). A kiss gives both "kissed" (+6, a day) and moves a label of none to flirting; a rebuff gives the kisser "kiss rebuffed" (−12).
 - **Proposition:** the target says yes with odds of their attraction ÷ 10, only if they're at attraction 6+ and affection 20+ themselves, × the attached factor above if they're seeing someone. Lovin' is 30 minutes in place for both (lumps under the covers): "lovin'" +10 for a day, affection +10 both ways, and anyone asleep in the room gets "kept up by the roommates" (−3). It moves a label of none, flirting or ex to dating for someone with monogamy 5 or more, otherwise to fling, so expectations can mismatch without anyone lying. A no gives "turned down" (−10).
 - **Exclusivity** odds are the target's attraction ÷ 10 × (0.5 + monogamy ÷ 10) × (1 + 0.5 × (loyal − 5) ÷ 5). A yes makes the asker's label exclusive; the target's too, unless the deceptive-fling roll in the table above comes up, in which case they privately record a fling. A no gives "won't commit" (−10).
@@ -681,12 +681,12 @@ Mood starts at 50 and adds every active thought. Each thought has a value, a dur
 | Cold shower / sink bath / couldn't wash | −4 / −4 / −6 | 1 day | Discomfort |
 | Too cold / too hot | −1 per 2°F outside range, up to −8 | While outside | Discomfort |
 | Turned away at the door by X | −5 | 1 day | Rejection |
-| Rank went up / down | +5 / −8 | 2 days | Status |
+| Rank went up / down | +5 / −8 | 1 day (tuned from 2) | Status |
 | Insulted by X | −6 | 2 days | Person X |
 | Rebuffed by X | −8 | 2 days | Rejection |
 | Betrayed by X | −20 | 7 days | Person X |
 | Lovin' with X | +10 | 1 day | Romance |
-| Sentenced in public | −10 | 2 days | Humiliation |
+| Sentenced in public | −10 | 1 day (tuned from 2) | Humiliation |
 | Fishbowl night | −12 (aquatic −4) | 1 day | Humiliation |
 
 **Break lines** come from calmness: minor = 30 + 1.5 × (10 − calm); major = minor × 4/7; extreme = minor ÷ 7. Below each line, an hourly chance: 4% minor, 10% major, 20% extreme. Every break ends with catharsis, +15 for a day.
@@ -707,7 +707,7 @@ Mood starts at 50 and adds every active thought. Each thought has a value, a dur
 **How the build does it (proposed; numbers in `data/thoughts.yaml` and `data/breaks.yaml`).**
 
 - **Thoughts** carry a value, hours, a stacking limit and a source. Personality scales them: volatility as before, a per-thought `scale` (vain for the couch, the suite, clothes and fancy booze; kind for watching cruelty; loyal for betrayal; playful for boredom) and a per-source one (fear × 1 − 0.5 × (brave − 5) ÷ 5, status × vanity). A thought that works out to zero (an aquatic's cold shower) isn't added.
-- **Where they come from:** "trapped here" (−5) from arrival, forever. Low needs, refreshed every ten minutes while under the line: hungry (hunger under 20, −4), exhausted (rest under 15, −6), couldn't wash (hygiene under 20, −6), lonely (social under 20, −4), bored (fun under 20, −4). Too cold or too hot, −0.5 per °F felt outside the range up to −8. Sleep leaves its thought on waking if it lasted three hours. Meals leave gourmet +6 or leftovers −4 (plain nothing). A cold shower and a sink bath leave theirs when finished. Clothes leave "dressed like a star" (+3, rank 1) or "dressed like nobody" (−3, rank 7) from one ceremony to the next. Witnesses of an insult, a mocking or a fight get "watched them be cruel" (−2, × kindness).
+- **Where they come from:** "trapped here" (−5) from arrival, forever. Low needs, refreshed every ten minutes while under the line: hungry (hunger under 20, −4), exhausted (rest under 15, −6), couldn't wash (hygiene under 20, −6), lonely (social under 20, −4), bored (fun under 20, −4). Well-met needs lift it the same way (tuning): good company (social over 80, +6), having a good time (fun over 80, +6, × playful) and comfortable (comfort over 70, +3); without them almost nothing good reached mood.  Too cold or too hot, −0.5 per °F felt outside the range up to −8. Sleep leaves its thought on waking if it lasted three hours. Meals leave gourmet +6 or leftovers −4 (plain nothing). A cold shower and a sink bath leave theirs when finished. Clothes leave "dressed like a star" (+3, rank 1) or "dressed like nobody" (−3, rank 7) from one ceremony to the next. Witnesses of an insult, a mocking or a fight get "watched them be cruel" (−2, × kindness).
 - **Break checks** run on the hour for anyone awake and not asleep, fighting, in lovin' or on the toilet. They roll the chance of the deepest line their mood is under. The biggest grievance is the source whose bad thoughts add up to the most, among the sources in the table (guilt, romance and booze never pick a break); for a break aimed at someone, the target is whoever those thoughts are most about.
 - **The breaks:** binge (the cafe, 30 minutes, hunger +40), steal food (the cafe, hunger +50, theft), sulk in bed (two hours), tantrum (where they are, damaging the set), cry in the confessional (30 minutes), drink binge (the best bar they can enter, four drinks in an hour), hide (a restroom stall, an hour), panic (30 minutes), insulting spree (follows the target, an insult every 10 minutes for an hour), wreck their things (the target's bedroom, damage; the target gets "wrecked my things" −8 and affection −15), and the attacks. "Attack whoever outranks them most" goes for rank 1; "lash out at the feared person" goes for whoever they fear most (fear 10+). An attacker chases a target who moved on up to three times. Anything with no possible target, or that would need to leave the fishbowl, becomes an hour of moping instead. Broken contestants skip meals and are excused from the ceremony.
 - **Catharsis** (+15 for a day) comes when the break ends, however it ends.
@@ -816,18 +816,18 @@ Ranks are assigned at the ceremony by meter, ties broken by lifetime points, and
 
 | Infraction | Default sentence |
 | --- | --- |
-| Entering above rank, including sneaking a night | Meter −10 |
-| Skipping a ceremony or event | Meter −10 |
-| Fighting outside the cage | Meter −15 |
+| Entering above rank, including sneaking a night | Meter −20 (tuned from −10) |
+| Skipping a ceremony or event | Meter −20 (tuned from −10) |
+| Fighting outside the cage | Meter −25 (tuned from −15) |
 | Theft | Fishbowl overnight; theft from shared food also costs everyone cold water and breakfast tomorrow |
 | Damaging the set | Fishbowl overnight |
-| Interfering with the cameras | Fishbowl 24 hours and meter −20 |
+| Interfering with the cameras | Fishbowl 24 hours and meter −30 (tuned from −20) |
 
 A second infraction the same day bumps the sentence up a step.
 
 **How the build does it (proposed; numbers in `data/rules.yaml`).**
 
-- **The sentence ladder** is the table's four sentences in order: meter −10, meter −15, fishbowl overnight, fishbowl 24 hours and meter −20. Each infraction starts at its row's step. Each contestant gets one sentence per ceremony, at the step of their worst infraction plus one for each extra infraction since the last ceremony, capped at the top.
+- **The sentence ladder** is the table's four sentences in order: meter −20, meter −25, fishbowl overnight, fishbowl 24 hours and meter −30. (Tuning: at −10 and −15 the infraction and sentence awards, 4 + 6, cancelled the mildest penalty, so sneaking cost nothing on the meter.) Each infraction starts at its row's step. Each contestant gets one sentence per ceremony, at the step of their worst infraction plus one for each extra infraction since the last ceremony, capped at the top.
 - **Sneaking in.** Actions in rooms above a contestant's rank (not the airlock or the fishbowl) are scored like any other, minus a risk of 1.5 × (1 + 0.5 × (honest − 5) ÷ 5) × (1 − 0.5 × (brave − 5) ÷ 5). Walking in logs an "entering above rank" infraction, once per room per contestant between ceremonies. Nobody sneaks when the bladder is critical. Anyone still above their rank at the ceremony is escorted out with the room moves.
 - **Fights outside the cage** give both fighters the infraction. What the fight paid each of them decides the rule-of-cool waiver, rolled at the ceremony.
 - **Sentencing** logs the sentence (6 points), gives "sentenced in public" (−10), then applies the meter penalty, so a penalty can put someone at zero in time for the spacing.
@@ -898,7 +898,7 @@ A killer who accuses an innocent and wins walks free; the engine keeps the truth
 - **Seen near the victim:** in the murder room within the hour before. The station keeps when each contestant last left each room.
 - **Suspicion,** 0–100: a witness is certain (100) about the killer and suspects nobody else. Otherwise 0.3 × −affection (when negative) + 0.3 × fear, +30 if the suspect and victim were rivals either way, +40 if the suspector and the suspect were both seen near the victim. It tops out at 99.
 - **The accusation** comes as soon as the murder is known: the highest suspicion × brave ÷ 10, if it reaches 15. The killer weighs everyone else like anyone would, so they can accuse an innocent. The accused gets "accused of murder by {who}" (−15) and affection −30 toward the accuser. Below the line, nobody dares and there's no trial.
-- **The trial** is a gathering at 07:45 (after arrivals), resolved 15 minutes in. Voters are everyone there except the two. Witnesses vote against the killer if the killer is on trial. Everyone else condemns the side with the lower affection − 0.5 × fear; a voter with no feelings either way condemns the lower meter. A tied vote goes against the lower meter, then lifetime points, then a coin. The loser is spaced on the spot unless they hold an immunity; the winner gets 15 and "survived a trial" (+10).
+- **The trial** is a gathering at 07:45 (after arrivals), resolved 15 minutes in. Voters are everyone there except the two. Witnesses vote against the killer if the killer is on trial. An accuser who witnessed the murder testifies: each voter holds the accused 20 + 0.5 × their trust in the accuser lower (tuning: without testimony about 40% of trials spaced the wrong person, mostly eyewitnesses the room happened to like less than the killer). Everyone else condemns the side with the lower affection − 0.5 × fear; a voter with no feelings either way condemns the lower meter. A tied vote goes against the lower meter, then lifetime points, then a coin. The loser is spaced on the spot unless they hold an immunity; the winner gets 15 and "survived a trial" (+10).
 
 ## Data files and the core API
 
@@ -930,7 +930,7 @@ sim sweep --param meter.drain --from 0.8 --to 1.4 --step 0.1 --days 30 --seeds 1
 
 **It reports:**
 
-- deaths per week by cause, and average stay
+- deaths per week by cause, and average stay (contestant-weeks aboard per death, since in a 30-day run only short stays get to finish; the plain average of finished stays is printed alongside)
 - breaks per contestant-day by type
 - fights, flirts, kisses, hookups, breakups and betrayals per week
 - infractions and sentences per day; the Wheel's outcomes

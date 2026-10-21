@@ -171,7 +171,9 @@ function candidates(ctx: Ctx, c: Contestant): Candidate[] {
         if (def.assigned && !bedAllowed(ctx, c, o, guest ? host : undefined)) continue;
         if (def.kind === 'thermostat' && (sneak || guest || preferredSetting(ctx, c) === ctx.w.rooms[room.id]!.setting)) continue;
         if (!usable(ctx, c, def)) continue;
-        const score = scoreAction(ctx, c, def, room.id, others, critical, night, pull) - risk;
+        // The night pull is for a bed of their own (or their host's), not the nearest couch.
+        const bedtime = night && (def.assigned || o.id === c.bed);
+        const score = scoreAction(ctx, c, def, room.id, others, critical, bedtime, pull) - risk;
         out.push({ def, object: o, room: room.id, score });
       }
     }

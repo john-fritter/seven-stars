@@ -70,6 +70,7 @@ function printReport(r: Report, ms: number): void {
   if (Object.keys(r.deathsByCausePerWeek).length) {
     console.log('\nDeaths per week by cause');
     console.log(top(r.deathsByCausePerWeek, 10, (v) => v.toFixed(2)));
+    console.log(`  stays that ended inside the run averaged ${fmt(r.finishedStayWeeks)} weeks (the target uses contestant-weeks per death)`);
   }
   console.log('\nWhere time goes, by room (share of all contestant time)');
   console.log(top(r.timeByRoom, 20, pct));
