@@ -176,6 +176,7 @@ export interface Relation {
   reasons: Reason[];
   label: Label; // what this contestant believes the relationship is
   flirts: number; // flirts that landed between them, either way
+  kisses: number; // kisses that landed between them, either way
   lovin: number; // times they've had lovin'
 }
 

@@ -10,6 +10,9 @@ kiss:
   # Odds = the target's attraction back ÷ 10 × (1 + their affection ÷ 100) × successScale.
   successScale: 1
   label: flirting                 # "labels move to flirting" (from none)
+  # Proposal (relationship tuning): a showmance. At this many kisses, someone flirting whose
+  # monogamy is at least proposition.datingAt thinks they're dating.
+  datingAfter: 2
   thought: kissed                 # both
   rebuffed: kiss_rebuffed         # the kisser, rebuffed hard
 
@@ -38,7 +41,14 @@ proposition:
   disturbed: disturbed            # anyone asleep in the room, when it starts
   # Proposal: lovin' moves a label of none, flirting or ex to dating for someone whose monogamy is
   # at least datingAt, otherwise to fling. Mismatched expectations happen without anyone lying.
+  # Each earlier lovin' with the same person counts as datingPerLovin more monogamy, so a fling
+  # that keeps happening turns into dating (proposal, relationship tuning).
   datingAt: 5
+  datingPerLovin: 1.5
+  # Proposal (relationship tuning): someone whose label for them is one of `labels` can also ask
+  # from anywhere that isn't private, when either has a bed to go to ("back to mine?"), with the
+  # proposition's weight × `weight` there.
+  anywhere: { labels: [flirting, dating, exclusive], weight: 0.25 }
 
 exclusive:
   # Odds = the target's attraction ÷ 10 × (0.5 + monogamy ÷ 10) × (1 + loyalK × (loyal − 5) ÷ 5).

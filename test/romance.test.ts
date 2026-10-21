@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { axis, drink, giftDrink, hangover, qualityFor, soberMinute, stageOf } from '../src/core/booze.js';
 import { createWorld, step } from '../src/core/index.js';
-import { meet, rel } from '../src/core/ledger.js';
+import { fadeLedger, meet, rel } from '../src/core/ledger.js';
 import { askExclusive, evidence, exclusiveOdds, kiss, kissOdds, lovin, propositionOdds, secretFlingOdds } from '../src/core/romance.js';
 import { interactionWeight } from '../src/core/social.js';
 import type { Contestant, World } from '../src/core/types.js';
@@ -181,5 +181,53 @@ describe('romance', () => {
     lovin(ctx, b, c);
     expect(b.thoughts.some((x) => x.id === 'guilty' && x.about === a.id)).toBe(true);
     expect(a.thoughts.some((x) => x.id === 'betrayed' && x.about === b.id)).toBe(true);
+  });
+
+  it('turns kisses into dating for the monogamous, and a fling that keeps happening into dating', () => {
+    const { w, ctx, cast } = aboard();
+    const [a, b] = cast as [Contestant, Contestant];
+    alone(w, a, b);
+    for (const c of [a, b]) Object.assign(c, { room: 'garden', asleep: false });
+    Object.assign(a, { monogamy: 8 });
+    Object.assign(b, { monogamy: 2 });
+    meet(ctx, a, b);
+    Object.assign(rel(a, b)!, { attraction: 10, affection: 100 });
+    Object.assign(rel(b, a)!, { attraction: 10, affection: 100 });
+    const k = data.romance.kiss.datingAfter;
+    for (let i = 0; i < k; i++) {
+      kiss(ctx, a, b);
+    }
+    expect(rel(a, b)!.kisses).toBe(k);
+    expect(rel(a, b)!.label).toBe('dating');
+    expect(rel(b, a)!.label).toBe('flirting');
+    // b needs (5 − 2) ÷ 1.5 = 2 earlier hookups before a third makes it dating.
+    const p = data.romance.proposition;
+    const needed = Math.ceil((p.datingAt - b.monogamy) / p.datingPerLovin);
+    for (let i = 0; i < needed; i++) {
+      w.show.today = {};
+      lovin(ctx, a, b);
+      expect(rel(b, a)!.label).toBe('fling');
+    }
+    w.show.today = {};
+    lovin(ctx, a, b);
+    expect(rel(b, a)!.label).toBe('dating');
+    expect(ctx.events.filter((e) => e.type === 'lovin').at(-1)!.data!.couple).toBe(false);
+    w.show.today = {};
+    lovin(ctx, a, b);
+    expect(ctx.events.filter((e) => e.type === 'lovin').at(-1)!.data!.couple).toBe(true);
+  });
+
+  it('lets affection between people dating fade slower', () => {
+    const { ctx, cast } = aboard();
+    const [a, b, c] = cast as [Contestant, Contestant, Contestant];
+    meet(ctx, a, b);
+    meet(ctx, a, c);
+    Object.assign(rel(a, b)!, { affection: 50, label: 'dating' });
+    Object.assign(rel(a, c)!, { affection: 50, label: 'none' });
+    a.personality = flat(5);
+    fadeLedger(ctx, a);
+    const f = data.social.ledger.fadePerDay.affection;
+    expect(rel(a, c)!.affection).toBeCloseTo(50 * (1 - f));
+    expect(rel(a, b)!.affection).toBeCloseTo(50 * (1 - f * data.social.ledger.loverFade));
   });
 });

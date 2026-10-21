@@ -3,7 +3,7 @@ import { bedmateFeeling, begin, endActivity, runActivity } from '../src/core/act
 import { isNightFor } from '../src/core/context.js';
 import { createWorld, step } from '../src/core/index.js';
 import { meet, rel } from '../src/core/ledger.js';
-import { bedFor, boldness, hereOdds, lovin, proposition } from '../src/core/romance.js';
+import { bedFor, boldness, hereOdds, lovin, placeMult, proposition } from '../src/core/romance.js';
 import { shareOdds } from '../src/core/social.js';
 import type { Contestant } from '../src/core/types.js';
 import { aboard, alone, data } from './helpers.js';
@@ -222,5 +222,23 @@ describe('night owls', () => {
     step(w, 2);
     expect(owl.asleep).toBe(true);
     if (lark && lark.quirk !== 'night_owl' && lark.needs.rest > data.schedule.wakeChime.minRest) expect(lark.asleep).toBe(false);
+  });
+});
+
+describe('asking a partner back to bed', () => {
+  it('is only for couples outside a private spot, at a lower weight, and needs a bed to go to', () => {
+    const { w, ctx, cast } = ready();
+    const [a, b] = cast as [Contestant, Contestant];
+    alone(w, a, b);
+    for (const c of [a, b]) Object.assign(c, { room: 'cafe', asleep: false });
+    meet(ctx, a, b);
+    expect(placeMult(ctx, a, b)).toBe(0);
+    rel(a, b)!.label = 'dating';
+    expect(placeMult(ctx, a, b)).toBe(data.romance.proposition.anywhere.weight);
+    a.room = b.room = 'garden'; // private enough for anyone
+    expect(placeMult(ctx, a, b)).toBe(1);
+    a.room = b.room = 'cafe';
+    a.bed = b.bed = null;
+    expect(placeMult(ctx, a, b)).toBe(0);
   });
 });

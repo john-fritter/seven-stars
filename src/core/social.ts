@@ -4,7 +4,7 @@ import type { InteractionDef } from '../data/schema.js';
 import { actionDef, bedmateFeeling, begin, endActivity, FIGHT } from './actions.js';
 import { axis, giftDrink, moveMult, stageMult } from './booze.js';
 import { log, type Ctx } from './context.js';
-import { askExclusive, attachedMult, breakUp, evidence, kiss, moveAllowed, proposition } from './romance.js';
+import { askExclusive, attachedMult, breakUp, evidence, kiss, moveAllowed, placeMult, proposition } from './romance.js';
 import { witnessesOf } from './scoring.js';
 import { infraction } from './show.js';
 import { feel, meet, rel, relation, warm } from './ledger.js';
@@ -91,6 +91,7 @@ export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: I
   const [lo, hi] = ctx.data.social.factorRange;
   let w = def.weight * moveMult(ctx, c, def.id);
   if (def.move && def.move !== 'gift' && def.move !== 'breakup') w *= attachedMult(ctx, c, o);
+  if (def.move === 'proposition') w *= placeMult(ctx, c, o);
   for (const s of def.scale) {
     const k = s.k ?? 1;
     let f: number;

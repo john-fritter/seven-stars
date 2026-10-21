@@ -339,6 +339,7 @@ export const socialSchema = z.object({
     keepReasons: z.number().int().positive(),
     fadePerDay: z.object({ affection: unit, trust: unit, fear: unit }),
     loyalK: num,
+    loverFade: num.nonnegative(),
     friendAt: num,
     rivalAt: num,
     crushAt: num,
@@ -459,7 +460,7 @@ export const breaksSchema = z.object({
 });
 
 export const romanceSchema = z.object({
-  kiss: z.object({ successScale: num, label: z.enum(LABELS), thought: z.string(), rebuffed: z.string() }),
+  kiss: z.object({ successScale: num, label: z.enum(LABELS), datingAfter: z.number().int().positive(), thought: z.string(), rebuffed: z.string() }),
   proposition: z.object({
     attraction: num,
     affection: num,
@@ -471,6 +472,8 @@ export const romanceSchema = z.object({
     bond: num,
     disturbed: z.string(),
     datingAt: num,
+    datingPerLovin: num.nonnegative(),
+    anywhere: z.object({ labels: z.array(z.enum(LABELS)), weight: unit }),
     // Where: a bed by default; sometimes right here, which is a show for anyone watching.
     bed: z.object({ walkCost: num, crowd: num }),
     here: z.object({ chance: unit, noBed: unit, modestyK: num, braveK: num, witnessThought: z.string() }),

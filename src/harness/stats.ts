@@ -34,6 +34,8 @@ export interface SeedStats {
   drinks: Record<string, number>; // by quality
   intoxMinutes: Record<string, number>; // contestant-minutes in each stage
   labels: Record<string, number>; // directed relationships by label at each day's end, plus couples
+  couples: Record<string, number>; // nights with a couple aboard, couples formed, ended by breakup or death, lovin' within a couple
+  coupleDays: number[]; // how many day-ends each couple lasted, for couples that ended inside the run
   wheel: Record<string, number>; // by segment
   formats: Record<string, number>; // daily events by format, plus booked (by the Wheel) and cancelled
   presses: number[]; // button presses at each Button
@@ -80,6 +82,8 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
     drinks: {},
     intoxMinutes: {},
     labels: {},
+    couples: {},
+    coupleDays: [],
     wheel: {},
     formats: {},
     presses: [],
@@ -95,6 +99,7 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
   let bottom: string | null = null;
   let streak = 0;
   const notable = new Set(data.targets.notable);
+  const together = new Map<string, number>(); // couple → day it was first seen
   const world = createWorld(data, seed);
   for (let d = 0; d < days; d++) {
     const events = step(world, MINUTES_PER_DAY);
@@ -134,7 +139,7 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
     }
     if (isNotable) s.notableDays++;
     if (sentenced) s.sentenceDays++;
-    endOfDay(s, world, data);
+    endOfDay(s, world, data, d, together);
   }
   if (bottom !== null) s.bottomStreaks.push(streak);
   for (const prev of stage.values()) if (prev.stage !== 'sober') add(s.intoxMinutes, prev.stage, world.t - prev.since);
@@ -163,6 +168,7 @@ function tally(s: SeedStats, e: SimEvent): void {
       add(s.knocks, d.answer as string);
       break;
     case 'lovin':
+      if (d.couple) add(s.couples, 'lovin');
       add(s.beds, `lovin_${d.where as string}`);
       add(s.beds, 'lovinMinutes', d.minutes as number);
       break;
@@ -231,7 +237,8 @@ function tally(s: SeedStats, e: SimEvent): void {
   }
 }
 
-function endOfDay(s: SeedStats, w: World, data: GameData): void {
+function endOfDay(s: SeedStats, w: World, data: GameData, day: number, together: Map<string, number>): void {
+  const now = new Set<string>();
   s.contestantDays += w.contestants.length;
   const l = data.social.ledger;
   for (const c of w.contestants) {
@@ -253,9 +260,28 @@ function endOfDay(s: SeedStats, w: World, data: GameData): void {
       const a = c.ledger[o.id]?.label ?? 'none';
       const b = o.ledger[c.id]?.label ?? 'none';
       const together = (x: string) => x === 'dating' || x === 'exclusive';
-      if (together(a) && together(b)) add(s.labels, 'couples');
+      if (together(a) && together(b)) {
+        add(s.labels, 'couples');
+        now.add(`${c.id}|${o.id}`);
+      }
       if (a !== b && (a !== 'none' || b !== 'none')) add(s.labels, 'mismatched');
     }
+  }
+  // Couples, sampled at day's end: formed, and how long the ones that ended lasted.
+  if (now.size) {
+    add(s.couples, 'nights');
+    add(s.couples, `nights.week${Math.floor(day / 7) + 1}`);
+  }
+  for (const k of now) if (!together.has(k)) {
+    together.set(k, day);
+    add(s.couples, 'formed');
+  }
+  const alive = new Set(w.contestants.map((c) => c.id));
+  for (const [k, since] of together) {
+    if (now.has(k)) continue;
+    together.delete(k);
+    s.coupleDays.push(day - since);
+    add(s.couples, k.split('|').every((id) => alive.has(id)) ? 'brokeUp' : 'death');
   }
 }
 
@@ -311,6 +337,12 @@ export interface Report {
     perWeek: Record<string, number>; // flirts, kisses, hookups, exclusives, breakups, betrayals, jealousy
     labelsAtNight: Record<string, number>; // directed relationships by label, per contestant
     couplesAtNight: number; // pairs who both believe they're together, on average
+    couples: {
+      formedPerWeek: number;
+      endedPerWeek: { brokeUp: number; death: number }; // brokeUp: no longer both together, both alive
+      lastedDays: number | null; // average, for couples that ended inside the run
+      nightShareByWeek: number[]; // share of nights with a couple aboard, week by week
+    };
     mismatchedAtNight: number; // pairs whose labels disagree, on average
   };
   wheel: Record<string, number>; // spins landing on each segment, per week
@@ -359,6 +391,8 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
     fightsPerWeek: perWeek(events.fight ?? 0),
     brawlsPerHookup: events.lovin ? seeds.reduce((a, s) => a + s.fightsOutsideCage, 0) / events.lovin : null,
     hookupsPerWeek: perWeek(events.lovin ?? 0),
+    coupleNightShare: seeds.reduce((a, s) => a + (s.couples.nights ?? 0), 0) / days,
+    coupleHookupShare: ratio(seeds.reduce((a, s) => a + (s.couples.lovin ?? 0), 0), events.lovin ?? 0),
     sentenceDayShare: seeds.reduce((a, s) => a + s.sentenceDays, 0) / days,
     rankChangeShare: ratio(seeds.reduce((a, s) => a + s.ceremoniesWithRankChange, 0), seeds.reduce((a, s) => a + s.ceremonies, 0)),
     quietDayShare: 1 - seeds.reduce((a, s) => a + s.notableDays, 0) / days,
@@ -432,6 +466,19 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
         perWeek: Object.fromEntries(ids.map((k) => [k, perWeek(events[k] ?? 0)])),
         labelsAtNight: sortDesc(Object.fromEntries(Object.entries(labels).filter(([k]) => k !== 'none').map(([k, v]) => [k, v / cDays]))),
         couplesAtNight: couples / days,
+        couples: (() => {
+          const cp = sum((s) => s.couples);
+          const lasted = seeds.flatMap((s) => s.coupleDays);
+          return {
+            formedPerWeek: perWeek(cp.formed ?? 0),
+            endedPerWeek: { brokeUp: perWeek(cp.brokeUp ?? 0), death: perWeek(cp.death ?? 0) },
+            lastedDays: lasted.length ? lasted.reduce((a, b) => a + b, 0) / lasted.length : null,
+            nightShareByWeek: Array.from({ length: Math.ceil(days / seeds.length / 7) }, (_, i) => {
+              const nights = seeds.reduce((a, s) => a + Math.max(0, Math.min(7, s.days - i * 7)), 0);
+              return (cp[`nights.week${i + 1}`] ?? 0) / nights;
+            }),
+          };
+        })(),
         mismatchedAtNight: mismatched / days,
       };
     })(),

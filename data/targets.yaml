@@ -9,6 +9,12 @@ targets:
   # john, Oct 21: brawls (fights outside the cage) shouldn't outnumber hookups.
   - { id: brawlsPerHookup, label: "Brawls per hookup", max: 1 }
   - { id: hookupsPerWeek, label: "Hookups per week", min: 2 }
+  # Proposals (relationship tuning; john, Oct 21: too few relationships, and couples should have
+  # lots of unremarkable repeat hookups): a couple aboard on half the nights over the whole run
+  # (the first week is a slow start while attraction builds; from week two it's most nights), and
+  # most hookups in couples.
+  - { id: coupleNightShare, label: "Nights with a couple aboard", min: 0.5 }
+  - { id: coupleHookupShare, label: "Hookups within a couple", min: 0.5 }
   - { id: sentenceDayShare, label: "Days with an infraction sentenced", min: 0.5 }
   - { id: rankChangeShare, label: "Ceremonies with a rank change", min: 0.5 }
   - { id: quietDayShare, label: "Days with nothing notable", max: 0.1 }

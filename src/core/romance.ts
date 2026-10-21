@@ -37,11 +37,8 @@ export function attachedMult(ctx: Ctx, c: Contestant, o: Contestant): number {
 export function moveAllowed(ctx: Ctx, c: Contestant, o: Contestant, def: InteractionDef): boolean {
   const ro = ctx.data.romance;
   switch (def.move) {
-    case 'proposition': {
-      // Somewhere they believe is private, or their own bedroom.
-      const room = ctx.st.room.get(c.room)!;
-      return room.privacy >= ro.proposition.privacy || (room.access === 'occupants' && canEnter(ctx, c, room.id));
-    }
+    case 'proposition':
+      return placeMult(ctx, c, o) > 0;
     case 'breakup': {
       const r = rel(c, o)!;
       return r.affection <= ro.breakup.affectionBelow || c.thoughts.some((x) => x.id === ro.betrayal.thought && x.about === o.id);
@@ -49,6 +46,18 @@ export function moveAllowed(ctx: Ctx, c: Contestant, o: Contestant, def: Interac
     default:
       return true;
   }
+}
+
+/**
+ * Where someone can proposition: somewhere they believe is private, or their own bedroom, at full
+ * weight. Someone already flirting with or seeing them can also ask anywhere else ("back to
+ * mine?") at anywhere.weight, as long as there's a bed to go to.
+ */
+export function placeMult(ctx: Ctx, c: Contestant, o: Contestant): number {
+  const p = ctx.data.romance.proposition;
+  const room = ctx.st.room.get(c.room)!;
+  if (room.privacy >= p.privacy || (room.access === 'occupants' && canEnter(ctx, c, room.id))) return 1;
+  return p.anywhere.labels.includes(labelOf(c, o)) && bedFor(ctx, c, o) !== null ? p.anywhere.weight : 0;
 }
 
 /** Odds a kiss lands: their attraction back ÷ 10 × (1 + their affection ÷ 100). */
@@ -68,7 +77,10 @@ export function kiss(ctx: Ctx, c: Contestant, o: Contestant): void {
   }
   for (const [a, b] of [[c, o], [o, c]] as const) {
     const r = relation(ctx, a, b);
+    r.kisses++;
     if (r.label === 'none') r.label = k.label;
+    // Enough kisses and the monogamous think they're seeing each other.
+    if (r.label === 'flirting' && r.kisses >= k.datingAfter && a.monogamy >= ctx.data.romance.proposition.datingAt) r.label = 'dating';
     think(ctx, a, k.thought, b.id);
   }
   log(ctx, 'kiss', [c.id, o.id], c.room, { odds: round2(odds) });
@@ -170,17 +182,20 @@ function consummate(ctx: Ctx, c: Contestant, o: Contestant): void {
   const p = ctx.data.romance.proposition;
   const room = c.room;
   const first = relation(ctx, c, o).lovin === 0;
+  const couple = ATTACHED.includes(labelOf(c, o)) && ATTACHED.includes(labelOf(o, c));
   for (const [a, b] of [[c, o], [o, c]] as const) {
     const r = relation(ctx, a, b);
+    // Each time before counts toward thinking it's more than a fling.
+    const dating = a.monogamy + r.lovin * p.datingPerLovin >= p.datingAt;
     r.lovin++;
-    if (r.label === 'none' || r.label === 'flirting' || r.label === 'ex') r.label = a.monogamy >= p.datingAt ? 'dating' : 'fling';
+    if (r.label === 'none' || r.label === 'flirting' || r.label === 'ex' || (r.label === 'fling' && dating)) r.label = dating ? 'dating' : 'fling';
     feel(ctx, a, b, 'affection', p.bond, 'lovin');
     think(ctx, a, p.thought, b.id);
   }
   for (const x of ctx.w.contestants) if (x !== c && x !== o && x.room === room && x.asleep) think(ctx, x, p.disturbed);
   const inBed = c.activity?.object != null;
   const exposed = ctx.st.room.get(room)!.access !== 'occupants'; // outside a bedroom: a show
-  log(ctx, 'lovin', [c.id, o.id], room, { first, minutes: (c.activity?.endAt ?? ctx.w.t) - ctx.w.t, where: inBed ? 'bed' : exposed ? 'public' : 'bedroom' });
+  log(ctx, 'lovin', [c.id, o.id], room, { first, couple, minutes: (c.activity?.endAt ?? ctx.w.t) - ctx.w.t, where: inBed ? 'bed' : exposed ? 'public' : 'bedroom' });
   if (exposed) for (const x of ctx.w.contestants) if (x !== c && x !== o && x.room === room && !x.asleep) think(ctx, x, p.here.witnessThought, c.id);
   aftermath(ctx, c, o, 'lovin');
 }
