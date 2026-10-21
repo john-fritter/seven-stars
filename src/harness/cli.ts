@@ -121,7 +121,7 @@ function printReport(r: Report, ms: number): void {
   console.log(top(r.wheel, 12, (v) => v.toFixed(2)));
   const ev = r.events;
   console.log(`\nDaily events, a week: ${Object.entries(ev.perWeek).map(([k, v]) => `${k} ${v.toFixed(2)}`).join(', ')}`);
-  console.log(`  fights outside the cage: ${ev.fightsOutsideCagePerWeek.toFixed(2)} a week (the brawls target; the fights target counts cage matches too)`);
+  console.log(`  fights outside the cage: ${ev.fightsOutsideCagePerWeek.toFixed(2)} a week (the fights target counts cage matches too; brawls shouldn't outnumber hookups)`);
   console.log(`  The Button: ${fmt(ev.pressesPerButton)} presses on average; someone pressed ${ev.buttonShare === null ? '—' : pct(ev.buttonShare)} of the time`);
   const mu = r.murders;
   const mw = Object.entries(mu.perWeek).map(([k, v]) => `${k} ${v.toFixed(3)}`).join(', ');

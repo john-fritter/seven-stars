@@ -315,7 +315,7 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
     averageStayWeeks: events.death ? cDays / events.death / 7 : null,
     breaksPerDay: (events.break ?? 0) / days,
     fightsPerWeek: perWeek(events.fight ?? 0),
-    brawlsPerWeek: perWeek(seeds.reduce((a, s) => a + s.fightsOutsideCage, 0)),
+    brawlsPerHookup: events.lovin ? seeds.reduce((a, s) => a + s.fightsOutsideCage, 0) / events.lovin : null,
     hookupsPerWeek: perWeek(events.lovin ?? 0),
     sentenceDayShare: seeds.reduce((a, s) => a + s.sentenceDays, 0) / days,
     rankChangeShare: ratio(seeds.reduce((a, s) => a + s.ceremoniesWithRankChange, 0), seeds.reduce((a, s) => a + s.ceremonies, 0)),
