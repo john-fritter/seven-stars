@@ -214,4 +214,15 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Bodies: found by the first awake non-killer in the room, or announced at the ceremony; grief waits until the death is known.
 - [ ] Suspicion weights: dislike 0.3, fear 0.3, enemy +30, both seen near the victim in the hour before +40; accusing takes suspicion × brave ÷ 10 of 15 or more. The accused feels −15 and affection −30 toward the accuser.
 - [ ] Trial voters with no feelings either way condemn the lower meter; a fear nudge of 0.5.
-- [ ] The fights target now counts cage matches (2.5 a week). Should it count only fights outside the cage?
+- [x] The fights target now counts cage matches (2.5 a week). Should it count only fights outside the cage? *John (Oct 21): split it: 3+ fights a week with cage matches, and brawls outside the cage no more often than hookups. The fight rate was already fine.*
+
+**Proposed while tuning slice one (Oct 21).** With these, a 200-seed, 30-day run hits all nine success targets (deaths 2.45 a week, average stay 2.7 weeks, breaks 3.5 a day, fights 4.1 a week with cage matches, 0.68 brawls per hookup, hookups 2.5 a week). DESIGN.md Part two has the details; all numbers are in `data/`.
+
+- [ ] Sentences cost more on the meter: −20, −25, fishbowl overnight, fishbowl 24 hours and −30 (were −10, −15, —, −20), so the mildest sentence costs 10 net instead of nothing. The meter drain stays at 1 an hour.
+- [ ] Well-met needs lift mood: good company (social over 80) +6, having a good time (fun over 80) +6 × playful, comfortable (comfort over 70) +3.
+- [ ] "Sentenced in public" and "rank went up / down" last one day, not two.
+- [ ] Attraction is 16 × gender fit × (…), capped at 10, instead of 10 ×; propositions weigh 0.2 instead of 0.03.
+- [ ] Chitchat adds affection +0.25 instead of +0.5 (friends fell from 37% to 31% of pairs).
+- [ ] An accuser who witnessed the murder testifies: voters hold the accused 20 + 0.5 × trust in the accuser lower. Wrong verdicts fell from about 40% to under 20%.
+- [ ] Still open from tuning: mood averages about 38 and sits much lower for ranks 5–7 (rank 7 about 18), so extreme breaks (about 10 a week) outnumber minor ones. The weight is the death dread: watching an execution, someone died and a friend died land on everyone nearly every night. Lighter death thoughts or fewer of them stacking would fix it, but that changes the dread D-007 asks for.
+- [ ] Rivals are rare, about 1% of pairs.

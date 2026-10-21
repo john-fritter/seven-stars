@@ -337,6 +337,7 @@ export const socialSchema = z.object({
     personality: num,
     chemistrySd: num.nonnegative(),
     fitScale: num.positive(),
+    scale: num.positive(),
     deception: unit,
     firstImpression: unit,
     approach: unit,
@@ -365,7 +366,7 @@ export const thoughtsSchema = z.object({
   species: z.record(z.string(), z.record(z.string(), num)).default({}),
   sources: z.record(z.string(), axisScale).default({}),
   trapped: z.string(),
-  needs: z.array(z.object({ need: needEnum, below: num, thought: z.string() })),
+  needs: z.array(z.object({ need: needEnum, below: num.optional(), above: num.optional(), thought: z.string() }).refine((x) => (x.below === undefined) !== (x.above === undefined), 'give exactly one of below or above')),
   temperature: z.object({ cold: z.string(), hot: z.string(), perDegree: num, max: num }),
   sleepMinutes: num.nonnegative(),
   thoughts: z.record(
@@ -534,6 +535,7 @@ export const trialsSchema = z.object({
   accuseAt: num,
   accused: z.object({ thought: z.string(), affection: num }),
   fearNudge: num,
+  testimony: z.object({ base: num, trust: num }),
   survivedThought: z.string(),
 });
 

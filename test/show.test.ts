@@ -118,7 +118,7 @@ describe('sentences', () => {
     sentencing(ctx);
     expect(ctx.events.some((e) => e.type === 'waived' && e.actors[0] === b.id)).toBe(true);
     expect(b.meter).toBe(before.b);
-    expect(a.meter).toBeCloseTo(before.a + 6 - 10);
+    expect(a.meter).toBeCloseTo(before.a + 6 + data.rules.sentences[0]!.meter!);
     expect(a.thoughts.some((t) => t.id === 'sentenced')).toBe(true);
     expect(ctx.w.show.pending).toHaveLength(0);
   });

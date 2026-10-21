@@ -31,6 +31,11 @@ needs:
   - { need: hygiene, below: 20, thought: filthy }
   - { need: social,  below: 20, thought: lonely }
   - { need: fun,     below: 20, thought: bored }
+# Tuning proposal (M8): well-met needs lift mood too, as in RimWorld and The Sims. Without them
+# almost nothing good reached mood and it sat near the break lines.
+  - { need: social,  above: 80, thought: good_company }
+  - { need: fun,     above: 80, thought: good_time }
+  - { need: comfort, above: 70, thought: comfortable }
 
 # Too cold / too hot: −perDegrees per degree felt outside your range, up to −max, refreshed every
 # ten minutes while it lasts.
@@ -49,6 +54,10 @@ thoughts:
   lonely:      { label: "Lonely", value: -4, hours: 0.5, stack: 1, source: rejection }         # proposal
   bored:       { label: "Bored stiff", value: -4, hours: 0.5, stack: 1, source: discomfort,    # proposal
                  scale: [{ axis: playful }] }
+  good_company: { label: "Good company", value: 6, hours: 0.5, stack: 1, source: person }        # proposal (M8)
+  good_time:   { label: "Having a good time", value: 6, hours: 0.5, stack: 1, source: discomfort, # proposal (M8)
+                 scale: [{ axis: playful }] }
+  comfortable: { label: "Comfortable", value: 3, hours: 0.5, stack: 1, source: discomfort }      # proposal (M8)
   too_cold:    { label: "Too cold", value: -1, hours: 0.5, stack: 1, source: discomfort }      # value set by the temperature line
   too_hot:     { label: "Too hot", value: -1, hours: 0.5, stack: 1, source: discomfort }
   slept_couch: { label: "Slept on the couch", value: -6, hours: 24, stack: 1, source: discomfort, scale: [{ axis: vain }] }
@@ -100,10 +109,10 @@ thoughts:
 
   # The show
   doomed:        { label: "The show is going to kill me", value: -4, hours: 1.5, stack: 1, source: fear }  # value set by meter.yaml doomed
-  sentenced:     { label: "Sentenced in public", value: -10, hours: 48, stack: 1, source: humiliation }
+  sentenced:     { label: "Sentenced in public", value: -10, hours: 24, stack: 1, source: humiliation }
   fishbowl_night: { label: "A night in the fishbowl", value: -12, species: { aquatic: -4 }, hours: 24, stack: 1, source: humiliation }
-  rank_up:       { label: "Rank went up", value: 5, hours: 48, stack: 1, source: status }
-  rank_down:     { label: "Rank went down", value: -8, hours: 48, stack: 1, source: status }
+  rank_up:       { label: "Rank went up", value: 5, hours: 24, stack: 1, source: status }
+  rank_down:     { label: "Rank went down", value: -8, hours: 24, stack: 1, source: status }
   mocked:        { label: "Mocked through the glass by {who}", value: -4, hours: 12, stack: 2, source: humiliation } # proposal
   fed:           { label: "{who} passed food through the slot", value: 4, hours: 12, stack: 1, source: person }     # proposal
 

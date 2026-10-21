@@ -104,13 +104,13 @@ export function perceivedFit(ctx: Ctx, a: Contestant, b: Contestant, knows: numb
 
 /**
  * Where a's attraction to b is heading, 0..10:
- * 10 × genderFit × (looks × beauty + personality × perceived fit + chemistry).
+ * scale × genderFit × (looks × beauty + personality × perceived fit + chemistry), capped at 10.
  */
 export function attractionTarget(ctx: Ctx, a: Contestant, b: Contestant): number {
   const at = ctx.data.social.attraction;
   const r = a.ledger[b.id];
   const inner = at.looks * looks(ctx, b) + at.personality * perceivedFit(ctx, a, b, r?.knows ?? 0) + (r?.chemistry ?? 0);
-  return clamp(10 * genderFit(a, b) * inner, 0, 10);
+  return clamp(at.scale * genderFit(a, b) * inner, 0, 10);
 }
 
 /** Time together moves attraction part of the way toward its target. */

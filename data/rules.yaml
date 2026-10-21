@@ -19,11 +19,11 @@ infractions:
 
 # The ladder, mildest first. meter: a penalty applied at the ceremony. fishbowl: "night" until the
 # release time below, "day" for dayHours.
-sentences:
-  - { meter: -10 }
-  - { meter: -15 }
+sentences:                      # M8 tuning: was −10, −15, —, −20. With the infraction (4) and
+  - { meter: -20 }               # sentence (6) awards, a −10 sentence cost nothing on the meter.
+  - { meter: -25 }
   - { fishbowl: night }
-  - { fishbowl: day, meter: -20 }
+  - { fishbowl: day, meter: -30 }
 
 # Rule of cool: an infraction whose own act scored at least minPoints for that contestant is
 # waived with this chance.

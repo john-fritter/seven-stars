@@ -107,7 +107,12 @@ export function voteOf(ctx: Ctx, trial: Trial, v: Contestant, accuser: Contestan
   const k = ctx.data.trials.fearNudge;
   const score = (x: Contestant) => (v.ledger[x.id]?.affection ?? 0) - k * (v.ledger[x.id]?.fear ?? 0);
   const a = score(accuser);
-  const b = score(accused);
+  let b = score(accused);
+  // An accuser who saw it happen testifies, and voters believe them as far as they trust them.
+  if (trial.witnesses.includes(accuser.id)) {
+    const t = ctx.data.trials.testimony;
+    b -= t.base + t.trust * (v.ledger[accuser.id]?.trust ?? 0);
+  }
   if (a !== b) return a < b ? accuser : accused;
   return tieLoser(ctx, accuser, accused); // no feelings either way: the show's numbers decide
 }

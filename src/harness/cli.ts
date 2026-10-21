@@ -70,6 +70,7 @@ function printReport(r: Report, ms: number): void {
   if (Object.keys(r.deathsByCausePerWeek).length) {
     console.log('\nDeaths per week by cause');
     console.log(top(r.deathsByCausePerWeek, 10, (v) => v.toFixed(2)));
+    console.log(`  stays that ended inside the run averaged ${fmt(r.finishedStayWeeks)} weeks (the target uses contestant-weeks per death)`);
   }
   console.log('\nWhere time goes, by room (share of all contestant time)');
   console.log(top(r.timeByRoom, 20, pct));
@@ -120,7 +121,7 @@ function printReport(r: Report, ms: number): void {
   console.log(top(r.wheel, 12, (v) => v.toFixed(2)));
   const ev = r.events;
   console.log(`\nDaily events, a week: ${Object.entries(ev.perWeek).map(([k, v]) => `${k} ${v.toFixed(2)}`).join(', ')}`);
-  console.log(`  fights outside the cage: ${ev.fightsOutsideCagePerWeek.toFixed(2)} a week (the fights target counts cage matches too)`);
+  console.log(`  fights outside the cage: ${ev.fightsOutsideCagePerWeek.toFixed(2)} a week (the fights target counts cage matches too; brawls shouldn't outnumber hookups)`);
   console.log(`  The Button: ${fmt(ev.pressesPerButton)} presses on average; someone pressed ${ev.buttonShare === null ? '—' : pct(ev.buttonShare)} of the time`);
   const mu = r.murders;
   const mw = Object.entries(mu.perWeek).map(([k, v]) => `${k} ${v.toFixed(3)}`).join(', ');

@@ -42,7 +42,7 @@ describe('thoughts', () => {
     const { w, ctx, cast } = aboard();
     const c = cast[0]!;
     Object.assign(c, { personality: flat(5), rank: 4, room: 'cafe', thoughts: [] });
-    c.needs.hunger = 10;
+    Object.assign(c.needs, { hunger: 10, social: 50, fun: 50, comfort: 50 });
     w.rooms.cafe!.temp = data.species.species[c.species]!.comfort[0] - 6; // rank-4 clothes add 1: felt 5° under
     conditions(ctx, c);
     expect(c.thoughts.find((x) => x.id === 'hungry')?.value).toBeCloseTo(-4);
@@ -56,6 +56,9 @@ describe('thoughts', () => {
     condition(ctx, c, 'too_hot', -5);
     expect(c.thoughts.filter((x) => x.id === 'too_hot')).toHaveLength(1);
     expect(c.mood).toBeCloseTo(45);
+    Object.assign(c.needs, { social: 90, fun: 90, comfort: 90 }); // well-met needs lift mood
+    conditions(ctx, c);
+    expect(c.thoughts.map((x) => x.id).sort()).toEqual(['comfortable', 'good_company', 'good_time']);
   });
 
   it('pick the biggest grievance and who it is about', () => {
