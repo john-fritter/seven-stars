@@ -35,10 +35,10 @@ describe('interaction chance', () => {
     const flirt = data.social.interactions.find((d) => d.id === 'flirt')!;
     a.personality.kind = 5;
     rel(a, b)!.affection = 0;
-    expect(interactionWeight(ctx, a, b, insult)).toBeCloseTo(0.007);
+    expect(interactionWeight(ctx, a, b, insult)).toBeCloseTo(insult.weight);
     rel(a, b)!.affection = -50; // × 2
     a.personality.kind = 0; // × 2
-    expect(interactionWeight(ctx, a, b, insult)).toBeCloseTo(0.028);
+    expect(interactionWeight(ctx, a, b, insult)).toBeCloseTo(insult.weight * 4);
     rel(a, b)!.attraction = 3.9;
     expect(interactionWeight(ctx, a, b, flirt)).toBe(0);
     rel(a, b)!.attraction = 5;

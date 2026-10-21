@@ -433,7 +433,8 @@ Slice one answers one question: does the mechanical station, left alone, produce
 | Deaths per week, all causes | 2–3 |
 | Average stay | 2–4 weeks |
 | Mental breaks, whole station | At least 1 a day |
-| Fights | 3+ a week |
+| Fights, cage matches included | 3+ a week |
+| Brawls (fights outside the cage) | 2+ a week |
 | Hookups | 2+ a week |
 | Infractions sentenced | Most days at least one |
 | Rank changes at the ceremony | Most nights at least one |
@@ -627,7 +628,7 @@ Every 10 minutes that two contestants share a room and aren't absorbed in someth
 | Kind words | 0.02 | Kindness | Target's mood +5 |
 | Flirt | 0.02 | Attraction, privacy, bravery, drunkenness | See romance below |
 | Slight | 0.02 | Low affection, cruelty | Affection −5; small bad thought |
-| Insult | 0.007 | Low affection, cruelty, drunkenness (up to ×5) | Affection −15; bad thought; fight chance |
+| Insult | 0.021 (tuned from 0.007) | Low affection, cruelty, drunkenness (up to ×5) | Affection −15; bad thought; fight chance |
 
 **Fights.** Each insult has a 4% chance of a fight (×2 drunk, ×3 hammered, ×1.5 when volatile). A fight lasts a few minutes: strength, stamina and a die roll decide who's hurt. The loser loses 10–30 health; a serious injury is rare. Afterward a coin flip makes it cathartic (+20 affection) or angering (−20). Fights outside the cage are an infraction.
 

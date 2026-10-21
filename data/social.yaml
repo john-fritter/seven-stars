@@ -47,9 +47,9 @@ interactions:
       scale: [{ by: attraction }, { by: privacy, k: 1 }, { by: brave, k: 0.5 }] }
   - { id: slight, weight: 0.02, scale: [{ by: affection, k: -2 }, { by: kind, k: -1 }],
       target: { affection: -5 }, thought: slighted }
-  - { id: insult, weight: 0.007, scale: [{ by: affection, k: -2 }, { by: kind, k: -1 }],
+  - { id: insult, weight: 0.021, scale: [{ by: affection, k: -2 }, { by: kind, k: -1 }],
       target: { affection: -15, fear: 3 }, thought: insulted, fight: true,       # fear: proposal
-      witnessThought: saw_cruelty }
+      witnessThought: saw_cruelty }   # M8: weight was 0.007; tripled for 2+ brawls a week
   # Gifts: a carried drink (booze.yaml carry and gift).
   - { id: gift, weight: 0.03, move: gift, needs: { inventory: true }, social: 4,
       scale: [{ by: kind }, { by: affection, k: 1 }] }
