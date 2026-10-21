@@ -150,6 +150,7 @@ function renderSheet(): void {
       ${c.breakdown ? row('breakdown', `<b>${esc(data.breaks.kinds[c.breakdown.kind]?.label ?? c.breakdown.kind)}</b> (${c.breakdown.level}, over ${esc(c.breakdown.source)})`) : ''}
       ${row('intoxication', `${c.intox.toFixed(0)}${stageText(c)}${c.drinks ? ` <small>(hangover weight ${c.drinks.toFixed(1)})</small>` : ''}`)}
       ${c.inventory.length ? row('carrying', esc(c.inventory.join(', '))) : ''}
+      ${c.immunities ? row('secret immunities', String(c.immunities)) : ''}
       ${c.secret ? row('secret points', `${c.secret.toFixed(0)} <small>(hidden until they die)</small>`) : ''}
       ${row('health', c.health.toFixed(0))}
       ${row('doing', esc(doingText(c)))}
@@ -265,7 +266,9 @@ function describe(e: SimEvent): string | null {
     case 'on_notice':
       return `${a[0]}'s meter hits zero. ${a[0]} is ON NOTICE.`;
     case 'death':
-      if (d.cause === 'murder') return `☠ ${d.name} is dead, killed by ${who(String(d.killer))} in the ${roomName(e.room)} (aboard ${(Number(d.stay) / 1440).toFixed(1)} days).`;
+      if (d.cause === 'murder') return `☠ ${d.name} is dead, killed by ${who(String(d.killer))} in the ${roomName(e.room)} (aboard ${(Number(d.stay) / 1440).toFixed(1)} days).${(d.witnesses as unknown[]).length ? '' : ' Nobody knows yet.'}`;
+      if (d.cause === 'wheel') return `☠ The Wheel has spoken. ${d.name} is spaced (aboard ${(Number(d.stay) / 1440).toFixed(1)} days).`;
+      if (d.cause === 'trial') return `☠ ${d.name} loses the trial and is spaced (aboard ${(Number(d.stay) / 1440).toFixed(1)} days).`;
       return `☠ ${d.name} is spaced. The robots wave goodbye at the airlock (meter ${Number(d.meter).toFixed(0)}, aboard ${(Number(d.stay) / 1440).toFixed(1)} days).`;
     case 'murder':
       return `MURDER. ${a[0]} kills ${a[1]}${d.weapon ? ` (${d.weapon === 'cafe' ? 'with a cafe knife' : 'in the hot tub'})` : ''}. ${(d.witnesses as unknown[]).length ? 'Someone saw.' : 'Nobody saw. The cameras did.'}`;
@@ -359,6 +362,59 @@ function describe(e: SimEvent): string | null {
       return `${a[0]} leaves ${a[1]}'s ${roomName(e.room)}`;
     case 'guest_out':
       return `Morning: robots show ${a[0]} out of ${a[1]}'s ${roomName(e.room)}`;
+    // The Wheel
+    case 'wheel': {
+      const seg = data.wheel.segments.find((s) => s.id === d.segment);
+      return `🎡 ${a[0]}, our lowest star, spins the Wheel... ${(seg?.label ?? String(d.segment)).toUpperCase()}!`;
+    }
+    case 'booked':
+      return `Tomorrow's event is booked: ${a[0]} vs ${a[1]}, ${label(String(d.format))}.`;
+    case 'bed_swap':
+      return `${a[0]} gets the suite tonight. ${a[1]} gets the couch.`;
+    case 'pick_two':
+      return `${a[0]} picks: ${a[1]} gains ${d.amount}, ${a[2]} loses ${d.amount}.`;
+    case 'secrets': {
+      const ls = (d.labels as [string, string, string][]).map(([x, y, l]) => `${who(x)} calls ${who(y)} "${l}"`);
+      return `SECRETS REVEALED: ${ls.length ? ls.join('; ') : 'nobody has any. How boring.'}`;
+    }
+    case 'effects':
+      return `Today: ${(d.effects as string[]).map((id) => data.wheel.effects[id]?.label ?? id).join(', ')}.`;
+    case 'collective':
+      return `Because of ${a[0]}, tomorrow everyone gets: ${(d.effects as string[]).map((id) => (data.wheel.effects[id]?.label ?? id).toLowerCase()).join(', ')}. Thank ${a[0]}!`;
+    // The daily event
+    case 'event_start':
+      return `Today's event: ${label(String(d.format)).toUpperCase()}${a.length ? ` (${a.join(' vs ')}${d.sudden ? ', sudden death' : ''}${d.prize ? ', for the rank' : ''})` : ''}! Everyone to the ${roomName(e.room)}.`;
+    case 'event_cancelled':
+      return `The ${label(String(d.format))} is off: not enough contestants showed up.`;
+    case 'booking_cancelled':
+      return `The booked ${label(String(d.format))} is off: someone isn't with us any more.`;
+    case 'cage_match':
+      return `CAGE MATCH: ${a[0]} beats ${a[1]}${d.forfeit ? ' (a no-show forfeits)' : ''}!`;
+    case 'rank_swap':
+      return `${a[0]} takes ${a[1]}'s rank (#${d.up}) and room until the next ceremony.`;
+    case 'dance_off': {
+      const sc = d.scores as Record<string, number>;
+      return `DANCE-OFF: ${Object.entries(sc).map(([id, s]) => `${who(id)} ${s.toFixed(1)}`).join(', ')}. ${who(String(d.winner))} wins${d.sudden ? `; ${who(String(d.loser))} drops to ZERO` : ''}.`;
+    }
+    case 'button':
+      return `THE BUTTON: everyone chooses in secret... ${d.presses} pressed. (Pressers: ${(d.pressers as string[]).map(who).join(', ') || 'nobody'}; revealed at dinner.)`;
+    case 'button_reveal':
+      return `Dinner reveal: ${a.length ? `${a.join(', ')} pressed the button` : 'nobody pressed the button'}.`;
+    // Murders and trials
+    case 'body_found':
+      return d.announced ? `The announcer regrets to inform you that ${d.name} is dead (${roomName(e.room)}). The robots collect.` : `${a[0]} finds ${d.name}'s body in the ${roomName(e.room)}!`;
+    case 'accusation':
+      return `J'ACCUSE: ${a[0]} accuses ${a[1]} of murdering ${d.name}. Trial ${d.day === Math.floor(e.t / 1440) + 1 ? 'this' : 'tomorrow'} morning.${d.right ? '' : ' (They didn\'t do it.)'}`;
+    case 'no_accusation':
+      return `Nobody dares accuse anyone of killing ${d.name}.`;
+    case 'trial_called':
+      return 'All rise: a trial. Everyone to the common room.';
+    case 'trial': {
+      const votes = Object.values(d.votes as Record<string, string>);
+      return `TRIAL for ${d.name}: ${a[0]} vs ${a[1]}. Votes: ${a[0]} ${votes.filter((v) => v === e.actors[0]).length}, ${a[1]} ${votes.filter((v) => v === e.actors[1]).length}. ${who(String(d.loser))} is condemned${d.right ? '.' : `, and ${who(String(d.killer))} did it.`}`;
+    }
+    case 'trial_cancelled':
+      return `The trial for ${d.name} is off: someone isn't with us any more.`;
     default:
       return `${e.type} ${a.join(', ')} ${e.room ?? ''} ${JSON.stringify(d)}`;
   }
@@ -385,7 +441,8 @@ function renderTicker(): void {
 }
 
 function render(): void {
-  $('clock').textContent = clockText(world.t);
+  const fx = Object.entries(world.show.effects).filter(([, day]) => day === Math.floor(world.t / 1440) + 1).map(([id]) => data.wheel.effects[id]?.label ?? id);
+  $('clock').textContent = clockText(world.t) + (fx.length ? ` · ${fx.join(', ')}` : '');
   renderStation();
   renderSheet();
   renderTicker();

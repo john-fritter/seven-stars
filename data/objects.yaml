@@ -17,6 +17,7 @@
 #   logs:        an event logged when the action is finished, for scoring (a karaoke performance)
 #   thought:     a thought when it's finished (for sleep: when they wake, if they slept long enough)
 #   booze:       for drinks, the best quality poured here (booze.yaml); fun comes from the quality
+#   when / unless: only on / never on a day with this station effect (wheel.yaml effects)
 #
 # Numbers marked "proposal" aren't in DESIGN.md yet.
 
@@ -65,7 +66,11 @@ types:
     capacity: 1
     actions:
       - { id: shower, label: takes a hot shower, minutes: 15, gains: { hygiene: 60 }, comfort: 85,
-          notSpecies: [feline], tags: [solitary, exposed, comforting] }
+          notSpecies: [feline], unless: cold_water, tags: [solitary, exposed, comforting] }
+      # On a cold-water day (wheel.yaml effects) the hot shower runs cold.
+      - { id: cold_shower, label: takes a cold shower, minutes: 10, gains: { hygiene: 40 }, comfort: 25,
+          speciesGains: { aquatic: { hygiene: 60 } }, cost: 0.5, speciesCost: { aquatic: 0 },
+          notSpecies: [feline], when: cold_water, thought: cold_shower, tags: [solitary, exposed] }
   shower_cold:
     capacity: 1
     actions:

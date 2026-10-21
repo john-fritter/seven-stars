@@ -193,11 +193,12 @@ export function attack(ctx: Ctx, c: Contestant, target: Contestant): void {
   const p = ctx.data.breaks.passion;
   const room = c.room;
   const killChance = p.perStrength * Math.max(0, c.strength - target.strength) * (p.weapons[room] ?? 1);
-  const dead = brawl(ctx, c, target, {
+  const fight = brawl(ctx, c, target, {
     firstBlow: p.firstBlow,
     lethal: (winner) => winner === c && chance(ctx.w.rng, killChance),
   });
-  if (!dead) return;
+  if (!fight.killed) return;
+  const dead = fight.loser;
   const witnesses = ctx.w.contestants.filter((o) => o !== c && o !== dead && o.room === room && !o.asleep);
   log(ctx, 'murder', [c.id, dead.id], room, { name: dead.name, weapon: p.weapons[room] ? room : null, witnesses: witnesses.map((w) => w.id) });
   for (const w of witnesses) {

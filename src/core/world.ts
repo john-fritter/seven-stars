@@ -28,9 +28,13 @@ export function createWorld(data: GameData, seed: number): World {
   }
   const objects: World['objects'] = {};
   for (const o of st.objects) objects[o.id] = [];
-  const w: World = { version: 1, seed, t: 0, rng: createRng(seed), nextId: 1, contestants: [], rooms, objects, show: { day: 1, today: {}, pairs: {}, pending: [] } };
+  const w: World = { version: 1, seed, t: 0, rng: createRng(seed), nextId: 1, contestants: [], rooms, objects, show: newShow() };
   worldData.set(w, data);
   return w;
+}
+
+function newShow(): World['show'] {
+  return { day: 1, today: {}, pairs: {}, pending: [], effects: {}, booked: null, event: null, lastFormat: null, button: null, bedSwap: null, bodies: [], trials: [], trialOn: null, seen: {} };
 }
 
 /** Swaps the data a world runs on, for hot-reloading tuned values. */

@@ -96,12 +96,60 @@ export interface Infraction {
   scored: number; // what the act itself scored for them, for the rule-of-cool waiver
 }
 
-/** The show's bookkeeping: the judge's boredom, repeat pairs, and infractions awaiting sentence. */
+/** A match booked for a daily event: by the Wheel for tomorrow, or set up when the slot opens. */
+export interface Booking {
+  format: string;
+  actors: string[]; // the Wheel's spinner first; empty: picked from whoever turns up
+  sudden: boolean; // the loser drops to zero
+  prize: boolean; // a winning challenger takes the loser's rank and room until the next ceremony
+}
+
+/** Today's daily event, from when the slot opens until the next one. */
+export interface DailyEvent extends Booking {
+  day: number;
+  room: string;
+}
+
+/** A murder nobody saw: the victim lies where they fell until someone finds them. */
+export interface Body {
+  id: string;
+  name: string;
+  room: string;
+  t: number;
+  killer: string;
+  witnesses: string[];
+  near: string[]; // seen in the room shortly before
+  feelings: Record<string, { affection: number; enemy: boolean }>; // everyone else, at the time of death
+}
+
+/** An accusation waiting for the morning trial. */
+export interface Trial {
+  day: number;
+  victim: string;
+  name: string;
+  killer: string;
+  accuser: string;
+  accused: string;
+  witnesses: string[];
+}
+
+/** The show's bookkeeping: the judge's boredom, repeat pairs, infractions awaiting sentence, and the
+ * Wheel's, the daily event's and the trials' state. */
 export interface ShowState {
   day: number; // the day `today` counts
   today: Record<string, number>; // event type -> times scored today, station-wide
   pairs: Record<string, number[]>; // "type|a|b" -> when that pair last scored it, within the repeat window
   pending: Infraction[];
+  effects: Record<string, number>; // station effect -> the day it's on
+  booked: Booking | null; // the Wheel's match for tomorrow's event
+  event: DailyEvent | null;
+  lastFormat: string | null;
+  button: { day: number; pressers: string[] } | null; // revealed at dinner
+  bedSwap: string[] | null; // the Wheel's suite night, swapped back at the wake chime
+  bodies: Body[];
+  trials: Trial[];
+  trialOn: number | null; // the day trials were last called, so the gathering runs its course
+  seen: Record<string, Record<string, number>>; // room -> contestant -> when they last left it
 }
 
 /** One reason in the ledger. Repeats of the same reason merge into the latest entry. */

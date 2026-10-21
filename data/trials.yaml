@@ -1,0 +1,27 @@
+# Bodies and placeholder trials. DESIGN.md Part two, Arrivals, deaths and trials. Trials run on
+# knowledge and feelings, not speech. The hour they're held is in schedule.yaml trials.
+
+# A murder nobody saw leaves a body where it fell until someone walks in on it (the killer
+# doesn't count); the announcer declares any still unfound at the ceremony.
+foundThought: found_body
+
+# Seen near the victim: in the murder room within this many minutes before the murder.
+nearMinutes: 60         # proposal
+
+# Each contestant's suspicion of each other one, 0..100:
+#   witnessed the murder: `witnessed` on the killer, nothing on anyone else
+#   otherwise: dislike × −affection (if negative) + fear × fear + `enemy` if the suspect and the
+#   victim were rivals (either way) + `near` if both were seen near the victim
+suspicion: { witnessed: 100, dislike: 0.3, fear: 0.3, enemy: 30, near: 40 }   # proposal
+
+# The contestant with the highest suspicion × brave ÷ 10 accuses their top suspect, if it's at
+# least this. Below it, nobody dares and there's no trial.
+accuseAt: 15            # proposal
+
+accused: { thought: accused, affection: -30 }   # proposal: how the accused takes it
+
+# Voters (everyone there but the two) who witnessed the murder vote against the killer. Everyone
+# else condemns whichever side scores lower on affection − fearNudge × fear: the one they like
+# less, nudged toward someone they fear. Ties on votes break on the meter, then lifetime points.
+fearNudge: 0.5          # proposal
+survivedThought: survived_trial

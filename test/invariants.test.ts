@@ -39,6 +39,7 @@ describe('invariants, checked every minute', () => {
         const alive = new Set(w.contestants.map((c) => c.id));
         for (const c of w.contestants) for (const id of Object.keys(c.ledger)) if (!alive.has(id)) throw new Error(`${c.name} still has a ledger entry for the dead ${id}`);
         for (const x of w.show.pending) if (!alive.has(x.who)) throw new Error(`a dead contestant ${x.who} awaits sentence`);
+        for (const b of w.show.bodies) if (alive.has(b.id)) throw new Error(`${b.name} is both a body and aboard`);
         for (const [id, users] of Object.entries(w.objects)) {
           const cap = ctx.st.object.get(id)!.capacity;
           if (users.length > cap) throw new Error(`${id} has ${users.length} users, capacity ${cap}`);

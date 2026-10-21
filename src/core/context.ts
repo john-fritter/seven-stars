@@ -70,6 +70,18 @@ export function validGuest(ctx: Ctx, c: Contestant, roomId: string): boolean {
   return !!host && host.bed !== null && ctx.st.object.get(host.bed)!.room === roomId;
 }
 
+/** A station effect (wheel.yaml effects) that's on today: cold water, no breakfast, a party. */
+export function effectOn(ctx: Ctx, id: string): boolean {
+  return ctx.w.show.effects[id] === dayOf(ctx.w.t);
+}
+
+/** The station effects on today. */
+export function effectsToday(ctx: Ctx): string[] {
+  const day = dayOf(ctx.w.t);
+  const fx = ctx.w.show.effects;
+  return Object.keys(fx).filter((id) => fx[id] === day);
+}
+
 export function inRanks(r: number, ranks: readonly [number, number] | undefined): boolean {
   return !ranks || (r >= ranks[0] && r <= ranks[1]);
 }

@@ -39,6 +39,15 @@ export const scheduleSchema = z.object({
     wakeAbove: num,
     room: z.string(),
   }),
+  // The daily event slot and the morning trials are gatherings like the ceremony.
+  event: z.object({ at: clock, minutes: z.number().int().positive(), resolveAfter: z.number().int().nonnegative(), wakeAbove: num }),
+  trials: z.object({
+    at: clock,
+    minutes: z.number().int().positive(),
+    resolveAfter: z.number().int().nonnegative(),
+    wakeAbove: num,
+    room: z.string(),
+  }),
 });
 
 export const roomsSchema = z.object({
@@ -80,6 +89,8 @@ export const actionSchema = z.object({
   logs: z.string().optional(),
   thought: z.string().optional(),
   booze: z.string().optional(),
+  when: z.string().optional(),
+  unless: z.string().optional(),
 });
 
 export const objectsSchema = z.object({
@@ -220,7 +231,15 @@ export const scoringSchema = z.object({
 const sentenceSchema = z.object({ meter: num.optional(), fishbowl: z.enum(['night', 'day']).optional() });
 
 export const rulesSchema = z.object({
-  infractions: z.record(z.string(), z.object({ label: z.string(), step: z.number().int().positive() })),
+  infractions: z.record(
+    z.string(),
+    z.object({
+      label: z.string(),
+      step: z.number().int().positive(),
+      collective: z.array(z.string()).default([]),
+      blame: num.default(0),
+    }),
+  ),
   sentences: z.array(sentenceSchema).min(1),
   waiver: z.object({ minPoints: num, chance: unit }),
   sneak: z.object({ cost: num, honestK: num, braveK: num }),
@@ -448,6 +467,76 @@ export const romanceSchema = z.object({
   guilty: z.string(),
 });
 
+export const wheelSchema = z.object({
+  thought: z.string().optional(),
+  segments: z
+    .array(
+      z.object({
+        id: z.string(),
+        label: z.string(),
+        weight: num.nonnegative(),
+        effect: z.enum(['space', 'immunity', 'meter', 'event', 'swap_beds', 'fishbowl', 'station', 'secrets', 'pick_two', 'nothing']),
+        thought: z.string().optional(),
+        to: num.optional(),
+        event: z.string().optional(),
+        against: z.enum(['top', 'random']).optional(),
+        sudden: z.boolean().default(false),
+        prize: z.boolean().default(false),
+        fishbowl: z.enum(['night', 'day']).optional(),
+        station: z.array(z.string()).default([]),
+        blame: num.default(0),
+        amount: num.optional(),
+      }),
+    )
+    .min(1),
+  effects: z.record(
+    z.string(),
+    z.object({ label: z.string(), meals: z.array(z.string()).default([]), booze: z.string().optional() }),
+  ),
+});
+
+export const FORMATS = ['cage_match', 'dance_off', 'button'] as const;
+export type Format = (typeof FORMATS)[number];
+
+export const eventsSchema = z.object({
+  rotation: z.array(z.enum(FORMATS)).min(2),
+  cage_match: z.object({ room: z.string(), watchFun: num, prizeThoughts: z.boolean().default(true) }),
+  dance_off: z.object({
+    room: z.string(),
+    dancers: z.tuple([z.number().int().min(2), z.number().int().min(2)]),
+    playful: num,
+    stamina: num,
+    beauty: num,
+    crowd: num,
+    die: num.nonnegative(),
+    watchFun: num,
+    won: z.string(),
+    lost: z.string(),
+  }),
+  button: z.object({
+    room: z.string(),
+    base: unit,
+    kindK: num,
+    loyalK: num,
+    braveK: num,
+    desperateK: num,
+    gain: num,
+    loss: num,
+    revealAt: clock,
+    affection: num,
+  }),
+});
+
+export const trialsSchema = z.object({
+  foundThought: z.string(),
+  nearMinutes: num.nonnegative(),
+  suspicion: z.object({ witnessed: num, dislike: num, fear: num, enemy: num, near: num }),
+  accuseAt: num,
+  accused: z.object({ thought: z.string(), affection: num }),
+  fearNudge: num,
+  survivedThought: z.string(),
+});
+
 /** Every data file, by file name (without .yaml). */
 export const fileSchemas = {
   schedule: scheduleSchema,
@@ -470,6 +559,9 @@ export const fileSchemas = {
   booze: boozeSchema,
   breaks: breaksSchema,
   romance: romanceSchema,
+  wheel: wheelSchema,
+  events: eventsSchema,
+  trials: trialsSchema,
 } as const;
 
 export type GameData = { [K in keyof typeof fileSchemas]: z.output<(typeof fileSchemas)[K]> };

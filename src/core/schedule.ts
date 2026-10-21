@@ -1,7 +1,10 @@
-// The daily schedule: arrivals, the wake chime, meals, lights-dim and the ceremony.
-// DESIGN.md Part two, Clock and daily schedule.
-import { CEREMONY, endActivity, onToilet, openMeals } from './actions.js';
+// The daily schedule: arrivals, the wake chime, trials, meals, the daily event, lights-dim and the
+// ceremony. DESIGN.md Part two, Clock and daily schedule.
+import { actionDef, CEREMONY, endActivity, EVENT, onToilet, openMeals, TRIAL, type Plan } from './actions.js';
 import { canEnter, dayOf, log, timeOfDay, type Ctx } from './context.js';
+import { eventToday, openEvent, resolveEvent, revealButton } from './events.js';
+import { announceBodies, findBodies, holdTrials, trialsToday } from './trials.js';
+import { spinWheel, unswapBeds } from './wheel.js';
 import { fadeLedger } from './ledger.js';
 import { cast } from './generator.js';
 import { shuffle } from './rng.js';
@@ -17,9 +20,20 @@ export function runSchedule(ctx: Ctx): void {
   const s = ctx.data.schedule;
   const m = timeOfDay(ctx.w.t);
   fishbowlMinute(ctx);
+  if (ctx.w.show.bodies.length) findBodies(ctx);
+
+  if (m === 0) {
+    // Station effects (cold water, no breakfast, a party) last their day; the old ones go.
+    const fx = ctx.w.show.effects;
+    const day = dayOf(ctx.w.t);
+    for (const id of Object.keys(fx)) if (fx[id]! < day) delete fx[id];
+    const on = Object.keys(fx).filter((id) => fx[id] === day);
+    if (on.length) log(ctx, 'effects', [], undefined, { effects: on });
+  }
 
   if (m === s.wakeChime.at) {
     log(ctx, 'wake_chime', []);
+    if (ctx.w.show.bedSwap) backToBed(ctx);
     for (const c of ctx.w.contestants) if (c.asleep && c.needs.rest > s.wakeChime.minRest) endActivity(ctx, c, 'woke');
     guestsOut(ctx);
     for (const c of ctx.w.contestants) {
@@ -30,6 +44,19 @@ export function runSchedule(ctx: Ctx): void {
   if (m === s.arrivals) arrivals(ctx);
   if (m === s.lightsDim) log(ctx, 'lights_dim', []);
 
+  if (m === s.trials.at && trialsToday(ctx).length) {
+    log(ctx, 'trial_called', [], s.trials.room, { trials: trialsToday(ctx).length });
+    summon(ctx, TRIAL, s.trials.wakeAbove);
+  }
+  if (m === s.trials.at + s.trials.resolveAfter && trialsToday(ctx).length) holdTrials(ctx);
+
+  if (m === s.event.at) {
+    openEvent(ctx);
+    summon(ctx, EVENT, s.event.wakeAbove);
+  }
+  if (m === s.event.at + s.event.resolveAfter) resolveEvent(ctx);
+  if (m === ctx.data.events.button.revealAt && ctx.w.show.button) revealButton(ctx);
+
   // A meal opening pulls awake people out of what they're doing so they can choose to go.
   for (const meal of s.meals) {
     if (m !== meal.from) continue;
@@ -38,16 +65,53 @@ export function runSchedule(ctx: Ctx): void {
     }
   }
 
-  if (m === s.ceremony.at) {
-    for (const c of ctx.w.contestants) if (c.asleep && !c.confined && c.needs.rest > s.ceremony.wakeAbove) endActivity(ctx, c, 'woke');
-    // Everyone is summoned, unless they're in the middle of a breakdown.
-    for (const c of ctx.w.contestants) if (!c.asleep && !c.confined && !c.breakdown && c.activity?.action !== CEREMONY && !onToilet(ctx, c)) endActivity(ctx, c, 'interrupted');
-  }
+  if (m === s.ceremony.at) summon(ctx, CEREMONY, s.ceremony.wakeAbove);
   if (m === s.ceremony.at + s.ceremony.resolveAfter) ceremony(ctx);
 }
 
+/**
+ * A gathering everyone must attend, if one is on now: the ceremony, a trial, the daily event.
+ * Contestants who come free while it's on head there.
+ */
+export function gathering(ctx: Ctx): Plan | null {
+  const s = ctx.data.schedule;
+  const m = timeOfDay(ctx.w.t);
+  const at = (from: number, minutes: number) => m >= from && m < from + minutes;
+  const until = (from: number, minutes: number) => ctx.w.t - m + from + minutes;
+  if (at(s.ceremony.at, s.ceremony.minutes)) return { action: CEREMONY, object: null, room: s.ceremony.room, endAt: until(s.ceremony.at, s.ceremony.minutes) };
+  // A trial is on until its verdicts are in and its time is up.
+  if (at(s.trials.at, s.trials.minutes) && ctx.w.show.trialOn === dayOf(ctx.w.t)) return { action: TRIAL, object: null, room: s.trials.room, endAt: until(s.trials.at, s.trials.minutes) };
+  const ev = at(s.event.at, s.event.minutes) ? eventToday(ctx) : null;
+  if (ev) return { action: EVENT, object: null, room: ev.room, endAt: until(s.event.at, s.event.minutes) };
+  return null;
+}
+
+/** Everyone is summoned: sleepers with enough rest are woken, and anyone free is pulled out of what they're doing. */
+function summon(ctx: Ctx, action: string, wakeAbove: number): void {
+  if (action === TRIAL) ctx.w.show.trialOn = dayOf(ctx.w.t);
+  for (const c of ctx.w.contestants) if (c.asleep && !c.confined && c.needs.rest > wakeAbove) endActivity(ctx, c, 'woke');
+  // Unless they're in the middle of a breakdown, or on the toilet.
+  for (const c of ctx.w.contestants) if (!c.asleep && !c.confined && !c.breakdown && c.activity?.action !== action && !onToilet(ctx, c)) endActivity(ctx, c, 'interrupted');
+}
+
+/** The suite night is over at the wake chime. Anyone still in a bed or room that isn't theirs any more is moved along. */
+function backToBed(ctx: Ctx): void {
+  const ids = ctx.w.show.bedSwap ?? [];
+  unswapBeds(ctx);
+  for (const c of ctx.w.contestants) {
+    if (!ids.includes(c.id)) continue;
+    const a = c.activity;
+    if (a && ((a.object && actionDef(ctx, a)?.assigned && a.object !== c.bed) || !canEnter(ctx, c, a.room))) endActivity(ctx, c, 'woke');
+    if (!canEnter(ctx, c, c.room)) {
+      const from = c.room;
+      c.room = ctx.data.schedule.ceremony.room;
+      log(ctx, 'escorted', [c.id], c.room, { from });
+    }
+  }
+}
+
 /** The robots deliver or repossess clothes with the new rank; the outfit leaves a thought. */
-function dress(ctx: Ctx, c: Contestant): void {
+export function dress(ctx: Ctx, c: Contestant): void {
   for (const tier of Object.values(ctx.data.clothing.byRank)) if (tier.thought) forget(ctx, c, tier.thought);
   const thought = ctx.data.clothing.byRank[String(c.rank) as '1']!.thought;
   if (thought) think(ctx, c, thought);
@@ -87,12 +151,13 @@ export function rankOrder(ctx: Ctx, cast: Contestant[]): Contestant[] {
 }
 
 /**
- * The evening ceremony, in order: roll call, today's infractions and sentences (meter penalties
- * applied), anyone at zero spaced, ranks assigned, the Wheel (still to come), room moves, and the
- * fishbowl's new occupants escorted in.
+ * The evening ceremony, in order: any unfound body announced, roll call, today's infractions and
+ * sentences (meter penalties applied), anyone at zero spaced, ranks assigned, the Wheel spun by the
+ * new bottom rank, room moves, and the fishbowl's new occupants escorted in.
  */
 function ceremony(ctx: Ctx): void {
   const w = ctx.w;
+  if (w.show.bodies.length) announceBodies(ctx);
   rollCall(ctx);
   const fishbowl = sentencing(ctx);
   spacings(ctx);
@@ -112,6 +177,9 @@ function ceremony(ctx: Ctx): void {
     ranks: order.map((c) => c.id),
     changes,
   });
+
+  const spinner = order[order.length - 1];
+  if (spinner) fishbowl.push(...spinWheel(ctx, spinner, order));
 
   for (const { c, kind } of fishbowl) if (w.contestants.includes(c)) confine(ctx, c, kind);
 

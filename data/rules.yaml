@@ -7,10 +7,15 @@
 infractions:
   above_rank:       { label: "Entering above rank", step: 1 }
   skipped_ceremony: { label: "Skipping the ceremony", step: 1 }
+  skipped_event:    { label: "Skipping an event", step: 1 }    # the daily event or a trial
   fighting:         { label: "Fighting outside the cage", step: 2 }
-  theft:            { label: "Theft", step: 3 }                # arrives with breaks
+  theft:            { label: "Theft", step: 3,                 # the only theft is raiding the cafe's food,
+                      collective: [cold_water, no_breakfast], blame: -5 }   # so everyone pays tomorrow
   damage:           { label: "Damaging the set", step: 3 }     # arrives with breaks
   cameras:          { label: "Interfering with the cameras", step: 4 }   # arrives with breaks
+
+# collective: station effects (wheel.yaml) everyone suffers the day after the sentence, and
+# blame: how much everyone else's affection for the guilty one moves (proposal: −5).
 
 # The ladder, mildest first. meter: a penalty applied at the ceremony. fishbowl: "night" until the
 # release time below, "day" for dayHours.

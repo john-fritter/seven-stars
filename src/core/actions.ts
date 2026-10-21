@@ -6,7 +6,8 @@
 import type { ActionDef, MealDef, Need } from '../data/schema.js';
 import { drinkFun, drinkPull, finishDrink, qualityFor, soberFactor, stageMult } from './booze.js';
 import { breakArrive, breakMinute, endBreak } from './breaks.js';
-import { accessRank, canEnter, dayOf, inRanks, isNight, log, timeOfDay, type Ctx } from './context.js';
+import { accessRank, canEnter, dayOf, effectOn, effectsToday, inRanks, isNight, log, timeOfDay, type Ctx } from './context.js';
+import { gathering } from './schedule.js';
 import { gainsOf, personalityOf } from './derived.js';
 import { addNeed, needUrgency } from './needs.js';
 import { between, weightedIndex } from './rng.js';
@@ -20,6 +21,8 @@ import type { Activity, Contestant } from './types.js';
 /** Scheduled actions that aren't advertised by objects. */
 export const MEAL = 'meal';
 export const CEREMONY = 'ceremony';
+export const EVENT = 'event'; // the daily event (events.ts)
+export const TRIAL = 'trial'; // a morning trial (trials.ts)
 export const IDLE = 'idle';
 export const WAIT = 'wait'; // waiting for a toilet to free up
 export const FIGHT = 'fight';
@@ -125,12 +128,14 @@ export function openMeals(ctx: Ctx, c: Contestant): MealDef[] {
   const m = timeOfDay(ctx.w.t);
   const day = dayOf(ctx.w.t);
   const r = accessRank(ctx, c);
-  return ctx.data.schedule.meals.filter((meal) => m >= meal.from && m < meal.to && c.eaten[meal.group] !== day && inRanks(r, meal.ranks) && canEnter(ctx, c, meal.room));
+  const cancelled = effectsToday(ctx).flatMap((id) => ctx.data.wheel.effects[id]!.meals);
+  return ctx.data.schedule.meals.filter((meal) => !cancelled.includes(meal.id) && m >= meal.from && m < meal.to && c.eaten[meal.group] !== day && inRanks(r, meal.ranks) && canEnter(ctx, c, meal.room));
 }
 
-function usable(ctx: Ctx, c: Contestant, def: ActionDef): boolean {
+export function usable(ctx: Ctx, c: Contestant, def: ActionDef): boolean {
   if (def.onlySpecies && !def.onlySpecies.includes(c.species)) return false;
   if (def.notSpecies?.includes(c.species)) return false;
+  if ((def.when && !effectOn(ctx, def.when)) || (def.unless && effectOn(ctx, def.unless))) return false;
   return inRanks(accessRank(ctx, c), def.ranks);
 }
 
@@ -214,11 +219,10 @@ function knockCandidates(ctx: Ctx, c: Contestant, others: Map<string, number>, n
 
 /** Picks and starts the next action. Scheduled obligations come first, then the scoring. */
 export function decide(ctx: Ctx, c: Contestant): void {
-  const cer = ctx.data.schedule.ceremony;
-  const m = timeOfDay(ctx.w.t);
   const critical = c.needs.bladder < ctx.data.needs.bladder.criticalBelow;
-  if (!critical && !c.confined && m >= cer.at && m < cer.at + cer.minutes) {
-    begin(ctx, c, { action: CEREMONY, object: null, room: cer.room, endAt: ctx.w.t - m + cer.at + cer.minutes });
+  const g = critical || c.confined ? null : gathering(ctx);
+  if (g) {
+    begin(ctx, c, g);
     return;
   }
 
@@ -287,6 +291,7 @@ export function begin(ctx: Ctx, c: Contestant, p: Plan): void {
 
 function arrive(ctx: Ctx, c: Contestant): void {
   const a = c.activity!;
+  if (c.room !== a.room) (ctx.w.show.seen[c.room] ??= {})[c.id] = ctx.w.t; // for "seen near the victim"
   c.room = a.room;
   if (c.guest && c.guest.room !== a.room) {
     log(ctx, 'guest_leave', [c.id, c.guest.host], c.guest.room);

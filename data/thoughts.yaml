@@ -113,3 +113,12 @@ thoughts:
   friend_died:   { label: "My friend {who} died", value: -12, hours: 168, stack: 1, source: grief }
   rival_died:    { label: "{who} got what was coming", value: 6, hours: 72, stack: 1, source: person }
   saw_murder:    { label: "Saw {who} kill someone", value: -12, hours: 72, stack: 1, source: fear }  # proposal
+  found_body:    { label: "Found {who}'s body", value: -10, hours: 72, stack: 1, source: fear }
+
+  # The Wheel, the daily event and trials (all proposals)
+  spun_wheel:    { label: "Had to spin the Wheel", value: -5, hours: 24, stack: 1, source: fear }
+  won_immunity:  { label: "Won a secret immunity", value: 8, hours: 48, stack: 1, source: status }
+  won_dance_off: { label: "Won the dance-off", value: 5, hours: 24, stack: 1, source: status }
+  lost_dance_off: { label: "Lost the dance-off", value: -4, hours: 24, stack: 1, source: humiliation, scale: [{ axis: vain }] }
+  accused:       { label: "Accused of murder by {who}", value: -15, hours: 72, stack: 1, source: person }
+  survived_trial: { label: "Survived a trial", value: 10, hours: 72, stack: 1, source: catharsis }

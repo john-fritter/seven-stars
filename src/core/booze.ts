@@ -2,7 +2,7 @@
 // Quality goes by rank, capped by what each place pours. Drinks add intoxication, which wears
 // off by the hour; the stages change how people talk, flirt and fight.
 import type { ActionDef, Axis } from '../data/schema.js';
-import { accessRank, log, type Ctx } from './context.js';
+import { accessRank, effectsToday, log, type Ctx } from './context.js';
 import { feel } from './ledger.js';
 import { addNeed, axisFactor } from './needs.js';
 import { chance } from './rng.js';
@@ -39,6 +39,11 @@ export function moveMult(ctx: Ctx, c: Contestant, id: string): number {
 
 /** The quality a contestant gets at a place that pours `best`: their rank's, or the place's best if worse. */
 export function qualityFor(ctx: Ctx, c: Contestant, best: string): string {
+  // A party (the Wheel) pours the top shelf for everyone, wherever they drink.
+  for (const id of effectsToday(ctx)) {
+    const party = ctx.data.wheel.effects[id]!.booze;
+    if (party) return party;
+  }
   const b = ctx.data.booze;
   const mine = b.byRank[String(accessRank(ctx, c)) as '1']!;
   return b.order.indexOf(mine) >= b.order.indexOf(best) ? mine : best;

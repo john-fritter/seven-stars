@@ -34,6 +34,12 @@ export interface SeedStats {
   drinks: Record<string, number>; // by quality
   intoxMinutes: Record<string, number>; // contestant-minutes in each stage
   labels: Record<string, number>; // directed relationships by label at each day's end, plus couples
+  wheel: Record<string, number>; // by segment
+  formats: Record<string, number>; // daily events by format, plus booked (by the Wheel) and cancelled
+  presses: number[]; // button presses at each Button
+  murders: Record<string, number>; // witnessed, found (by someone), announced, accused, unaccused, trials, right, wrong, spared
+  bodyMinutes: number[]; // how long an unwitnessed body lay before it was found
+  fightsOutsideCage: number;
 }
 
 function add(m: Record<string, number>, k: string, v = 1): void {
@@ -72,6 +78,12 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
     drinks: {},
     intoxMinutes: {},
     labels: {},
+    wheel: {},
+    formats: {},
+    presses: [],
+    murders: {},
+    bodyMinutes: [],
+    fightsOutsideCage: 0,
   };
   const stage = new Map<string, { stage: string; since: number }>();
   let bottom: string | null = null;
@@ -151,6 +163,40 @@ function tally(s: SeedStats, e: SimEvent): void {
       break;
     case 'drink':
       add(s.drinks, d.quality as string);
+      break;
+    case 'fight':
+      if (d.outsideCage) s.fightsOutsideCage++;
+      break;
+    case 'wheel':
+      add(s.wheel, d.segment as string);
+      break;
+    case 'event_start':
+      add(s.formats, d.format as string);
+      if (e.actors.length) add(s.formats, 'booked');
+      break;
+    case 'event_cancelled':
+      add(s.formats, 'cancelled');
+      break;
+    case 'button':
+      s.presses.push(d.presses as number);
+      break;
+    case 'murder':
+      if ((d.witnesses as unknown[]).length) add(s.murders, 'witnessed');
+      break;
+    case 'body_found':
+      add(s.murders, d.announced ? 'announced' : 'found');
+      s.bodyMinutes.push(d.minutes as number);
+      break;
+    case 'accusation':
+      add(s.murders, 'accused');
+      add(s.murders, d.right ? 'accusedKiller' : 'accusedInnocent');
+      break;
+    case 'no_accusation':
+      add(s.murders, 'unaccused');
+      break;
+    case 'trial':
+      add(s.murders, 'trials');
+      add(s.murders, d.right ? 'right' : 'wrong');
       break;
   }
 }
@@ -235,6 +281,17 @@ export interface Report {
     labelsAtNight: Record<string, number>; // directed relationships by label, per contestant
     couplesAtNight: number; // pairs who both believe they're together, on average
     mismatchedAtNight: number; // pairs whose labels disagree, on average
+  };
+  wheel: Record<string, number>; // spins landing on each segment, per week
+  events: {
+    perWeek: Record<string, number>; // by format, plus booked and cancelled
+    fightsOutsideCagePerWeek: number; // the fights target counts cage matches too
+    pressesPerButton: number | null;
+    buttonShare: number | null; // share of Buttons where anyone pressed
+  };
+  murders: {
+    perWeek: Record<string, number>; // what happens after a murder
+    bodyHours: number | null; // average hours an unwitnessed body lay before anyone knew
   };
 }
 
@@ -329,6 +386,23 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
         labelsAtNight: sortDesc(Object.fromEntries(Object.entries(labels).filter(([k]) => k !== 'none').map(([k, v]) => [k, v / cDays]))),
         couplesAtNight: couples / days,
         mismatchedAtNight: mismatched / days,
+      };
+    })(),
+    wheel: sortDesc(Object.fromEntries(Object.entries(sum((s) => s.wheel)).map(([k, v]) => [k, perWeek(v)]))),
+    events: (() => {
+      const presses = seeds.flatMap((s) => s.presses);
+      return {
+        perWeek: Object.fromEntries(Object.entries(sum((s) => s.formats)).map(([k, v]) => [k, perWeek(v)])),
+        fightsOutsideCagePerWeek: perWeek(seeds.reduce((a, s) => a + s.fightsOutsideCage, 0)),
+        pressesPerButton: presses.length ? presses.reduce((a, b) => a + b, 0) / presses.length : null,
+        buttonShare: presses.length ? presses.filter((x) => x > 0).length / presses.length : null,
+      };
+    })(),
+    murders: (() => {
+      const mins = seeds.flatMap((s) => s.bodyMinutes);
+      return {
+        perWeek: Object.fromEntries(Object.entries(sum((s) => s.murders)).map(([k, v]) => [k, perWeek(v)])),
+        bodyHours: mins.length ? mins.reduce((a, b) => a + b, 0) / mins.length / 60 : null,
       };
     })(),
     relations: rel.pairs ? { friends: (rel.friends ?? 0) / rel.pairs, rivals: (rel.rivals ?? 0) / rel.pairs, crushes: (rel.crushes ?? 0) / rel.pairs, affection: (rel.affection ?? 0) / rel.pairs } : null,
