@@ -209,10 +209,9 @@ export interface BrawlOptions {
 
 /**
  * A fight: `swinger` throws the first punch. Strength, stamina and a die roll decide who gets
- * hurt. Ordinary fights never take health below the floor; a lethal one can kill. Returns the loser
- * if they were killed.
+ * hurt. Ordinary fights never take health below the floor; a lethal one can kill.
  */
-export function brawl(ctx: Ctx, swinger: Contestant, other: Contestant, opts: BrawlOptions): Contestant | null {
+export function brawl(ctx: Ctx, swinger: Contestant, other: Contestant, opts: BrawlOptions): { winner: Contestant; loser: Contestant; killed: boolean } {
   const insulted = swinger;
   const insulter = other;
   const f = ctx.data.social.fight;
@@ -256,7 +255,7 @@ export function brawl(ctx: Ctx, swinger: Contestant, other: Contestant, opts: Br
     const guilty = ctx.data.rules.fighting === 'both' && !opts.firstBlow ? [insulted, insulter] : [insulted];
     for (const c of guilty) infraction(ctx, c, 'fighting', room, awards[c.id] ?? 0);
   }
-  return killed ? loser : null;
+  return { winner, loser, killed };
 }
 
 // ---------------------------------------------------------------------------------------------

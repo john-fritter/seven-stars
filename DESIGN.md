@@ -860,6 +860,21 @@ A second infraction the same day bumps the sentence up a step.
 - **Dance-off:** two to four contestants. Score = playful + stamina + beauty ÷ 2 + the crowd's affection + a die roll. Sudden death when the Wheel set it up.
 - **The Button:** everyone secretly chooses. Each presser gains 20; everyone else loses 5 per press. Pressing is likelier for cruel, fickle, brave or desperate (low meter) contestants. Revealed at dinner: non-pressers' affection for each presser −10.
 
+**How the build does it (proposed; numbers in `data/wheel.yaml` and `data/events.yaml`).**
+
+- **The spin** comes right after ranks are assigned, before the room moves, so a fishbowl or a bed swap lands with them. The spinner gets "had to spin the Wheel" (−5). Each segment is a row with an effect kind, so new segments are data.
+- **Station effects** (cold water, no breakfast, top-shelf booze) last one station day, midnight to midnight. "Tomorrow" means the day after the ceremony. Actions opt in or out with `when:` and `unless:`; on a cold-water day the hot showers run cold (the cold-shower action and its thought). Punish everyone also costs the spinner 5 affection from everyone else.
+- **Collective punishment** uses the same effects: a theft sentence (the only theft is raiding the cafe's food) means cold water and no breakfast for everyone the next day, and everyone else's affection for the thief −5.
+- **Cage match and dance-off from the Wheel** book tomorrow's event: the cage match against rank 1, the dance-off against a random contestant. If either dies first, the booking is off and the rotation picks. A no-show forfeits. A spinner who wins the cage match swaps rank, bed and clothes with rank 1 until the next ceremony ("rank went up/down" thoughts).
+- **Suite night** swaps the two beds until the next wake chime.
+- **Secrets revealed** reads out every label everyone holds. Anyone who believed "exclusive" with someone who calls it less gets "{who} won't commit", and everyone learns who's involved with whom, which counts as evidence (betrayal for an exclusive partner, jealousy for the rest). Slice one has no hidden infractions to reveal: detection is total and every infraction is sentenced in public.
+- **Pick two:** the spinner's favorite (highest affection) gains 50 and their least favorite loses 50.
+- **The event slot** is a gathering like the ceremony: everyone is summoned at 15:00 (sleepers with rest above 40 woken), it resolves 20 minutes in, and anyone not there skipped an event (an infraction; the fishbowl and breakdowns are excused). Cage matches are held in the cage room; the dance-off and the Button in the common room, so rank 7 can come.
+- **Cage match** pairs are the two present with the lowest mutual affection when the Wheel didn't book it. The fight is an ordinary brawl (no infraction, never lethal), then "cage match" pays 25 and 10. Watchers get fun +20.
+- **Dance-off** without the Wheel: 2–4 dancers at random. Score = playful + stamina + beauty × 0.5 + 0.05 × the watchers' average affection for them + a roll of 0–6. It pays 5 to every dancer and 15 more to the winner; "won the dance-off" +5, "lost" −4. Watchers get fun +15.
+- **The Button** odds = 0.3 × (1 − 0.5 (kind − 5) ÷ 5) × (1 − 0.5 (loyal − 5) ÷ 5) × (1 + 0.5 (brave − 5) ÷ 5) × (1 + (1 − meter ÷ 100)). Gains and losses go to the meter only, not lifetime points. The reveal is at 19:00.
+- **Scoring** for events and trials skips the witness multiplier, since everyone is watching.
+
 ## Arrivals, deaths and trials
 
 **Arrivals.** At 07:30, empty slots refill to seven through the casting step.
@@ -877,11 +892,19 @@ A second infraction the same day bumps the sentence up a step.
 
 A killer who accuses an innocent and wins walks free; the engine keeps the truth for viewers.
 
+**How the build does it (proposed; numbers in `data/trials.yaml`, times in `data/schedule.yaml`).**
+
+- **Bodies.** A crime of passion nobody saw leaves a body. The first awake contestant other than the killer to be in that room finds it ("found a body" −10). Anything still unfound at the ceremony is announced first thing. The death is logged when it happens; the grief thoughts wait until it's known.
+- **Seen near the victim:** in the murder room within the hour before. The station keeps when each contestant last left each room.
+- **Suspicion,** 0–100: a witness is certain (100) about the killer and suspects nobody else. Otherwise 0.3 × −affection (when negative) + 0.3 × fear, +30 if the suspect and victim were rivals either way, +40 if the suspector and the suspect were both seen near the victim. It tops out at 99.
+- **The accusation** comes as soon as the murder is known: the highest suspicion × brave ÷ 10, if it reaches 15. The killer weighs everyone else like anyone would, so they can accuse an innocent. The accused gets "accused of murder by {who}" (−15) and affection −30 toward the accuser. Below the line, nobody dares and there's no trial.
+- **The trial** is a gathering at 07:45 (after arrivals), resolved 15 minutes in. Voters are everyone there except the two. Witnesses vote against the killer if the killer is on trial. Everyone else condemns the side with the lower affection − 0.5 × fear; a voter with no feelings either way condemns the lower meter. A tied vote goes against the lower meter, then lifetime points, then a coin. The loser is spaced on the spot unless they hold an immunity; the winner gets 15 and "survived a trial" (+10).
+
 ## Data files and the core API
 
 The core is a TypeScript library with no I/O, no clock and no global randomness. Everything tunable lives in YAML data files, hot-reloaded by the harness and debug view.
 
-**Data files:** schedule, rooms (including temperatures), objects, species, clothing, generator, needs, personality, actions, social (interactions, the ledger, attraction, fights, knocking), romance, thoughts, breaks, booze, scoring, ranks, rules, wheel, events.
+**Data files:** schedule, rooms (including temperatures), objects, species, clothing, generator, needs, personality, actions, social (interactions, the ledger, attraction, fights, knocking), romance, thoughts, breaks, booze, scoring, ranks, rules, wheel, events, trials.
 
 **Core API (sketch):**
 

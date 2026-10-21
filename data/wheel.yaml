@@ -1,0 +1,42 @@
+# The Wheel. DESIGN.md Part two, The Wheel and the daily event. Spun at the ceremony, right after
+# ranks are assigned, by the new bottom rank. Segments are John's (D-028); weights are proposals.
+# With these weights (22 in all) the spacing segment comes up about one night in 22.
+#
+# effect:
+#   space      the robots take the spinner to the airlock (an immunity cancels it)
+#   immunity   a secret immunity: cancels the next spacing of any kind
+#   meter      the spinner's meter is set to `to`
+#   event      books tomorrow's daily event (`event`) against `against` (top: rank 1; random)
+#              sudden: the loser drops to zero; prize: if the spinner wins they swap rank and
+#              room with the loser until the next ceremony
+#   swap_beds  the spinner and rank 1 swap beds tonight, back at the wake chime
+#   fishbowl   the spinner goes in (`fishbowl`: night | day)
+#   station    station effects (below) for everyone tomorrow; everyone else's affection for
+#              the spinner moves by `blame`
+#   secrets    the announcer reveals everyone's private labels
+#   pick_two   the spinner's favorite gains `amount`, their least favorite loses it
+#   nothing    nothing happens
+# thought: an optional thought for the spinner after their segment.
+
+thought: spun_wheel     # proposal: spinning is scary, most of all for the spinner
+
+segments:
+  - { id: spaced,      label: "Spaced",           weight: 1, effect: space }
+  - { id: immunity,    label: "One immunity",     weight: 1, effect: immunity, thought: won_immunity }
+  - { id: meter_full,  label: "Meter to full",    weight: 2, effect: meter, to: 100 }
+  - { id: cage_match,  label: "Cage match",       weight: 2, effect: event, event: cage_match, against: top, prize: true }
+  - { id: dance_off,   label: "Dance-off",        weight: 2, effect: event, event: dance_off, against: random, sudden: true }
+  - { id: suite_night, label: "Suite night",      weight: 2, effect: swap_beds }
+  - { id: fishbowl,    label: "Fishbowl",         weight: 2, effect: fishbowl, fishbowl: day }
+  - { id: punish_all,  label: "Punish everyone",  weight: 2, effect: station, station: [cold_water, no_breakfast], blame: -5 }  # blame: proposal
+  - { id: party,       label: "Party",            weight: 2, effect: station, station: [top_shelf] }
+  - { id: secrets,     label: "Secrets revealed", weight: 1, effect: secrets }
+  - { id: pick_two,    label: "Pick two",         weight: 2, effect: pick_two, amount: 50 }
+  - { id: nothing,     label: "Nothing",          weight: 3, effect: nothing }
+
+# Station effects last one station day (midnight to midnight). Actions opt in or out with
+# `when:` / `unless:` in objects.yaml (cold water turns the hot showers cold).
+effects:
+  cold_water:   { label: "Cold water for everyone" }
+  no_breakfast: { label: "No breakfast", meals: [breakfast] }
+  top_shelf:    { label: "Top-shelf booze for everyone", booze: fancy }

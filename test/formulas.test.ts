@@ -52,7 +52,8 @@ describe('ceremony order', () => {
     step(w, 22 * 60);
     const ranks = w.contestants.map((c) => c.rank).sort();
     expect(ranks).toEqual([1, 2, 3, 4, 5, 6, 7]);
-    for (const c of w.contestants) expect(c.bed).toBe(data.ranks.ranks[String(c.rank) as '1']!.bed);
+    // The Wheel's suite night swaps two beds until the wake chime.
+    for (const c of w.contestants) if (!w.show.bedSwap?.includes(c.id)) expect(c.bed).toBe(data.ranks.ranks[String(c.rank) as '1']!.bed);
   });
 });
 

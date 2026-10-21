@@ -25,3 +25,19 @@ ceremony:
   wakeAbove: 40          # proposal: the ceremony chime wakes sleepers with rest above this; the
                          # exhausted sleep through it, and skipping the ceremony is an infraction
   room: common
+
+# The daily event (events.yaml picks the format). Everyone is summoned like the ceremony;
+# skipping it is an infraction. It resolves `resolveAfter` minutes in.
+event:
+  at: "15:00"
+  minutes: 60
+  resolveAfter: 20       # proposal
+  wakeAbove: 40          # proposal: as the ceremony
+
+# Pending trials (trials.yaml), held after the morning arrivals so newcomers can break ties.
+trials:
+  at: "07:45"
+  minutes: 30            # proposal
+  resolveAfter: 15       # proposal
+  wakeAbove: 40          # proposal
+  room: common

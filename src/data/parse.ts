@@ -185,5 +185,46 @@ function crossCheck(d: GameData, dir: string): void {
   thought(ro.guilty, 'romance.yaml: guilty');
   if (!d.social.interactions.some((x) => x.id === 'insult')) errors.push(`${dir}/social.yaml: interactions: an "insult" is needed (fights, sprees, confrontations)`);
 
+  // The Wheel, the daily event and trials
+  const wh = d.wheel;
+  const effect = (id: string, at: string) => {
+    if (!wh.effects[id]) errors.push(`${dir}/${at}: no station effect "${id}" in wheel.yaml effects`);
+  };
+  thought(wh.thought, 'wheel.yaml: thought');
+  wh.segments.forEach((s, i) => {
+    const at = `wheel.yaml: segments.${i}`;
+    thought(s.thought, `${at}.thought`);
+    for (const id of s.station) effect(id, `${at}.station`);
+    if (s.effect === 'meter' && s.to === undefined) errors.push(`${dir}/${at}.to: needed for a meter segment`);
+    if (s.effect === 'event' && (!s.event || !(d.events.rotation as string[]).includes(s.event))) errors.push(`${dir}/${at}.event: needs a format from events.yaml rotation`);
+    if (s.effect === 'event' && !s.against) errors.push(`${dir}/${at}.against: needed for an event segment`);
+    if (s.effect === 'fishbowl' && !s.fishbowl) errors.push(`${dir}/${at}.fishbowl: night or day`);
+    if (s.effect === 'pick_two' && s.amount === undefined) errors.push(`${dir}/${at}.amount: needed for pick_two`);
+  });
+  for (const [id, e] of Object.entries(wh.effects)) {
+    for (const m of e.meals) if (!d.schedule.meals.some((x) => x.id === m)) errors.push(`${dir}/wheel.yaml: effects.${id}.meals: no meal "${m}"`);
+    if (e.booze && !bz.qualities[e.booze]) errors.push(`${dir}/wheel.yaml: effects.${id}.booze: no quality "${e.booze}"`);
+  }
+  for (const [id, x] of Object.entries(r.infractions)) for (const e of x.collective) effect(e, `rules.yaml: infractions.${id}.collective`);
+  for (const [t, def] of Object.entries(types)) {
+    def.actions.forEach((a, i) => {
+      if (a.when) effect(a.when, `objects.yaml: types.${t}.actions.${i}.when`);
+      if (a.unless) effect(a.unless, `objects.yaml: types.${t}.actions.${i}.unless`);
+    });
+  }
+  if (!r.infractions.skipped_event) errors.push(`${dir}/rules.yaml: infractions.skipped_event: missing`);
+  const ev = d.events;
+  for (const f of ['cage_match', 'dance_off', 'button'] as const) {
+    if (!rooms.has(ev[f].room)) errors.push(`${dir}/events.yaml: ${f}.room: no room "${ev[f].room}"`);
+  }
+  if (ev.dance_off.dancers[0] > ev.dance_off.dancers[1]) errors.push(`${dir}/events.yaml: dance_off.dancers: the smaller number goes first`);
+  thought(ev.dance_off.won, 'events.yaml: dance_off.won');
+  thought(ev.dance_off.lost, 'events.yaml: dance_off.lost');
+  const tr = d.trials;
+  thought(tr.foundThought, 'trials.yaml: foundThought');
+  thought(tr.accused.thought, 'trials.yaml: accused.thought');
+  thought(tr.survivedThought, 'trials.yaml: survivedThought');
+  if (!rooms.has(d.schedule.trials.room)) errors.push(`${dir}/schedule.yaml: trials.room: no room "${d.schedule.trials.room}"`);
+
   if (errors.length) throw new DataError(`Bad data:\n${errors.map((e) => `  ${e}`).join('\n')}`);
 }

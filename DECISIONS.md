@@ -198,3 +198,20 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Betrayal only for an exclusive label; flirting, fling, dating or ex is jealousy (−10 affection). A betrayed contestant confronts on the spot half the time. Breakups need affection at 0 or below, or feeling betrayed.
 - [ ] Crushes pull harder toward believed-private rooms (× 1 + 2 × privacy).
 - [ ] Note for tuning: hookups barely happen (0.06 a week) because attraction 6+ both ways is rare: about 0.2 pairs a day clear it. Mood also runs low enough that extreme breaks are as common as major ones.
+
+**Proposed while building the Wheel, the daily event and trials (Oct 21).** Numbers are in `data/wheel.yaml`, `data/events.yaml`, `data/trials.yaml` and `data/schedule.yaml`; DESIGN.md Part two has the details.
+
+- [ ] Station effects from the Wheel last one station day, midnight to midnight. On a cold-water day the hot showers run cold. Punish everyone also costs the spinner 5 affection from everyone.
+- [ ] Collective punishment: a theft sentence means cold water and no breakfast for all the next day, and affection −5 toward the thief.
+- [ ] Secrets revealed reads out everyone's labels only. Slice one has no hidden infractions to reveal, since every infraction is sentenced in public.
+- [ ] Pick two: the spinner's favorite gains 50 and least favorite loses 50, by the spinner's own affection.
+- [ ] The Wheel's cage match is against rank 1, the dance-off against a random contestant; a no-show forfeits; a booking is dropped if either dies first.
+- [ ] Spinning the Wheel gives the spinner "had to spin the Wheel" (−5); an immunity win +8.
+- [ ] The daily event is a summoned gathering like the ceremony (resolved 20 minutes in), and skipping it is an infraction. The dance-off and the Button are in the common room so rank 7 can attend.
+- [ ] Event numbers: watchers get fun +20 (cage) and +15 (dance); a dance-off has 2–4 dancers, crowd affection counts 0.05 per point, and it pays 5 to each dancer and 15 more to the winner; "won/lost the dance-off" +5 / −4.
+- [ ] The Button: odds 0.3 base, × the cruel, fickle and brave factors, doubled at an empty meter; its gains and losses are meter only.
+- [ ] Events and trials skip the witness multiplier.
+- [ ] Bodies: found by the first awake non-killer in the room, or announced at the ceremony; grief waits until the death is known.
+- [ ] Suspicion weights: dislike 0.3, fear 0.3, enemy +30, both seen near the victim in the hour before +40; accusing takes suspicion × brave ÷ 10 of 15 or more. The accused feels −15 and affection −30 toward the accuser.
+- [ ] Trial voters with no feelings either way condemn the lower meter; a fear nudge of 0.5.
+- [ ] The fights target now counts cage matches (2.5 a week). Should it count only fights outside the cage?

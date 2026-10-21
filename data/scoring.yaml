@@ -35,7 +35,10 @@ awards:
   fishbowl_night: { actor: 8, witnessed: false }   # paid on release
   death:       { witnesses: 3, witnessed: false }  # "witnessed a death"
   murder:      { actor: 40, meterOnly: true, secret: 100, witnessed: false }  # 40 to the meter, 100 hidden lifetime
-  # Still to come with their systems: dance-off 20 / 5; cage match 25 / 10; trial survived 15.
+  # The daily event and trials. Everyone is watching, so no witness multiplier.
+  cage_match:  { winner: 25, loser: 10, witnessed: false }
+  dance_off:   { each: 5, winner: 15, witnessed: false }  # 20 to the winner, 5 to each other dancer
+  trial:       { winner: 15, witnessed: false }           # "trial survived (accuser or accused)"
 
 modifiers:
   witnessEach: 0.15        # × 1 + 0.15 per witness

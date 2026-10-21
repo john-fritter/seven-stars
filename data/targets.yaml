@@ -12,4 +12,4 @@ targets:
   - { id: quietDayShare, label: "Days with nothing notable", max: 0.1 }
 
 # Event types that make a day notable.
-notable: [death, break, fight, lovin, kiss, betrayal, breakup, sentence, trial]
+notable: [death, break, fight, lovin, kiss, betrayal, breakup, sentence, trial, cage_match, dance_off, button_reveal]

@@ -1,0 +1,43 @@
+# The daily event at 15:00 (schedule.yaml event). DESIGN.md Part two, The Wheel and the daily
+# event. It rotates through the formats, never the same twice in a row; a match the Wheel booked
+# takes the slot. Everyone attends; those not taking part watch.
+
+rotation: [cage_match, dance_off, button]
+
+# Two contestants: the Wheel's pair, or the pair with the lowest mutual affection. A fight in the
+# cage isn't an infraction and never kills. Scoring: cage_match in scoring.yaml.
+cage_match:
+  room: cage
+  watchFun: 20          # proposal: fun for everyone watching
+
+# Two to four dancers (picked at random when the Wheel didn't book it). Score:
+#   playful × playful + stamina × stamina + beauty × beauty + crowd × the watchers' average
+#   affection + a roll of 0..die. Sudden death (the Wheel): the loser drops to zero.
+dance_off:
+  room: common          # proposal: robots roll out a floor in the common room, so rank 7 can come
+  dancers: [2, 4]
+  playful: 1
+  stamina: 1
+  beauty: 0.5
+  crowd: 0.05           # proposal: affection +100 from the whole crowd is worth +5
+  die: 6
+  watchFun: 15          # proposal
+  won: won_dance_off
+  lost: lost_dance_off
+
+# Everyone at the event secretly chooses. Odds of pressing:
+#   base × (1 + kindK (kind − 5) ÷ 5) × (1 + loyalK (loyal − 5) ÷ 5) × (1 + braveK (brave − 5) ÷ 5)
+#        × (1 + desperateK × (1 − meter ÷ max))
+# Each presser's meter gains `gain`; everyone else's loses `loss` per press. Revealed at dinner:
+# every non-presser's affection for each presser moves by `affection`.
+button:
+  room: common
+  base: 0.3             # proposal
+  kindK: -0.5           # the cruel press
+  loyalK: -0.5          # the fickle press
+  braveK: 0.5
+  desperateK: 1         # an empty meter doubles the odds
+  gain: 20
+  loss: 5
+  revealAt: "19:00"     # dinner
+  affection: -10
