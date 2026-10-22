@@ -171,6 +171,9 @@ export function interact(ctx: Ctx, c: Contestant, o: Contestant, def: Interactio
   for (const [dim, v] of Object.entries(def.target)) feel(ctx, o, c, dim as never, dim === 'affection' && v > 0 ? v * charm : v, def.id);
   for (const [n, v] of Object.entries(def.targetGains)) addNeed(o, n as never, v);
   if (def.thought) think(ctx, o, def.thought, c.id);
+  // Helping someone feels good, to the kind and the loyal.
+  const helped = ctx.data.thoughts.moments.helped;
+  if (helped.interactions.includes(def.id)) think(ctx, c, helped.thought, o.id);
 
   switch (def.move) {
     case 'flirt':

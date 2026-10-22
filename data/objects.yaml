@@ -13,6 +13,7 @@
 #   assigned:    only whoever is assigned this object at the ceremony can use it (beds)
 #   cost / speciesCost: a flat cost when scoring (a cold shower)
 #   tags:        drive the personality grid and the mood modifier (personality.yaml)
+#   nightTags:   extra tags during the contestant's night (the hot tub after hours is risky)
 #   onlySpecies / notSpecies / ranks: who can use it
 #   logs:        an event logged when the action is finished, for scoring (a karaoke performance)
 #   thought:     a thought when it's finished (for sleep: when they wake, if they slept long enough)
@@ -97,7 +98,7 @@ types:
     capacity: 1
     actions:
       # "Hidden" in the garden; anyone can use it. Its raiding rules are out of slice one.
-      - { id: drink, label: nips from the hidden still, kind: drink, minutes: 20, booze: rotgut, tags: [solitary, drinking, illicit] }
+      - { id: drink, label: nips from the hidden still, kind: drink, minutes: 20, booze: rotgut, tags: [solitary, drinking, illicit, risky] }
 
   dance_floor:
     capacity: 8
@@ -133,7 +134,7 @@ types:
     actions:
       - { id: soak, label: soaks in the hot tub, minutes: 30, gains: { fun: 12, social: 4 }, comfort: 90,
           speciesGains: { aquatic: { fun: 12, social: 4, hygiene: 30 } },
-          recreation: spa, company: true, tags: [comforting, social, status] }
+          recreation: spa, company: true, tags: [comforting, social, status], nightTags: [risky] }
   garden_bench:
     capacity: 2
     actions:

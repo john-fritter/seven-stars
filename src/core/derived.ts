@@ -63,13 +63,20 @@ export function personalityOf(data: GameData, c: Contestant, def: ActionDef): nu
   let m = d.personality.get(def);
   if (m === undefined) {
     const p = data.personality;
-    m = 1;
-    const tags = traitFx(data, c).tags;
-    for (const tag of def.tags) {
-      for (const e of p.tags[tag] ?? []) m *= axisFactor(e.k ?? p.k, c.personality[e.axis]);
-      m *= tags[tag] ?? 1;
-    }
+    m = tagMult(data, c, def.tags);
     d.personality.set(def, m);
+  }
+  return m;
+}
+
+/** The personality grid's multiplier for a list of tags, traits included. */
+export function tagMult(data: GameData, c: Contestant, tags: readonly string[]): number {
+  const p = data.personality;
+  const fx = traitFx(data, c).tags;
+  let m = 1;
+  for (const tag of tags) {
+    for (const e of p.tags[tag] ?? []) m *= axisFactor(e.k ?? p.k, c.personality[e.axis]);
+    m *= fx[tag] ?? 1;
   }
   return m;
 }

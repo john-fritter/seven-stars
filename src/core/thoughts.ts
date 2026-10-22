@@ -125,15 +125,15 @@ export function updateMood(ctx: Ctx, c: Contestant): void {
 }
 
 /**
- * The worst grievance among `sources`: the source whose bad thoughts add up to the most, and who
- * its thoughts are most about.
+ * The worst grievance among `sources`: the source whose bad thoughts add up to the most (each
+ * × its weight, default 1), and who its thoughts are most about.
  */
-export function grievance(ctx: Ctx, c: Contestant, sources: Record<string, unknown>): { source: string; about: string | null } | null {
+export function grievance(ctx: Ctx, c: Contestant, sources: Record<string, unknown>, weights: Record<string, number> = {}): { source: string; about: string | null } | null {
   const th = ctx.data.thoughts.thoughts;
   const bySource = new Map<string, number>();
   for (const x of c.thoughts) {
     const s = th[x.id]!.source;
-    if (x.value < 0 && s in sources) bySource.set(s, (bySource.get(s) ?? 0) + x.value);
+    if (x.value < 0 && s in sources) bySource.set(s, (bySource.get(s) ?? 0) + x.value * (weights[s] ?? 1));
   }
   let source: string | null = null;
   let worst = 0;

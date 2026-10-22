@@ -31,6 +31,7 @@ export interface SeedStats {
   breaks: Record<string, number>; // by kind
   breakLevels: Record<string, number>; // by level
   breakSources: Record<string, number>; // by the grievance that picked it
+  desperateAttacks: number; // extreme breaks that only turned violent because the meter was under the doom line
   drinks: Record<string, number>; // by quality
   intoxMinutes: Record<string, number>; // contestant-minutes in each stage
   labels: Record<string, number>; // directed relationships by label at each day's end, plus couples
@@ -85,6 +86,7 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
     breaks: {},
     breakLevels: {},
     breakSources: {},
+    desperateAttacks: 0,
     drinks: {},
     intoxMinutes: {},
     labels: {},
@@ -244,6 +246,7 @@ function tally(s: SeedStats, e: SimEvent): void {
       add(s.breaks, d.kind as string);
       add(s.breakLevels, d.level as string);
       add(s.breakSources, d.source as string);
+      if (d.desperate) s.desperateAttacks++;
       break;
     case 'drink':
       add(s.drinks, d.quality as string);
@@ -294,10 +297,14 @@ function friendBand(n: number): string {
 function sampleHour(s: SeedStats, w: World, data: GameData): void {
   const p = data.social.people;
   const ids = new Set([p.friend.thought, p.partner.thought, p.enemy.thought, p.worry.thought, p.missing.thought, p.envy.thought]);
+  const moments = new Set(Object.values(data.thoughts.moments).map((m) => m.thought));
   for (const c of w.contestants) {
     if (c.asleep) continue;
     add(s.people, 'hours');
-    for (const x of c.thoughts) if (ids.has(x.id)) add(s.people, x.id, x.value);
+    for (const x of c.thoughts) {
+      if (ids.has(x.id)) add(s.people, x.id, x.value);
+      else if (moments.has(x.id)) add(s.people, `moment.${x.id}`, x.value);
+    }
     let friends = 0;
     for (const r of Object.values(c.ledger)) if (r.affection >= data.social.ledger.friendAt) friends++;
     const band = friendBand(friends);
@@ -396,6 +403,7 @@ export interface Report {
   /** People as mood, sampled hourly while awake. */
   people: {
     thoughts: Record<string, number>; // each people thought's average value per awake hour
+    moments: Record<string, number>; // each joy and pain's average value per awake hour (thoughts.yaml moments)
     moodAwake: number; // average mood over awake hours
     moodByFriends: Record<string, { share: number; mood: number }>; // by friends aboard: share of awake hours, average mood
     reactionsPerWeek: Record<string, number>; // to deaths: grief, gloat, relief, shaken
@@ -417,6 +425,7 @@ export interface Report {
     byKind: Record<string, number>; // per week
     byLevel: Record<string, number>; // per week
     bySource: Record<string, number>; // per week
+    desperateAttacksPerWeek: number; // violent only because of the murder nudge
   };
   booze: {
     drinksPerContestantDay: Record<string, number>; // by quality, with a total
@@ -566,6 +575,7 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
       byKind: sortDesc(Object.fromEntries(Object.entries(sum((s) => s.breaks)).map(([k, v]) => [k, perWeek(v)]))),
       byLevel: Object.fromEntries(Object.entries(sum((s) => s.breakLevels)).map(([k, v]) => [k, perWeek(v)])),
       bySource: sortDesc(Object.fromEntries(Object.entries(sum((s) => s.breakSources)).map(([k, v]) => [k, perWeek(v)]))),
+      desperateAttacksPerWeek: perWeek(seeds.reduce((a, s) => a + s.desperateAttacks, 0)),
     },
     booze: (() => {
       const dr = sum((s) => s.drinks);
@@ -638,17 +648,20 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
       const p = sum((s) => s.people);
       const hours = p.hours ?? 0;
       const thoughts: Record<string, number> = {};
+      const moments: Record<string, number> = {};
       const moodByFriends: Record<string, { share: number; mood: number }> = {};
       for (const [k, v] of Object.entries(p)) {
         if (k.startsWith('hours.')) {
           const band = k.slice(6);
           moodByFriends[band] = { share: hours ? v / hours : 0, mood: v ? (p[`mood.${band}`] ?? 0) / v : 0 };
-        } else if (k !== 'hours' && !k.startsWith('mood.')) thoughts[k] = hours ? v / hours : 0;
+        } else if (k.startsWith('moment.')) moments[k.slice(7)] = hours ? v / hours : 0;
+        else if (k !== 'hours' && !k.startsWith('mood.')) thoughts[k] = hours ? v / hours : 0;
       }
       const order = ['0', '1', '2-3', '4+'];
       const moodAwake = Object.entries(p).filter(([k]) => k.startsWith('mood.')).reduce((a, [, v]) => a + v, 0) / Math.max(1, hours);
       return {
         thoughts: sortDesc(thoughts),
+        moments: sortDesc(moments),
         moodAwake,
         moodByFriends: Object.fromEntries(order.filter((b) => moodByFriends[b]).map((b) => [b, moodByFriends[b]!])),
         reactionsPerWeek: Object.fromEntries(Object.entries(sum((s) => s.reactions)).map(([k, v]) => [k, perWeek(v)])),

@@ -88,11 +88,14 @@ export function award(ctx: Ctx, e: SimEvent): void {
     awards[id] = pts;
     total += pts;
   }
-  // Show-offs love an audience (traits.yaml `watched`); events everyone watches count as watched.
+  // Performing to an audience: the vain love it (thoughts.yaml moments), Show-offs even more
+  // (traits.yaml `watched`). Events everyone watches count as watched.
   if (witnesses.length || !row.witnessed) {
+    const watched = ctx.data.thoughts.moments.watched;
     for (const id of e.actors) {
       const c = ctx.w.contestants.find((x) => x.id === id);
       if (!c || !awards[id]) continue;
+      if (watched.events.includes(e.type)) think(ctx, c, watched.thought);
       for (const w of traitFx(ctx.data, c).watched) if (w.events.includes(e.type)) think(ctx, c, w.thought);
     }
   }
