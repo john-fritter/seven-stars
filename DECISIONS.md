@@ -41,6 +41,8 @@ The record of what John has decided. DESIGN.md describes how things work; this f
 - **D-026 (Oct 15)** Staged drama follows the rule of cool: if it's great, it's great; if it's lame, it isn't.
 - **D-027 (Oct 15)** A producer layer writes "Previously on" recaps built only from what actually happened, with links into the events.
 - **D-028 (Oct 18)** The Wheel: once a day the bottom-ranked contestant spins it. It's scary to everyone, most of all the spinner. It can kill or give immunity, make someone miserable or comfortable, affect someone else or everyone, and launch contests. Segments as listed in DESIGN.md (John edited them on Oct 18).
+- **D-112 (Oct 22)** Contestants try to get their ratings up when their meter falls, each in a way that fits their own blend of personality and traits (D-109), never as a fixed type.
+- **D-113 (Oct 22)** Reserved characters should be able to be surprisingly interesting; scoring should reward the unexpected. Murder is a way to get ratings, without a special rule for now.
 
 ## Rank, rooms and privileges
 
@@ -112,6 +114,10 @@ The record of what John has decided. DESIGN.md describes how things work; this f
 - **D-105 (Oct 21)** The bed is the default place for lovin'. Lovin' outside the bedroom isn't forbidden, but it's taboo: it affects whoever witnesses it, and personality (modesty above all) decides who risks it. Lovin' lasts a variable time, about five to thirty minutes.
 - **D-106 (Oct 21)** Modesty drives the desire for privacy, for lovin' and for showering and the like.
 - **D-107 (Oct 21)** The occasional night owl: a quirk that shifts the hours they like to be awake. People can disturb each other's sleep.
+- **D-108 (Oct 22)** RimWorld-style named traits on top of the personality sliders, with a good variety of them. The quirks are rolled into the traits. (This was the intent of D-071's "traits or quirks on top".)
+- **D-109 (Oct 22)** No personality buckets or archetypes. Behaviour stays a blend of every slider and trait, so a very kind, moderately deceptive character is mostly kind and schemes once in a while. The same goes for what makes them happy or unhappy.
+- **D-110 (Oct 22)** Fear hits people too hard and should be tuned down.
+- **D-111 (Oct 22)** Relationships should matter much more to mood, and grudges and rivalries should actually happen.
 
 ## Viewers
 
@@ -262,3 +268,15 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Who died matters: "someone died" is −6 − 0.1 × affection between −15 and +30. From −15 to −30 it's "can't say I'll miss them" +3 for two days, at −30 or less "got what was coming" +6 as before, and both scale with cruelty (× 1 − 0.8 × (kind − 5) ÷ 5). Kindness 8 or more (drunk kindness counts) feels any death as "someone died".
 - [ ] Meter drain 1 → 0.95 an hour. Calmer contestants break less and earn fewer break points, which had pushed deaths to 2.84 a week and the average stay down to 2.3 weeks.
 - [ ] Still open: hate is rare (about 1% of reactions to a death are a rival's, 4% a dislike's), so gloating seldom happens. The spread by trait in average mood is still only a few points, because traits change how specific things land rather than overall mood. More work on personalities, relationships and mood is expected (john, Oct 22).
+
+**Proposed for the personality, traits and mood pass (Oct 22).** john agreed the direction (D-108 to D-113); these are the starting numbers and details, all in DESIGN.md Part two, Personality, traits and mood: the next pass. Nothing is built yet.
+
+- [ ] One to three traits each (50% / 35% / 15%), from a starting list of about 30, with opposites that can't roll together; sliders tilt each trait's roll weight.
+- [ ] The trait list and each trait's rule as drafted.
+- [ ] The ratings pull: desperation from 0 at meter 50 to 1 at 0, squared; pull = R × desperation × points ÷ 10 × taste.
+- [ ] A contestant's own repeats of an event type within a day score × 0.7 each time.
+- [ ] Surprise bonus × 1 + S × max(0, 1 − taste), S = 1; deep talk scores 4 each (was 2).
+- [ ] "Trapped here" eases from −5 to −2 over the first seven days; the fear cap drops to about −12.
+- [ ] Company, worry, missing and envy thoughts; dislike fades at half the rate of liking; friction from clashing personalities; target rivals 5–10% of directed pairs.
+- [ ] Below the doom line, the violent-break cutoffs loosen by one point (kind 4, calm 3).
+- [ ] Build order: traits and fear; then the ratings pull and scoring; then people as mood.
