@@ -54,11 +54,13 @@ interactions:
   - { id: gift, weight: 0.03, move: gift, needs: { inventory: true }, social: 4,
       scale: [{ by: kind }, { by: affection, k: 1 }] }
   # Romance moves (romance.yaml). Weights are proposals.
-  - { id: kiss, weight: 0.02, move: kiss, needs: { attraction: 6, flirted: true }, social: 4,
+  - { id: kiss, weight: 0.03, move: kiss, needs: { attraction: 6, flirted: true }, social: 4,   # relationship tuning: was 0.02
       scale: [{ by: attraction }, { by: privacy, k: 1 }, { by: brave, k: 0.5 }] }
-  - { id: proposition, weight: 0.2, move: proposition, needs: { attraction: 6, affection: 20 }, social: 4,
+  - { id: proposition, weight: 0.12, move: proposition, needs: { attraction: 6, affection: 20 }, social: 4,
       scale: [{ by: attraction }, { by: brave, k: 0.5 }] }
-  - { id: ask_exclusive, weight: 0.02, move: exclusive, needs: { labels: [dating] }, social: 4,
+  - { id: invite, weight: 2, move: invite, needs: { attraction: 6 }, social: 4,       # proposal (relationship tuning)
+      scale: [{ by: attraction }, { by: affection, k: 1 }] }
+  - { id: ask_exclusive, weight: 0.05, move: exclusive, needs: { labels: [dating] }, social: 4,   # relationship tuning: was 0.02
       scale: [{ by: monogamy, k: 1 }, { by: affection, k: 1 }] }
   - { id: breakup, weight: 0.05, move: breakup, needs: { labels: [flirting, fling, dating, exclusive] },
       scale: [{ by: affection, k: -2 }] }
@@ -106,6 +108,9 @@ ledger:
   # Proposal: the share of each value that fades per day. Affection fades × 1 + loyalK × (loyal − 5) ÷ 5.
   fadePerDay: { affection: 0.1, trust: 0.02, fear: 0.1 }
   loyalK: -0.5
+  # Proposal (relationship tuning): affection for someone they believe they're dating or exclusive
+  # with fades at this share of the usual rate, so couples don't drift apart in a week.
+  loverFade: 0.5
   # Proposal: labels for the harness and debug view only. Crushes need no label in the sim.
   friendAt: 30
   rivalAt: -30

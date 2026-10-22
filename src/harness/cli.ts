@@ -116,6 +116,9 @@ function printReport(r: Report, ms: number): void {
   console.log('\nRomance, a week');
   console.log(top(ro.perWeek, 12, (v) => v.toFixed(2)));
   console.log(`  ${'couples'.padEnd(16)} ${ro.couplesAtNight.toFixed(2)} at the end of an average day; ${ro.mismatchedAtNight.toFixed(2)} pairs whose labels disagree`);
+  const cp = ro.couples;
+  console.log(`  ${''.padEnd(16)} ${cp.formedPerWeek.toFixed(2)} couples form a week; ${cp.endedPerWeek.brokeUp.toFixed(2)} end in a breakup and ${cp.endedPerWeek.death.toFixed(2)} in a death; they last ${fmt(cp.lastedDays, 1)} days`);
+  console.log(`  ${''.padEnd(16)} nights with a couple aboard, week by week: ${cp.nightShareByWeek.map(pct).join(', ')}`);
   console.log(`  labels held, per contestant: ${Object.entries(ro.labelsAtNight).map(([k, v]) => `${k} ${v.toFixed(2)}`).join(', ') || 'none'}`);
   const bd = r.beds;
   const clock = (m: number | null) => (m === null ? '—' : `${String(Math.floor(Math.round(m) / 60)).padStart(2, '0')}:${String(Math.round(m) % 60).padStart(2, '0')}`);

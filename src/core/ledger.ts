@@ -27,7 +27,7 @@ export function rel(a: Contestant, b: Contestant): Relation | undefined {
 export function meet(ctx: Ctx, a: Contestant, b: Contestant): void {
   if (a.ledger[b.id]) return;
   const chemistry = normal(ctx.w.rng, 0, ctx.data.social.attraction.chemistrySd);
-  const fresh = (): Relation => ({ affection: 0, trust: 0, fear: 0, attraction: 0, knows: 0, chemistry, met: ctx.w.t, reasons: [], label: 'none', flirts: 0, lovin: 0 });
+  const fresh = (): Relation => ({ affection: 0, trust: 0, fear: 0, attraction: 0, knows: 0, chemistry, met: ctx.w.t, reasons: [], label: 'none', flirts: 0, kisses: 0, lovin: 0 });
   a.ledger[b.id] = fresh();
   b.ledger[a.id] = fresh();
   const first = ctx.data.social.attraction.firstImpression;
@@ -59,12 +59,15 @@ export function feel(ctx: Ctx, a: Contestant, b: Contestant, dim: Dim, amount: n
   }
 }
 
-/** Once a day, feelings fade a little toward neutral. Loyal people's affection fades slower. */
+/**
+ * Once a day, feelings fade a little toward neutral. Loyal people's affection fades slower, and
+ * so does affection for someone they believe they're dating or exclusive with.
+ */
 export function fadeLedger(ctx: Ctx, c: Contestant): void {
   const l = ctx.data.social.ledger;
   const aff = l.fadePerDay.affection * axisFactor(l.loyalK, c.personality.loyal);
   for (const r of Object.values(c.ledger)) {
-    r.affection *= 1 - aff;
+    r.affection *= 1 - Math.min(1, aff * (r.label === 'dating' || r.label === 'exclusive' ? l.loverFade : 1));
     r.trust *= 1 - l.fadePerDay.trust;
     r.fear *= 1 - l.fadePerDay.fear;
   }

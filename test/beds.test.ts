@@ -3,7 +3,7 @@ import { bedmateFeeling, begin, endActivity, runActivity } from '../src/core/act
 import { isNightFor } from '../src/core/context.js';
 import { createWorld, step } from '../src/core/index.js';
 import { meet, rel } from '../src/core/ledger.js';
-import { bedFor, boldness, hereOdds, lovin, proposition } from '../src/core/romance.js';
+import { bedFor, boldness, hereOdds, invite, lovin, moveAllowed, proposition } from '../src/core/romance.js';
 import { shareOdds } from '../src/core/social.js';
 import type { Contestant } from '../src/core/types.js';
 import { aboard, alone, data } from './helpers.js';
@@ -224,3 +224,71 @@ describe('night owls', () => {
     if (lark && lark.quirk !== 'night_owl' && lark.needs.rest > data.schedule.wakeChime.minRest) expect(lark.asleep).toBe(false);
   });
 });
+
+describe('bedtime', () => {
+  /** a (rank 1, the suite) and b, keen on each other, drunk enough that asking is certain. */
+  function keen(t: number) {
+    const { w, ctx, cast } = ready(t);
+    const [a, b] = cast as [Contestant, Contestant];
+    alone(w, a, b);
+    meet(ctx, a, b);
+    for (const [x, y] of [[a, b], [b, a]] as const) {
+      Object.assign(rel(x, y)!, { attraction: 10, affection: 100, label: 'dating' });
+      endActivity(ctx, x, 'interrupted');
+      Object.assign(x, { room: 'suite', intox: 60, quirk: 'hoards', personality: { ...x.personality, kind: 10, loyal: 5 } });
+    }
+    b.guest = { room: 'suite', host: a.id, since: w.t };
+    return { w, ctx, a, b };
+  }
+  const lovins = (ctx: { events: { type: string }[] }) => ctx.events.filter((e) => e.type === 'lovin').length;
+
+  it('turns getting into bed together into lovin\', then sleep, and not twice in a night', () => {
+    const { w, ctx, a, b } = keen(at(23));
+    begin(ctx, b, { action: 'sleep', object: a.bed, room: 'suite' });
+    expect(lovins(ctx)).toBe(0); // nobody else in the bed yet
+    begin(ctx, a, { action: 'sleep', object: a.bed, room: 'suite' });
+    expect(lovins(ctx)).toBe(1);
+    expect(a.activity?.action).toBe('lovin');
+    for (let i = 0; i < 40 && a.activity?.action === 'lovin'; i++) {
+      w.t++;
+      for (const c of [a, b]) runActivity(ctx, c);
+    }
+    for (const c of [a, b]) {
+      expect(c.activity?.action).toBe('sleep');
+      expect(c.activity?.object).toBe(a.bed);
+    }
+    expect(lovins(ctx)).toBe(1);
+  });
+
+  it('can happen again on waking up beside them', () => {
+    const { w, ctx, a, b } = keen(at(23));
+    for (const c of [a, b]) begin(ctx, c, { action: 'sleep', object: a.bed, room: 'suite', partner: c === a ? b.id : a.id });
+    expect(lovins(ctx)).toBe(0); // they just had it (the sleep remembers)
+    w.t += data.thoughts.sleepMinutes;
+    endActivity(ctx, a, 'woke');
+    expect(lovins(ctx)).toBe(1);
+  });
+
+  it('starts with an invitation near bedtime, and both go to bed together', () => {
+    const { w, ctx, a, b } = keen(at(14));
+    for (const c of [a, b]) c.room = 'common';
+    b.guest = null;
+    const def = data.social.interactions.find((d) => d.id === 'invite')!;
+    expect(moveAllowed(ctx, a, b, def)).toBe(false);
+    w.t += at(22) - at(14);
+    expect(moveAllowed(ctx, a, b, def)).toBe(true);
+    invite(ctx, b, a);
+    expect(ctx.events.find((e) => e.type === 'invite')!.data!.answer).toBe('yes');
+    const bed = bedFor(ctx, a, b) ?? ctx.st.object.get(a.bed!)!;
+    for (const c of [a, b]) expect(c.activity).toMatchObject({ action: 'sleep', object: bed.id });
+  });
+
+  it('lets a partner in even if it means being woken', () => {
+    const { ctx, a, b } = keen(at(23));
+    a.asleep = true;
+    const partner = shareOdds(ctx, a, b);
+    rel(a, b)!.label = 'none';
+    expect(shareOdds(ctx, a, b)).toBeLessThan(partner);
+  });
+});
+

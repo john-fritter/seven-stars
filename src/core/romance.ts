@@ -8,12 +8,12 @@
 import type { InteractionDef, Label } from '../data/schema.js';
 import { begin, endActivity, LOVIN } from './actions.js';
 import { axis, moveMult } from './booze.js';
-import { canEnter, log, type Ctx } from './context.js';
+import { canEnter, isNightFor, log, type Ctx } from './context.js';
 import { feel, rel, relation } from './ledger.js';
 import { axisFactor } from './needs.js';
 import { between, chance } from './rng.js';
 import { walkMinutes, type ObjectInstance } from './station.js';
-import { interact } from './social.js';
+import { interact, shareOdds } from './social.js';
 import { think } from './thoughts.js';
 import type { Contestant } from './types.js';
 
@@ -42,6 +42,9 @@ export function moveAllowed(ctx: Ctx, c: Contestant, o: Contestant, def: Interac
       const room = ctx.st.room.get(c.room)!;
       return room.privacy >= ro.proposition.privacy || (room.access === 'occupants' && canEnter(ctx, c, room.id));
     }
+    case 'invite':
+      // Getting on for bedtime, with a bed for two to go to.
+      return isNightFor(ctx, c, ctx.w.t + ro.invite.lead) && bedFor(ctx, c, o) !== null;
     case 'breakup': {
       const r = rel(c, o)!;
       return r.affection <= ro.breakup.affectionBelow || c.thoughts.some((x) => x.id === ro.betrayal.thought && x.about === o.id);
@@ -68,7 +71,10 @@ export function kiss(ctx: Ctx, c: Contestant, o: Contestant): void {
   }
   for (const [a, b] of [[c, o], [o, c]] as const) {
     const r = relation(ctx, a, b);
+    r.kisses++;
     if (r.label === 'none') r.label = k.label;
+    // Enough kisses and the monogamous think they're seeing each other.
+    if (r.label === 'flirting' && r.kisses >= k.datingAfter && a.monogamy >= ctx.data.romance.proposition.datingAt) r.label = 'dating';
     think(ctx, a, k.thought, b.id);
   }
   log(ctx, 'kiss', [c.id, o.id], c.room, { odds: round2(odds) });
@@ -153,6 +159,73 @@ export function lovin(ctx: Ctx, c: Contestant, o: Contestant, bed: ObjectInstanc
   for (const [a, b] of [[c, o], [o, c]] as const) begin(ctx, a, { action: LOVIN, object: bed?.id ?? null, room, partner: b.id, length });
 }
 
+/**
+ * Getting into a bed at night with someone already in it: before they sleep, one may turn to the
+ * other. Someone who wants them too (the proposition's bars) asks with odds bedtime.chance, × asleep
+ * if the other has dropped off, and the other answers as to a proposition. On a yes it's lovin'
+ * right there, then sleep. Not twice in a night: a sleep after lovin' remembers the partner.
+ */
+export function bedtime(ctx: Ctx, c: Contestant): void {
+  const a = c.activity!;
+  if (!a.object || a.partner || !isNightFor(ctx, c, ctx.w.t)) return;
+  const bt = ctx.data.romance.bedtime;
+  const mate = bedmate(ctx, c, a.object);
+  if (!mate || mate.activity!.partner) return;
+  const dozed = mate.asleep && ctx.w.t - mate.activity!.arriveAt >= bt.doze;
+  inBed(ctx, c, mate, a.object, bt.chance * (dozed ? bt.asleep : 1));
+}
+
+/**
+ * Waking up after a night beside someone still in the bed: the same again, with odds
+ * bedtime.morning. Then they get up.
+ */
+export function morning(ctx: Ctx, c: Contestant, bed: string): void {
+  const mate = bedmate(ctx, c, bed);
+  if (mate) inBed(ctx, c, mate, bed, ctx.data.romance.bedtime.morning);
+}
+
+/** Whoever else is in this bed, settled in (not walking over, not mid-lovin'). */
+function bedmate(ctx: Ctx, c: Contestant, bed: string): Contestant | undefined {
+  return ctx.w.contestants.find((o) => o !== c && o.activity?.object === bed && o.activity.phase === 'do' && o.activity.action !== LOVIN);
+}
+
+/** In a bed together: someone who wants them (the proposition's bars) asks with odds `ask`. */
+function inBed(ctx: Ctx, c: Contestant, mate: Contestant, bed: string, ask: number): void {
+  const p = ctx.data.romance.proposition;
+  const r = rel(c, mate);
+  if (!r || r.attraction < p.attraction || r.affection < p.affection) return;
+  if (!chance(ctx.w.rng, ask * moveMult(ctx, c, 'proposition'))) return;
+  const odds = propositionOdds(ctx, mate, c);
+  if (!chance(ctx.w.rng, odds)) {
+    think(ctx, c, p.turnedDown, mate.id);
+    log(ctx, 'turned_down', [c.id, mate.id], c.room, { odds: round2(odds), where: 'bed' });
+    return;
+  }
+  lovin(ctx, c, mate, ctx.st.object.get(bed)!);
+}
+
+/**
+ * Spend the night? Near bedtime, asking someone to come to bed: the best bed for two, as for lovin'.
+ * They answer as to a request to share a bed. On a yes both head there to sleep (whoever's bed it
+ * isn't is let in as a guest), and getting in together is where bedtime lovin' happens.
+ */
+export function invite(ctx: Ctx, c: Contestant, o: Contestant): void {
+  const bed = bedFor(ctx, c, o)!;
+  const odds = shareOdds(ctx, o, c);
+  if (!chance(ctx.w.rng, odds)) {
+    think(ctx, c, ctx.data.needs.sleep.share.refused, o.id);
+    log(ctx, 'invite', [c.id, o.id], c.room, { odds: round2(odds), answer: 'no' });
+    return;
+  }
+  const owner = c.bed === bed.id ? c : o;
+  const other = owner === c ? o : c;
+  for (const a of [c, o]) endActivity(ctx, a, 'interrupted');
+  if (!canEnter(ctx, other, bed.room)) other.guest = { room: bed.room, host: owner.id, since: ctx.w.t };
+  log(ctx, 'invite', [c.id, o.id], c.room, { odds: round2(odds), answer: 'yes', bed: bed.id, to: bed.room });
+  const sleep = bed.actions.find((d) => d.kind === 'sleep')!;
+  for (const a of [c, o]) begin(ctx, a, { action: sleep.id, object: bed.id, room: bed.room });
+}
+
 /** Arriving for lovin': once both are there, it starts. */
 export function lovinArrive(ctx: Ctx, c: Contestant): void {
   const a = c.activity!;
@@ -170,17 +243,20 @@ function consummate(ctx: Ctx, c: Contestant, o: Contestant): void {
   const p = ctx.data.romance.proposition;
   const room = c.room;
   const first = relation(ctx, c, o).lovin === 0;
+  const couple = ATTACHED.includes(labelOf(c, o)) && ATTACHED.includes(labelOf(o, c));
   for (const [a, b] of [[c, o], [o, c]] as const) {
     const r = relation(ctx, a, b);
+    // Each time before counts toward thinking it's more than a fling.
+    const dating = a.monogamy + r.lovin * p.datingPerLovin >= p.datingAt;
     r.lovin++;
-    if (r.label === 'none' || r.label === 'flirting' || r.label === 'ex') r.label = a.monogamy >= p.datingAt ? 'dating' : 'fling';
+    if (r.label === 'none' || r.label === 'flirting' || r.label === 'ex' || (r.label === 'fling' && dating)) r.label = dating ? 'dating' : 'fling';
     feel(ctx, a, b, 'affection', p.bond, 'lovin');
     think(ctx, a, p.thought, b.id);
   }
   for (const x of ctx.w.contestants) if (x !== c && x !== o && x.room === room && x.asleep) think(ctx, x, p.disturbed);
   const inBed = c.activity?.object != null;
   const exposed = ctx.st.room.get(room)!.access !== 'occupants'; // outside a bedroom: a show
-  log(ctx, 'lovin', [c.id, o.id], room, { first, minutes: (c.activity?.endAt ?? ctx.w.t) - ctx.w.t, where: inBed ? 'bed' : exposed ? 'public' : 'bedroom' });
+  log(ctx, 'lovin', [c.id, o.id], room, { first, couple, minutes: (c.activity?.endAt ?? ctx.w.t) - ctx.w.t, where: inBed ? 'bed' : exposed ? 'public' : 'bedroom' });
   if (exposed) for (const x of ctx.w.contestants) if (x !== c && x !== o && x.room === room && !x.asleep) think(ctx, x, p.here.witnessThought, c.id);
   aftermath(ctx, c, o, 'lovin');
 }
