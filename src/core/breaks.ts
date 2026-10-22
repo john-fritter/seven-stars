@@ -44,7 +44,7 @@ export function maybeBreak(ctx: Ctx, c: Contestant): void {
   const level = breakLevel(ctx, c);
   if (!level || !chance(ctx.w.rng, ctx.data.breaks.chance[level])) return;
   const b = ctx.data.breaks;
-  const g = grievance(ctx, c, b.sources) ?? { source: 'fear', about: null };
+  const g = grievance(ctx, c, b.sources, b.weights) ?? { source: 'fear', about: null };
   startBreak(ctx, c, level, g.source, b.sources[g.source]?.[level] ?? b.fallback, g.about);
 }
 
@@ -107,10 +107,18 @@ export function startBreak(ctx: Ctx, c: Contestant, level: Level, source: string
   const b = ctx.data.breaks;
   let id = kindId;
   let kind = b.kinds[id]!;
-  // At the extreme, only the cruel or the volatile turn violent; the rest collapse.
-  if (kind.attack && axis(ctx, c, 'kind') > b.passion.kindAtMost && c.personality.calm > b.passion.calmAtMost) {
-    id = b.passion.otherwise;
-    kind = b.kinds[id]!;
+  // At the extreme, only the cruel or the volatile turn violent; the rest collapse. Below the doom
+  // line the cutoffs loosen a little (the murder nudge): the desperate are likelier to snap.
+  let nudged = false;
+  if (kind.attack) {
+    const p = b.passion;
+    const loosen = c.meter < ctx.data.meter.doomed.below ? p.desperate : 0;
+    const violent = (by: number) => axis(ctx, c, 'kind') <= p.kindAtMost + by || c.personality.calm <= p.calmAtMost + by;
+    nudged = !violent(0) && violent(loosen);
+    if (!violent(loosen)) {
+      id = p.otherwise;
+      kind = b.kinds[id]!;
+    }
   }
   let target = targetFor(ctx, c, kind, about);
   let room = roomFor(ctx, c, kind, target);
@@ -124,7 +132,10 @@ export function startBreak(ctx: Ctx, c: Contestant, level: Level, source: string
   }
   endActivity(ctx, c, 'interrupted');
   c.breakdown = { kind: id, level, source, target: target?.id ?? null, since: ctx.w.t, follows: 0, next: 0 };
-  log(ctx, 'break', [c.id, ...(target ? [target.id] : [])], c.room, { level, kind: id, source, mood: Math.round(c.mood) });
+  log(ctx, 'break', [c.id, ...(target ? [target.id] : [])], c.room, { level, kind: id, source, mood: Math.round(c.mood), ...(nudged && kind.attack ? { desperate: true } : {}) });
+  // Watching someone fall apart hurts the kind.
+  const saw = ctx.data.thoughts.moments.breakdown.thought;
+  for (const o of ctx.w.contestants) if (o !== c && o.room === c.room && !o.asleep) think(ctx, o, saw, c.id);
   begin(ctx, c, { action: id, object: null, room, minutes: kind.minutes });
 }
 

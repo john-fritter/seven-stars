@@ -60,6 +60,16 @@ temperature: { cold: too_cold, hot: too_hot, perDegree: 0.5, max: 8 }
 # A sleep has to last this long to leave a "slept on the couch / in the dorm / in the suite" thought.
 sleepMinutes: 180   # proposal
 
+# Joys and pains from the blend (DESIGN.md Personality, traits and mood: the next pass, step 3).
+# Not one per trait: each moment leaves one thought whose `scale` reads the sliders (k: 1 means
+# 0 at the bottom of the slider, so nothing at all), and traits multiply thoughts as usual. All proposal.
+moments:
+  helped:    { thought: helped, interactions: [kind_words, gift, pass_food] }  # whoever helped (kind, loyal)
+  risky:     { thought: thrill, tag: risky, infractions: [above_rank] }        # finishing something risky, or sneaking in (brave)
+  guilt:     { thought: guilty_conscience, infractions: [above_rank, theft] }  # caught sneaking or stealing (honest)
+  watched:   { thought: watched_performing, events: [karaoke, dance_off] }     # performing with an audience (vain)
+  breakdown: { thought: saw_breakdown }                                        # in the room when someone breaks (kind)
+
 thoughts:
   trapped:     { label: "Trapped here", value: -5, hours: 100000, stack: 1, source: fear }   # value set by `trapped` above
 
@@ -69,6 +79,16 @@ thoughts:
   crowded:     { label: "Too many people", value: -2, hours: 0.5, stack: 1, source: discomfort }
   everyone_watching: { label: "Everyone was watching", value: 4, hours: 3, stack: 1, source: status }
   enjoyed_attention: { label: "Enjoyed the attention", value: 3, hours: 6, stack: 1, source: status }
+
+  # Joys and pains (moments above). All proposal.
+  helped:        { label: "Helped {who}", value: 3, hours: 12, stack: 2, source: person,
+                   scale: [{ axis: kind, k: 1 }, { axis: loyal }] }
+  thrill:        { label: "What a rush", value: 4, hours: 6, stack: 1, source: status, scale: [{ axis: brave, k: 1 }] }
+  guilty_conscience: { label: "Guilty conscience", value: -3, hours: 24, stack: 1, source: guilt,
+                   scale: [{ axis: honest }] }   # the guilt source scales by honest and kind too
+  watched_performing: { label: "All eyes on me", value: 3, hours: 3, stack: 1, source: status, scale: [{ axis: vain, k: 1 }] }
+  saw_breakdown: { label: "Watched {who} fall apart", value: -2, hours: 12, stack: 2, source: sympathy,  # sympathy picks
+                   scale: [{ axis: kind, k: 1 }] }                                                      # no break
 
   # Needs and comfort
   hungry:      { label: "Hungry", value: -4, hours: 0.5, stack: 1, source: hunger }            # proposal

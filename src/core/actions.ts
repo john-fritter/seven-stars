@@ -8,7 +8,7 @@ import { drinkFun, drinkPull, finishDrink, qualityFor, soberFactor, stageMult } 
 import { breakArrive, breakMinute, endBreak } from './breaks.js';
 import { accessRank, canEnter, dayOf, effectOn, effectsToday, inRanks, isNightFor, log, noisy, timeOfDay, type Ctx } from './context.js';
 import { gathering } from './schedule.js';
-import { gainsOf, personalityOf } from './derived.js';
+import { gainsOf, personalityOf, tagMult } from './derived.js';
 import { feel, rel } from './ledger.js';
 import { addNeed, needUrgency } from './needs.js';
 import { between, chance, pick, weightedIndex } from './rng.js';
@@ -115,8 +115,9 @@ function scoreAction(ctx: Ctx, c: Contestant, def: ActionDef, room: string, othe
   if (def.tags.includes('exposed') && !def.private && others.get(room)) costs += (c.modesty / 10) * a.modestyCost;
 
   const enough = def.kind === 'drink' ? soberFactor(ctx, c) * traitFx(ctx.data, c).drink : 1;
+  const after = def.nightTags.length && isNightFor(ctx, c, ctx.w.t) ? tagMult(ctx.data, c, def.nightTags) : 1; // the hot tub after hours
   // Playing for the cameras: whatever scores pulls harder as the meter falls (ratings.ts).
-  return (needs + pulls - costs) * personalityOf(ctx.data, c, def) * desperateEase(ctx, c, def) * moodMult(ctx, c, def.tags) * enough + actionPull(ctx, c, def);
+  return (needs + pulls - costs) * personalityOf(ctx.data, c, def) * after * desperateEase(ctx, c, def) * moodMult(ctx, c, def.tags) * enough + actionPull(ctx, c, def);
 }
 
 function mealScore(ctx: Ctx, c: Contestant, meal: MealDef): number {
@@ -402,6 +403,9 @@ export function endActivity(ctx: Ctx, c: Contestant, how: 'done' | 'interrupted'
     }
     if (def?.logs) log(ctx, def.logs, [c.id], a.room);
     if (def?.thought && def.kind !== 'sleep') think(ctx, c, def.thought);
+    // Got away with something risky: the brave get a rush.
+    const risky = ctx.data.thoughts.moments.risky;
+    if (def && (def.tags.includes(risky.tag) || (def.nightTags.includes(risky.tag) && isNightFor(ctx, c, ctx.w.t)))) think(ctx, c, risky.thought);
     // Seen in the shower (or on an open toilet): the modest mind.
     if (def?.tags.includes('exposed') && !def.private && ctx.w.contestants.some((o) => o !== c && o.room === c.room && !o.asleep)) {
       think(ctx, c, ctx.data.actions.modestyThought);

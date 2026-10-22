@@ -18,6 +18,10 @@ import type { Body, Contestant } from './types.js';
 export function infraction(ctx: Ctx, c: Contestant, rule: string, room: string, scored = 0): void {
   ctx.w.show.pending.push({ who: c.id, rule, t: ctx.w.t, room, scored });
   log(ctx, 'infraction', [c.id], room, { rule });
+  // Sneaking in is a rush for the brave; sneaking and stealing weigh on the honest.
+  const mo = ctx.data.thoughts.moments;
+  if (mo.risky.infractions.includes(rule)) think(ctx, c, mo.risky.thought);
+  if (mo.guilt.infractions.includes(rule)) think(ctx, c, mo.guilt.thought);
 }
 
 /** Already caught in this room since the last ceremony: the cameras don't count twice. */

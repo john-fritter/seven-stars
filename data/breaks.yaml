@@ -22,6 +22,11 @@ sources:
   fear:        { minor: hide, major: panic, extreme: lash_out }
   grief:       { minor: hide, major: panic, extreme: lash_out }
 
+# Proposal (joys and pains step): a source's bad thoughts count × this when picking the biggest
+# grievance; mood is unchanged. Envy is a few points of mood but it burns, and at × 1 it never
+# outweighed fear or people, so its binge and theft breaks never happened.
+weights: { envy: 5 }
+
 # What each break does (all proposal apart from the names in DESIGN.md).
 #   room:     here | bed (their own bed's room) | target (wherever the target is) | target_bed
 #             (the target's bedroom) | bar (the best place that pours that they can enter) | a room id
@@ -63,6 +68,9 @@ kinds:
 passion:
   kindAtMost: 3
   calmAtMost: 2
+  # Proposal (the murder nudge, D-113): below the meter's doom line both cutoffs loosen by this
+  # much (kind 4 or under, calm 3 or under), so the desperate are a little likelier to turn violent.
+  desperate: 1
   otherwise: catatonic
   firstBlow: 3
   perStrength: 0.05

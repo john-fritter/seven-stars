@@ -99,6 +99,7 @@ function printReport(r: Report, ms: number): void {
   const pe = r.people;
   console.log('\nPeople as mood (awake hours)');
   console.log(`  thoughts, average a contestant carries: ${Object.entries(pe.thoughts).map(([k, v]) => `${k} ${v.toFixed(2)}`).join(', ')}`);
+  console.log(`  joys and pains, the same way: ${Object.entries(pe.moments).map(([k, v]) => `${k} ${v.toFixed(2)}`).join(', ')}`);
   console.log(`  mood while awake: ${pe.moodAwake.toFixed(1)}`);
   console.log(`  mood by friends aboard: ${Object.entries(pe.moodByFriends).map(([k, v]) => `${k}: ${v.mood.toFixed(0)} (${pct(v.share)} of hours)`).join(', ')}`);
   console.log(`  reactions to deaths, a week: ${Object.entries(pe.reactionsPerWeek).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(', ')}`);
@@ -121,6 +122,7 @@ function printReport(r: Report, ms: number): void {
   console.log(`\nMental breaks: ${br.perContestantDay.toFixed(2)} per contestant-day`);
   console.log(`  by level (a week)     ${Object.entries(br.byLevel).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(', ')}`);
   console.log(`  by grievance (a week) ${Object.entries(br.bySource).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(', ')}`);
+  console.log(`  violent only because they were desperate (the murder nudge): ${br.desperateAttacksPerWeek.toFixed(2)} a week`);
   console.log('By kind, a week');
   console.log(top(br.byKind, 20, (v) => v.toFixed(2)));
   const bz = r.booze;

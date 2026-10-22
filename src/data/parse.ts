@@ -134,6 +134,11 @@ function crossCheck(d: GameData, dir: string): void {
   thought(th.trapped.thought, 'thoughts.yaml: trapped.thought');
   for (const k of ['friend', 'partner', 'enemy', 'worry', 'missing', 'envy'] as const) thought(d.social.people[k].thought, `social.yaml: people.${k}.thought`);
   th.needs.forEach((n, i) => thought(n.thought, `thoughts.yaml: needs.${i}.thought`));
+  const mo = th.moments;
+  for (const k of ['helped', 'risky', 'guilt', 'watched', 'breakdown'] as const) thought(mo[k].thought, `thoughts.yaml: moments.${k}.thought`);
+  const interactionIds = new Set(d.social.interactions.map((x) => x.id));
+  for (const id of mo.helped.interactions) if (!interactionIds.has(id)) errors.push(`${dir}/thoughts.yaml: moments.helped.interactions: no interaction "${id}" in social.yaml`);
+  for (const k of ['risky', 'guilt'] as const) for (const id of mo[k].infractions) if (!r.infractions[id]) errors.push(`${dir}/thoughts.yaml: moments.${k}.infractions: no rule "${id}" in rules.yaml`);
   thought(th.temperature.cold, 'thoughts.yaml: temperature.cold');
   thought(th.temperature.hot, 'thoughts.yaml: temperature.hot');
   for (const [t, def] of Object.entries(types)) def.actions.forEach((a, i) => thought(a.thought, `objects.yaml: types.${t}.actions.${i}.thought`));

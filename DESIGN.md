@@ -729,7 +729,7 @@ Mood starts at 50 and adds every active thought. Each thought has a value, a dur
 
 ## Personality, traits and mood: the next pass
 
-*Decided direction (john, Oct 22: D-108 to D-113). Step 1 (named traits and the "trapped here" easing) is built, with the lower fear cap held back (john, Oct 22). Step 2 (the ratings pull, personal boredom, the surprise bonus and deep talk) is built. Step 3 is built in part: people as mood, grudges, friction, envy and mood both ways; joys and pains and the murder nudge are not yet. Every number below is a proposal set in data and tuned.*
+*Decided direction (john, Oct 22: D-108 to D-113). Step 1 (named traits and the "trapped here" easing) is built, with the lower fear cap held back (john, Oct 22). Step 2 (the ratings pull, personal boredom, the surprise bonus and deep talk) is built. Step 3 is built: people as mood, grudges, friction, envy, mood both ways, joys and pains, and the murder nudge. Every number below is a proposal set in data and tuned.*
 
 **Why.** A review on Oct 22 (160 seeds × 30 days, 2,791 contestants, main after the dread tuning) found:
 
@@ -738,7 +738,7 @@ Mood starts at 50 and adds every active thought. Each thought has a value, a dur
 - **Relationships barely move mood.** No friends: mood 40; four or more: 43. A couple: 1 to 3 points.
 - **Hate is rare.** 27% of directed feelings were +30 or more; 2% were −30 or worse.
 - **Nobody plays the game.** A falling meter adds "the show is going to kill me" and changes no choice.
-- **Dead hooks.** No action is tagged risky, so bravery's pull never applies; no thought feeds the envy grievance, so envy breaks never happen.
+- **Dead hooks.** No action is tagged risky, so bravery's pull never applies; no thought feeds the envy grievance, so envy breaks never happen. (Both fixed in step 3.)
 
 **The rule for all of it: no buckets.** Nobody is assigned an archetype or a game plan. Every choice stays a blend of all eight sliders, the tastes and the traits, picked with noise, so a very kind, moderately deceptive contestant is mostly kind and schemes now and then. Joys and pains also come from the whole blend, not one per trait.
 
@@ -857,11 +857,26 @@ What it cost: with everyone earning more, the drain went 0.9 → 1.15 an hour to
 - **Deaths are logged** with how the station took it ("mourned": grief, gloat, relief, shaken).
 - **The harness** samples every awake hour: what each people thought is worth on average, mood by friends aboard, mood while awake, and reactions to deaths a week.
 
-**Step 3 numbers** (200 seeds × 30 days, before → after, all 11 targets hit both times; no meter change needed): rivals 2.6% → 7.7% of directed pairs, friends 30.9% → 27.5%, average affection 22 → 15. Gloats at a death 0.2 → 0.7 a week, "can't say I'll miss them" 0.3 → 0.8, grief 4.4 → 3.8. On an average awake hour a contestant carries +3.0 from a friend in the room, +1.0 from a partner, −1.0 from someone they can't stand, −0.9 envy, −0.7 worry, and almost nothing from missing someone (partners are rarely apart a whole day). Mood while awake 38.6 → 40.6; at night (mostly asleep, so no company) 38 → 37. Mood by friends aboard (0 / 1 / 2–3 / 4+) went from 41 / 37 / 37 / 41, flat, to 40 / 39 / 41 / 45. A week: slights 10.3 → 13.9, insults 9.7 → 11.5, kind words 16.0 → 16.5, breaks 20.7 → 19.2 (2.96 → 2.74 a day), fights 3.9 either way. Deaths 2.41 → 2.37 a week, stay 2.77 → 2.81 weeks, hookups 2.76 → 2.77, hookups within a couple 0.53 → 0.58, nights with a couple 0.57 → 0.54. Still open: envy is never the biggest grievance (fear and person thoughts outweigh it), so envy breaks still don't happen.
+**Step 3 numbers** (200 seeds × 30 days, before → after, all 11 targets hit both times; no meter change needed): rivals 2.6% → 7.7% of directed pairs, friends 30.9% → 27.5%, average affection 22 → 15. Gloats at a death 0.2 → 0.7 a week, "can't say I'll miss them" 0.3 → 0.8, grief 4.4 → 3.8. On an average awake hour a contestant carries +3.0 from a friend in the room, +1.0 from a partner, −1.0 from someone they can't stand, −0.9 envy, −0.7 worry, and almost nothing from missing someone (partners are rarely apart a whole day). Mood while awake 38.6 → 40.6; at night (mostly asleep, so no company) 38 → 37. Mood by friends aboard (0 / 1 / 2–3 / 4+) went from 41 / 37 / 37 / 41, flat, to 40 / 39 / 41 / 45. A week: slights 10.3 → 13.9, insults 9.7 → 11.5, kind words 16.0 → 16.5, breaks 20.7 → 19.2 (2.96 → 2.74 a day), fights 3.9 either way. Deaths 2.41 → 2.37 a week, stay 2.77 → 2.81 weeks, hookups 2.76 → 2.77, hookups within a couple 0.53 → 0.58, nights with a couple 0.57 → 0.54. Envy was never the biggest grievance (fear and person thoughts outweighed it), so envy breaks didn't happen; fixed with joys and pains below.
+
+**How the build does it (step 3, joys and pains; numbers in `data/thoughts.yaml` moments and thoughts, `data/breaks.yaml` weights and `data/objects.yaml`, all proposals).**
+
+- **From the blend, not per trait.** Each moment leaves one thought, and the thought's scale reads the sliders with k = 1, so the bottom of the slider feels nothing and the top about double. Traits touch them only through the usual thought and source multipliers.
+- **Helped them** (+3, 12 hours, × kind and × loyal at half strength): whoever gives kind words, a gift or food through the glass.
+- **What a rush** (+4, 6 hours, × brave): finishing something tagged risky, or sneaking into a room above their rank (on the infraction, so once per room between ceremonies). Risky is tagged on the still and, through a new `nightTags` on actions, on the hot tub during the contestant's night; the personality grid already pulls the brave toward risky.
+- **All eyes on me** (+3, 3 hours, × vain): after karaoke or a dance-off that paid them, with an audience (karaoke always counts as watched). A Show-off's "everyone was watching" still comes on top.
+- **Guilty conscience** (−3, 24 hours, × honest, source guilt, which also scales by honest and kind): caught sneaking in or stealing from the cafe.
+- **Watched them fall apart** (−2, 12 hours, × kind, about the one breaking): everyone awake in the room when a break starts. Its source, sympathy, picks no break.
+- **Envy burns:** when picking the biggest grievance, envy's bad thoughts count × 5 (mood is unchanged). At × 3 envy picked 0.1 breaks a week, at × 5 1.1, at × 8 4.8.
+- **The harness** reports each moment's average value per awake hour next to the people thoughts, and how many breaks a week turned violent only because of the murder nudge.
+
+**Joys and pains numbers** (200 seeds × 30 days, before → after, all 11 targets hit both times; no meter change needed): on an average awake hour a contestant carries +1.3 from all eyes on them, +1.1 from helping someone, +1.0 from a rush, −0.9 from a guilty conscience and −1.0 from watching someone fall apart. Mood while awake 40.6 → 41.7; at night 37 either way. Envy breaks 0 → 1.1 a week (binges 0.44, cafe raids 0.64), so theft infractions, and the cold water and lost breakfast everyone pays for them, now happen about 0.6 times a week; fishbowl nights 3.5 → 3.8. Breaks 2.74 → 2.71 a day, deaths 2.37 → 2.30 a week, stay 2.81 → 2.90 weeks, rivals 7.7% → 8.8%, hookups 2.77 → 2.67, hookups within a couple 0.58 → 0.55, kind words 16.5 → 16.8 a week. Rotgut and the hot tub barely moved (the risky pull is the grid's brave × 0.5).
 
 ### Murder
 
 Murder stays a crime of passion in slice one (planned murders are out of scope). One nudge: below the doom line, the violent-break cutoffs loosen by one point for that contestant (kind 4 or under, calm 3 or under), so a desperate, cruel or brave contestant is a little likelier to turn a break violent; the existing 40-point meter award does the rest. Killing deliberately for ratings waits for planned murders.
+
+**As built** (`data/breaks.yaml` passion.desperate, proposal): under the meter's doom line (30), both cutoffs rise by 1. Only kind and calm are read, as the rule says; bravery doesn't enter. A break that turned violent only because of it is logged with `desperate`. About 0.12 breaks a week turn violent this way (violent breaks overall 0.78 → 0.80 a week, since fewer breaks reached the extreme this run); murders stay at about 0.04 a week, since most attacks don't kill.
 
 ### Build order
 
@@ -869,7 +884,7 @@ One PR per step, each tuned back to all targets before the next:
 
 1. Named traits replacing quirks, and the fear tuning.
 2. The ratings pull, personal act boredom, the surprise bonus and the deep-talk change.
-3. People as mood, grudges, friction, envy, joys and pains, and the murder nudge. (People as mood through mood both ways is built; joys and pains and the murder nudge are next.)
+3. People as mood, grudges, friction, envy, joys and pains, and the murder nudge. (Built.)
 
 ## Booze
 

@@ -83,6 +83,8 @@ export const actionSchema = z.object({
   cost: num.default(0),
   speciesCost: z.record(z.string(), num).default({}),
   tags: z.array(z.string()).default([]),
+  // Extra tags during the contestant's night (the hot tub after hours is risky).
+  nightTags: z.array(z.string()).default([]),
   onlySpecies: z.array(z.string()).optional(),
   notSpecies: z.array(z.string()).optional(),
   ranks: rankRange.optional(),
@@ -425,6 +427,14 @@ export const thoughtsSchema = z.object({
   needs: z.array(z.object({ need: needEnum, below: num.optional(), above: num.optional(), thought: z.string() }).refine((x) => (x.below === undefined) !== (x.above === undefined), 'give exactly one of below or above')),
   temperature: z.object({ cold: z.string(), hot: z.string(), perDegree: num, max: num }),
   sleepMinutes: num.nonnegative(),
+  // Joys and pains from the blend: moments that leave a thought, its scale reading the sliders.
+  moments: z.object({
+    helped: z.object({ thought: z.string(), interactions: z.array(z.string()) }),
+    risky: z.object({ thought: z.string(), tag: z.string(), infractions: z.array(z.string()).default([]) }),
+    guilt: z.object({ thought: z.string(), infractions: z.array(z.string()) }),
+    watched: z.object({ thought: z.string(), events: z.array(z.string()) }),
+    breakdown: z.object({ thought: z.string() }),
+  }),
   thoughts: z.record(
     z.string(),
     z.object({
@@ -486,11 +496,15 @@ export const breaksSchema = z.object({
   chance: z.object({ minor: unit, major: unit, extreme: unit }),
   catharsis: z.string(),
   sources: z.record(z.string(), z.object({ minor: z.string(), major: z.string(), extreme: z.string() })),
+  // A source's bad thoughts count × this when picking the biggest grievance (mood is unchanged).
+  weights: z.record(z.string(), num.positive()).default({}),
   fallback: z.string(),
   kinds: z.record(z.string(), breakKind),
   passion: z.object({
     kindAtMost: num,
     calmAtMost: num,
+    // The murder nudge: below the meter's doom line both cutoffs loosen by this much.
+    desperate: num.nonnegative().default(0),
     otherwise: z.string(),
     firstBlow: num,
     perStrength: num.nonnegative(),
