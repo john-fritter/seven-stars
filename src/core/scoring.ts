@@ -5,7 +5,10 @@
 //   points = base × witnesses (1 + 0.15 each, up to ×2) × repeats (½ per repeat by the same pair
 //            within three days) × boredom (−10% per time that type already scored today)
 //            × their traits (a Show-off's karaoke, a Drama queen's breaks)
+//            × their own repeats (× 0.7 per time they already scored that type today, as an actor)
+//            × surprise for the first actor (1 + S × max(0, 1 − taste): an act against type, ratings.ts)
 import { dayOf, log, MINUTES_PER_DAY, type Ctx } from './context.js';
+import { surpriseOf } from './ratings.js';
 import { think } from './thoughts.js';
 import { traitFx } from './traits.js';
 import type { Contestant, SimEvent } from './types.js';
@@ -67,10 +70,18 @@ export function award(ctx: Ctx, e: SimEvent): void {
 
   const awards: Record<string, number> = {};
   let total = 0;
+  let surprise = 1;
   for (const [id, v] of base) {
     const c = ctx.w.contestants.find((x) => x.id === id);
     if (!c) continue;
-    const pts = round2(v * mult * (traitFx(ctx.data, c).scores[e.type] ?? 1));
+    let own = 1;
+    if (e.actors.includes(id)) {
+      const mine = (show.mine[id] ??= {});
+      own = m.ownRepeat ** (mine[e.type] ?? 0);
+      mine[e.type] = (mine[e.type] ?? 0) + 1;
+    }
+    if (id === e.actors[0]) surprise = surpriseOf(ctx, c, e);
+    const pts = round2(v * mult * own * (id === e.actors[0] ? surprise : 1) * (traitFx(ctx.data, c).scores[e.type] ?? 1));
     if (pts <= 0) continue;
     addMeter(ctx, c, pts);
     if (!row.meterOnly) c.lifetime = round2(c.lifetime + pts);
@@ -90,7 +101,7 @@ export function award(ctx: Ctx, e: SimEvent): void {
   if (actor) actor.secret = round2(actor.secret + row.secret!);
   if (!total) return;
   e.points = round2(total);
-  e.data = { ...d, awards };
+  e.data = { ...d, awards, ...(surprise > 1 ? { surprise: round2(surprise) } : {}) };
 }
 
 /** The judge's boredom recovers overnight; stale repeat records are dropped at the same time. */
@@ -100,6 +111,7 @@ function rollDay(ctx: Ctx): void {
   if (show.day === day) return;
   show.day = day;
   show.today = {};
+  show.mine = {};
   const since = ctx.w.t - ctx.data.scoring.modifiers.repeatDays * MINUTES_PER_DAY;
   for (const [k, ts] of Object.entries(show.pairs)) {
     const keep = ts.filter((t) => t > since);

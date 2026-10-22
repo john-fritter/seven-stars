@@ -137,7 +137,10 @@ describe('the Wheel', () => {
     const dance = events.find((e) => e.type === 'dance_off')!;
     expect(dance.data!.sudden).toBe(true);
     const loser = w.contestants.find((c) => c.id === dance.data!.loser)!;
-    expect(loser.meter).toBeLessThan(1);
+    // At zero they're desperate and may score again straight away (the ratings pull).
+    const after = events.filter((e) => e.t >= dance.t && e !== dance && events.indexOf(e) > events.indexOf(dance));
+    const since = after.reduce((s, e) => s + (((e.data?.awards ?? {}) as Record<string, number>)[loser.id] ?? 0), 0);
+    expect(loser.meter).toBeLessThan(1 + since);
     expect(events.some((e) => e.type === 'on_notice' && e.actors[0] === loser.id)).toBe(true);
   });
 

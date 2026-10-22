@@ -15,7 +15,7 @@
 # secret:    hidden lifetime points for the first actor, revealed when they die (murder)
 
 awards:
-  deep_talk:   { each: 2 }
+  deep_talk:   { each: 4 }                # personality step 2 (D-113): was 2, so quiet depth pays
   kind_words:  { actor: 1 }               # "Gift; kind words: 2 giver; 1"
   gift:        { actor: 2 }
   slight:      { each: 2 }
@@ -47,3 +47,35 @@ modifiers:
   repeatFactor: 0.5        # ...is worth this much more each repeat (half, a quarter, ...)
   boredom: 0.1             # each event type loses this share every time it happens station-wide
                            # that day, recovering overnight (at midnight)
+  ownRepeat: 0.7           # their act gets old: each time a contestant already scored that type today as
+                           # an actor, × 0.7 more (personality step 2; resets at midnight with boredom)
+
+# The ratings pull (personality step 2, all proposals). As the meter falls, whatever would score
+# pulls harder, weighted by the contestant's own taste for it (src/core/ratings.ts).
+#   desperation = max(0, 1 − meter ÷ from) ^ power
+#   actions:      added to an action's score: actions × desperation × points ÷ 10 × taste
+#                 (only actions that log a scoring event, like karaoke)
+#   interactions: an interaction type's weight × 1 + interactions × desperation × points ÷ 10 × taste
+#   chance:       the chance of starting an interaction × 1 + chance × desperation
+#   shyness:      desperation overcomes shyness: for that chance, outgoing counts as
+#                 outgoing + (10 − outgoing) × shyness × desperation
+# Points are the actor's share (each + actor) after the judge's boredom and their own repeats today.
+# pays: an interaction scored through another event's row, e.g. { proposition: lovin }. Left empty
+# (proposal): desperate singles propositioning for the cameras costs hookups within a couple.
+# ignore: interactions never pulled.
+ratings:
+  from: 50
+  power: 2
+  actions: 10
+  interactions: 5
+  chance: 1
+  shyness: 0.5
+  pays: {}
+  ignore: [breakup]   # proposal: nobody dumps someone for the cameras (it would only cost the couple targets)
+
+# Surprise pays: the first actor's award × 1 + bonus × max(0, 1 − taste), where taste is the same
+# multiplier as above (the personality grid for an action's tags, an interaction's axis scale
+# factors and traits). acts: an event scored as another act's taste (a rebuff is a flirt).
+surprise:
+  bonus: 1
+  acts: { rebuff: flirt }

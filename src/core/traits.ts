@@ -9,6 +9,7 @@ import type { Contestant } from './types.js';
 /** A contestant's traits merged: multipliers multiplied, offsets added, the rest collected. */
 export interface TraitFx {
   tags: Record<string, number>;
+  desperate: Record<string, number>; // a tag's multiplier at full desperation (ratings.ts)
   interactions: Record<string, number>;
   nearby: Record<string, number>;
   thoughts: Record<string, number>;
@@ -41,6 +42,7 @@ export interface TraitFx {
   nightShift: number;
   sleepwalk: { perHour: number; minutes: number } | undefined;
   peacemaker: number;
+  ratingsPull: number;
 }
 
 function mergeMult(into: Record<string, number>, from: Record<string, number | undefined>): void {
@@ -50,6 +52,7 @@ function mergeMult(into: Record<string, number>, from: Record<string, number | u
 export function mergeTraits(defs: TraitDef[]): TraitFx {
   const fx: TraitFx = {
     tags: {},
+    desperate: {},
     interactions: {},
     nearby: {},
     thoughts: {},
@@ -82,9 +85,11 @@ export function mergeTraits(defs: TraitDef[]): TraitFx {
     nightShift: 0,
     sleepwalk: undefined,
     peacemaker: 0,
+    ratingsPull: 1,
   };
   for (const t of defs) {
     mergeMult(fx.tags, t.tags);
+    mergeMult(fx.desperate, t.desperate);
     mergeMult(fx.interactions, t.interactions);
     mergeMult(fx.nearby, t.nearby);
     mergeMult(fx.thoughts, t.thoughts);
@@ -117,6 +122,7 @@ export function mergeTraits(defs: TraitDef[]): TraitFx {
     fx.nightShift += t.nightShift;
     fx.sleepwalk ??= t.sleepwalk;
     fx.peacemaker = Math.max(fx.peacemaker, t.peacemaker);
+    fx.ratingsPull *= t.ratingsPull;
   }
   return fx;
 }

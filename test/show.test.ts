@@ -60,9 +60,11 @@ describe('scoring', () => {
     const first = log(ctx, 'deep_talk', [a.id, b.id], 'cafe').data!.awards as Record<string, number>;
     const second = log(ctx, 'deep_talk', [b.id, a.id], 'cafe').data!.awards as Record<string, number>;
     const other = log(ctx, 'deep_talk', [a.id, c.id], 'cafe').data!.awards as Record<string, number>;
-    expect(first[a.id]).toBe(2);
-    expect(second[a.id]).toBeCloseTo(2 * 0.5 * 0.9); // a repeat, and the judge's second deep talk today
-    expect(other[c.id]).toBeCloseTo(2 * 0.81 * 1.15); // a new pair, but the third deep talk today, and b watching
+    expect(first[a.id]).toBe(4);
+    // a repeat, the judge's second deep talk today, and a's own second today
+    expect(second[a.id]).toBeCloseTo(4 * 0.5 * 0.9 * 0.7);
+    expect(other[c.id]).toBeCloseTo(4 * 0.81 * 1.15); // a new pair, but the third deep talk today, and b watching
+    expect(other[a.id]).toBeCloseTo(4 * 0.81 * 1.15 * 0.7 ** 2); // a's third today
   });
 
   it('only scores fights outside the cage', () => {

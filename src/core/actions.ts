@@ -14,6 +14,7 @@ import { addNeed, needUrgency } from './needs.js';
 import { between, chance, pick, weightedIndex } from './rng.js';
 import { bedtime, labelOf, lovinArrive, morning } from './romance.js';
 import { walkMinutes, type ObjectInstance } from './station.js';
+import { actionPull, desperateEase } from './ratings.js';
 import { caughtIn, infraction, sneakCost } from './show.js';
 import { askToShare, companyPull, expectedKnockOdds, guestOf, knock, occupants } from './social.js';
 import { discomfortAt, preferredSetting, setThermostat, situationComfort } from './temperature.js';
@@ -114,7 +115,8 @@ function scoreAction(ctx: Ctx, c: Contestant, def: ActionDef, room: string, othe
   if (def.tags.includes('exposed') && !def.private && others.get(room)) costs += (c.modesty / 10) * a.modestyCost;
 
   const enough = def.kind === 'drink' ? soberFactor(ctx, c) * traitFx(ctx.data, c).drink : 1;
-  return (needs + pulls - costs) * personalityOf(ctx.data, c, def) * moodMult(ctx, c, def.tags) * enough;
+  // Playing for the cameras: whatever scores pulls harder as the meter falls (ratings.ts).
+  return (needs + pulls - costs) * personalityOf(ctx.data, c, def) * desperateEase(ctx, c, def) * moodMult(ctx, c, def.tags) * enough + actionPull(ctx, c, def);
 }
 
 function mealScore(ctx: Ctx, c: Contestant, meal: MealDef): number {

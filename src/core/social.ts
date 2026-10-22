@@ -5,6 +5,7 @@ import { actionDef, bedmateFeeling, begin, endActivity, FIGHT } from './actions.
 import { axis, giftDrink, moveMult, stageMult, stageOf } from './booze.js';
 import { log, type Ctx } from './context.js';
 import { askExclusive, attachedMult, breakUp, evidence, kiss, invite, moveAllowed, proposition } from './romance.js';
+import { boldness, chanceBoost, interactionBoost } from './ratings.js';
 import { witnessesOf } from './scoring.js';
 import { infraction } from './show.js';
 import { feel, meet, rel, relation, warm } from './ledger.js';
@@ -28,11 +29,11 @@ export function available(ctx: Ctx, c: Contestant): boolean {
 
 /**
  * Chance that a contestant starts an interaction this round: outgoing ÷ 10 × (base + social
- * urgency), × 1.5 when tipsy or worse.
+ * urgency), × 1.5 when tipsy or worse, and more as the meter falls (ratings.ts).
  */
 export function interactionChance(ctx: Ctx, c: Contestant): number {
   const x = (100 - c.needs.social) / 100;
-  return (c.personality.outgoing / 10) * (ctx.data.social.base + x * x) * stageMult(ctx, c, 'interaction');
+  return (boldness(ctx, c) / 10) * (ctx.data.social.base + x * x) * stageMult(ctx, c, 'interaction') * chanceBoost(ctx, c);
 }
 
 /** Every few minutes: people who share a room meet, and each may start an interaction. */
@@ -117,6 +118,7 @@ export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: I
     if (x !== c && x.room === c.room && !x.asleep) w *= traitFx(ctx.data, x).nearby[def.id] ?? 1;
   }
   if (def.move && def.move !== 'gift' && def.move !== 'breakup') w *= attachedMult(ctx, c, o);
+  w *= interactionBoost(ctx, c, o, def); // what it would pay, as the meter falls
   for (const s of def.scale) {
     const k = s.k ?? 1;
     let f: number;

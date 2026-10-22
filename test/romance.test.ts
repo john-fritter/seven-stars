@@ -114,6 +114,7 @@ describe('romance', () => {
     expect(first.data!.awards).toEqual({ [a.id]: 12, [b.id]: 12 });
     w.show.today = {};
     w.show.pairs = {};
+    w.show.mine = {};
     lovin(ctx, a, b);
     expect(ctx.events.filter((e) => e.type === 'lovin')[1]!.data!.awards).toEqual({ [a.id]: 3, [b.id]: 3 });
   });
