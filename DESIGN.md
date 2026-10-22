@@ -226,7 +226,7 @@ Every contestant is a set of randomized numbers that the LLM interprets, never t
 | Orientation | Attraction to femininity and to masculinity (doubles as desire) | Who they fall for, and how much |
 | Monogamy | How strongly monogamous they want to be | Jealousy, affairs, mismatched expectations |
 | Tastes | Favorite recreation, food, modesty, reaction to substances | Daily choices and friction |
-| Quirks | One or two oddities with a mechanical hook (hums constantly, sleepwalks, hoards) | Flavor and small conflicts |
+| Traits | One to three RimWorld-style named traits, each one strong rule; the old quirks (snores, hums, hoards, sleepwalks, night owl) become traits (D-108) | Readable character, behaviour the sliders can't give |
 | Arrival drive | The strong want they wake up with | Stops the "where am I?" loop |
 | Voice | An LLM-written persona and speech style, made once | Consistent dialogue |
 | Live state | Needs, mood, health, meter, lifetime points, relationship ledger, beliefs, intentions, inventory, secret immunities | Everything else |
@@ -523,7 +523,7 @@ Using an object in a room above your rank is an infraction, whether you walked i
 | Drawn to femininity, to masculinity | 0–10 each | Also stands in for desire |
 | Monogamy | 0–10 | Default expectation of exclusivity |
 | Tastes | Favorite recreation types, drinking appetite 0–10, modesty 0–10 |  |
-| Quirk | One from a weighted list | Snores, hums, hoards, sleepwalks, night owl (rarer). Snoring and humming disturb sleep, hoarders carry more drinks, a night owl's night runs later; sleepwalking has no hook yet |
+| Quirk | One from a weighted list | Snores, hums, hoards, sleepwalks, night owl (rarer). Snoring and humming disturb sleep, hoarders carry more drinks, a night owl's night runs later; sleepwalking has no hook yet. *Quirks become named traits next (D-108; see Personality, traits and mood: the next pass)* |
 | Live state | Needs, mood, thoughts, health, intoxication, meter, lifetime points, rank, ledger, labels, inventory, immunity |  |
 
 **Species.** Mechanics are deliberately light; looks are in Part one. Comfort ranges are in °F before clothing.
@@ -725,6 +725,97 @@ Mood starts at 50 and adds every active thought. Each thought has a value, a dur
 - **The breaks:** binge (the cafe, 30 minutes, hunger +40), steal food (the cafe, hunger +50, theft), sulk in bed (two hours), tantrum (where they are, damaging the set), cry in the confessional (30 minutes), drink binge (the best bar they can enter, four drinks in an hour), hide (a restroom stall, an hour), panic (30 minutes), insulting spree (follows the target, an insult every 10 minutes for an hour), wreck their things (the target's bedroom, damage; the target gets "wrecked my things" −8 and affection −15), and the attacks. "Attack whoever outranks them most" goes for rank 1; "lash out at the feared person" goes for whoever they fear most (fear 10+). An attacker chases a target who moved on up to three times. Anything with no possible target, or that would need to leave the fishbowl, becomes an hour of moping instead. Broken contestants skip meals and are excused from the ceremony.
 - **Catharsis** (+15 for a day) comes when the break ends, however it ends.
 - **The attack** adds +3 to the attacker's fight roll. Only an attacker who wins can kill. The victim isn't charged with fighting. A murder pays the killer 40 to the meter only and 100 hidden lifetime points, revealed when they die; witnesses fear the killer +30 and get "saw them kill someone" (−12). The body, its discovery and the trial come with trials.
+
+## Personality, traits and mood: the next pass
+
+*Decided direction (john, Oct 22: D-108 to D-113), not built yet. Every number below is a proposal to be set in data and tuned.*
+
+**Why.** A review on Oct 22 (160 seeds × 30 days, 2,791 contestants, main after the dread tuning) found:
+
+- **Outgoing is the only strong trait.** It moved 26 of 31 measured behaviours: reserved contestants started 5 interactions a day and outgoing ones 28, earned 35 vs 52 points a day, and stayed 7 vs 17 days. Vain moved 8, playful 6, kind and calm 4, brave 2, honest and monogamy 1, loyal and modesty none.
+- **Mood barely depends on who you are.** No trait moved average mood more than 4 points (playful, 36 vs 40). Fear took about 16 points off everyone alike.
+- **Relationships barely move mood.** No friends: mood 40; four or more: 43. A couple: 1 to 3 points.
+- **Hate is rare.** 27% of directed feelings were +30 or more; 2% were −30 or worse.
+- **Nobody plays the game.** A falling meter adds "the show is going to kill me" and changes no choice.
+- **Dead hooks.** No action is tagged risky, so bravery's pull never applies; no thought feeds the envy grievance, so envy breaks never happen.
+
+**The rule for all of it: no buckets.** Nobody is assigned an archetype or a game plan. Every choice stays a blend of all eight sliders, the tastes and the traits, picked with noise, so a very kind, moderately deceptive contestant is mostly kind and schemes now and then. Joys and pains also come from the whole blend, not one per trait.
+
+### Named traits (replacing quirks)
+
+Each contestant rolls one to three named traits (proposal: 50% one, 35% two, 15% three) from a list of about 30, RimWorld-style: each is one strong, readable rule a viewer can see on the sheet and the AI can play later. Some come in opposites that can't roll together. Sliders tilt the odds without deciding them: a trait's roll weight is × 1 + k × (axis − 5) ÷ 5 for the slider it leans on (Hothead leans on volatility, Charmer on outgoing). The five quirks become traits on the list with their current hooks. Traits live in data (`data/traits.yaml`), each as a row of effects on existing systems: multipliers on tags, thoughts, sources, drains and odds, plus a few special hooks.
+
+A starting list (proposal; john to edit):
+
+| Group | Trait | Its rule |
+| --- | --- | --- |
+| Temper | Hothead | Slights can start fights too; fight chance × 2 |
+| Temper | Peacemaker | Steps in to break up fights in the room; insults near them rarer |
+| Temper | Drama queen | Break lines 10 higher; breaks score × 1.5 |
+| Temper | Ice cold | Death and grief thoughts × 0.3; never comforts anyone |
+| Temper | Worrier | Fear × 1.5; worry about friends × 2 |
+| Temper | Sunny / Gloomy | A permanent +4 / −4 |
+| Social | Charmer | Affection from interactions they start × 1.5 |
+| Social | Abrasive | Slights × 2; people sharing a room with them slowly like them less |
+| Social | Grudge-holder / Forgiving | Dislike never fades / fades twice as fast |
+| Social | Clingy | "Missing them" × 2; strong pull toward a partner's room |
+| Social | Loner | Social drains at half; a crowd of four or more is a small bad thought |
+| Social | Gossip | Passes rumors twice as often (hook arrives with rumors) |
+| Show | Show-off | Performing scores × 1.5 for them; "everyone was watching" joy |
+| Show | Stage fright | Avoids karaoke and dance-offs unless desperate; when they do perform it's a big surprise (below) |
+| Show | Survivor | Doom thought × 0.5; ratings pull × 1.5 |
+| Romance | Romantic | Attraction grows faster; reads every second kiss as dating |
+| Romance | Heartbreaker | Romance moves while attached × 2; no guilt |
+| Romance | Jealous | Jealousy and betrayal × 2; always confronts |
+| Romance | Prude / Exhibitionist | Modesty acts as 10 / 0; the exhibitionist enjoys being seen |
+| Appetite | Party animal / Teetotaler | Drink pull × 2 with company and half hangovers / never drinks, mildly dislikes drunks |
+| Appetite | Lightweight | Intoxication per drink × 1.5 |
+| Appetite | Glutton | Hunger drains × 1.3; gourmet × 2, leftovers × 2 |
+| Appetite | Neat freak / Slob | Hygiene thoughts × 2 and dislikes slobs in the room / × 0.3 |
+| Body | Snores, Hums, Hoards, Night owl | As the quirks today |
+| Body | Early bird | The night owl's opposite: up 90 minutes before the chime |
+| Body | Sleepwalks | Wanders to another room once some nights (finally a hook) |
+
+### The ratings pull
+
+As a contestant's meter falls, anything that scores gets an extra pull when they choose actions and interactions: pull = R × desperation × the act's usual points ÷ 10 × their taste for it. Desperation runs from 0 at meter 50 to 1 at 0 (squared, so it bites late). Taste is the multiplier their sliders and traits already give that act's tags or interaction (the kind like kind words, the cruel like slights). Because it's added to every scoring option and the pick stays noisy among the best few, each person's mix shifts toward what suits them without locking in.
+
+**Their act gets old.** On top of the station-wide boredom in scoring, each contestant's own repeats of an event type within a day score × 0.7 each time, so a karaoke regular drifts to a flirt or a fight.
+
+### Surprise pays, and the quiet get a way in
+
+**Surprise bonus:** an act scores × 1 + S × max(0, 1 − taste), where taste is the same multiplier as above (0.5 to 1.5 from the sliders, more with traits). A reserved contestant's karaoke, a sweetheart's insult or a loyal partner's cheating scores up to about × 1.5 (S = 1 proposed). This is the main route for reserved characters to be surprisingly interesting.
+
+Also: deep talk scores more (proposal 2 → 4 each), and reserved contestants' interaction choice depends less on outgoing (outgoing sets how often they start one, but no longer squeezes out the types the other sliders favour).
+
+### Fear tuned down
+
+- "Trapped here" eases from −5 to −2 over a contestant's first seven days aboard.
+- The fear cap drops from −20 to about −12 (the other sources keep −20).
+- Tuned against the 11 targets with harness numbers before and after.
+
+### People as mood, grudges and friction
+
+- **Company:** "with a friend" or "with my partner" (+) while sharing a room with someone at +30 or more; "stuck with someone I can't stand" (−) at −30 or worse.
+- **Worry and missing:** "my friend is on the chopping block" while a friend's meter is under the doom line; "missing them" when a partner has been out of sight for a day.
+- **Envy:** "they've got it better" toward a disliked contestant ranked above you, feeding the envy grievance (binge, steal food).
+- **Grudges stick:** dislike fades at half the rate of liking, slower still for the volatile and the loyal (and never for Grudge-holders).
+- **Friction:** contestants who share a room drift apart a little when their personalities clash (opposite ends of honest, calm, kind and playful) and together when they match.
+- **Mood changes behaviour both ways:** today only a mood under 40 changes choices. A good mood also makes kind acts and gifts likelier; a bad one makes slights likelier.
+- **Joys and pains from the blend:** helped someone (kind, loyal), a thrill after something risky (brave), being watched while performing (vain, Show-off), guilt after sneaking or stealing (honest), seeing someone break down (kind). Risky gets tagged on the still, the hot tub after hours and sneaking above rank.
+- **Target:** rivals in about 5 to 10% of directed pairs (2% today), so gloating, insult sprees, wrecked rooms and attacks on someone in particular actually happen.
+
+### Murder
+
+Murder stays a crime of passion in slice one (planned murders are out of scope). One nudge: below the doom line, the violent-break cutoffs loosen by one point for that contestant (kind 4 or under, calm 3 or under), so a desperate, cruel or brave contestant is a little likelier to turn a break violent; the existing 40-point meter award does the rest. Killing deliberately for ratings waits for planned murders.
+
+### Build order
+
+One PR per step, each tuned back to all targets before the next:
+
+1. Named traits replacing quirks, and the fear tuning.
+2. The ratings pull, personal act boredom, the surprise bonus and the deep-talk change.
+3. People as mood, grudges, friction, envy, joys and pains, and the murder nudge.
 
 ## Booze
 
