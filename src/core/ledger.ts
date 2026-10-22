@@ -7,6 +7,7 @@ import { AXES, type Dim } from '../data/schema.js';
 import { accessRank, log, type Ctx } from './context.js';
 import { axisFactor } from './needs.js';
 import { normal } from './rng.js';
+import { traitFx } from './traits.js';
 import type { Contestant, Relation } from './types.js';
 
 const RANGE: Record<Dim, [number, number]> = {
@@ -61,13 +62,16 @@ export function feel(ctx: Ctx, a: Contestant, b: Contestant, dim: Dim, amount: n
 
 /**
  * Once a day, feelings fade a little toward neutral. Loyal people's affection fades slower, and
- * so does affection for someone they believe they're dating or exclusive with.
+ * so does affection for someone they believe they're dating or exclusive with. Dislike fades at
+ * the rate their traits say (never for a Grudge-holder, twice as fast for the Forgiving).
  */
 export function fadeLedger(ctx: Ctx, c: Contestant): void {
   const l = ctx.data.social.ledger;
   const aff = l.fadePerDay.affection * axisFactor(l.loyalK, c.personality.loyal);
+  const grudge = traitFx(ctx.data, c).dislikeFade;
   for (const r of Object.values(c.ledger)) {
-    r.affection *= 1 - Math.min(1, aff * (r.label === 'dating' || r.label === 'exclusive' ? l.loverFade : 1));
+    const rate = aff * (r.label === 'dating' || r.label === 'exclusive' ? l.loverFade : 1) * (r.affection < 0 ? grudge : 1);
+    r.affection *= 1 - Math.min(1, rate);
     r.trust *= 1 - l.fadePerDay.trust;
     r.fear *= 1 - l.fadePerDay.fear;
   }
@@ -116,8 +120,9 @@ export function attractionTarget(ctx: Ctx, a: Contestant, b: Contestant): number
   return clamp(at.scale * genderFit(a, b) * inner, 0, 10);
 }
 
-/** Time together moves attraction part of the way toward its target. */
+/** Time together moves attraction part of the way toward its target (faster for a Romantic). */
 export function warm(ctx: Ctx, a: Contestant, b: Contestant): void {
   const r = relation(ctx, a, b);
-  r.attraction = clamp(r.attraction + (attractionTarget(ctx, a, b) - r.attraction) * ctx.data.social.attraction.approach, 0, 10);
+  const step = Math.min(1, ctx.data.social.attraction.approach * traitFx(ctx.data, a).attraction);
+  r.attraction = clamp(r.attraction + (attractionTarget(ctx, a, b) - r.attraction) * step, 0, 10);
 }

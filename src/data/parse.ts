@@ -131,7 +131,7 @@ function crossCheck(d: GameData, dir: string): void {
 
   // Thoughts, breaks, booze and romance
   const th = d.thoughts;
-  thought(th.trapped, 'thoughts.yaml: trapped');
+  thought(th.trapped.thought, 'thoughts.yaml: trapped.thought');
   th.needs.forEach((n, i) => thought(n.thought, `thoughts.yaml: needs.${i}.thought`));
   thought(th.temperature.cold, 'thoughts.yaml: temperature.cold');
   thought(th.temperature.hot, 'thoughts.yaml: temperature.hot');
@@ -185,7 +185,6 @@ function crossCheck(d: GameData, dir: string): void {
   thought(sl.share.bad, 'needs.yaml: sleep.share.bad');
   thought(sl.noise.thought, 'needs.yaml: sleep.noise.thought');
   thought(d.actions.modestyThought, 'actions.yaml: modestyThought');
-  for (const q of Object.keys(d.booze.carry.quirks)) if (!d.generator.quirks[q]) errors.push(`${dir}/booze.yaml: carry.quirks: no quirk "${q}" in generator.yaml`);
   thought(ro.exclusive.thought, 'romance.yaml: exclusive.thought');
   thought(ro.exclusive.refused, 'romance.yaml: exclusive.refused');
   thought(ro.breakup.dumped, 'romance.yaml: breakup.dumped');
@@ -234,6 +233,25 @@ function crossCheck(d: GameData, dir: string): void {
   thought(tr.accused.thought, 'trials.yaml: accused.thought');
   thought(tr.survivedThought, 'trials.yaml: survivedThought');
   if (!rooms.has(d.schedule.trials.room)) errors.push(`${dir}/schedule.yaml: trials.room: no room "${d.schedule.trials.room}"`);
+
+  // Traits
+  const ts = d.traits;
+  const interactions = new Set(d.social.interactions.map((x) => x.id));
+  if (!bz.stages.some((s) => s.id === ts.drunkFrom)) errors.push(`${dir}/traits.yaml: drunkFrom: no stage "${ts.drunkFrom}" in booze.yaml`);
+  for (const [id, t] of Object.entries(ts.traits)) {
+    const at = `traits.yaml: traits.${id}`;
+    for (const x of t.excludes) if (!ts.traits[x]) errors.push(`${dir}/${at}.excludes: no trait "${x}"`);
+    for (const x of [...Object.keys(t.interactions), ...Object.keys(t.nearby), ...t.fightOn]) {
+      if (!interactions.has(x)) errors.push(`${dir}/${at}: no interaction "${x}" in social.yaml`);
+    }
+    for (const x of Object.keys(t.thoughts)) thought(x, `${at}.thoughts`);
+    for (const x of Object.keys(t.scores)) if (!d.scoring.awards[x]) errors.push(`${dir}/${at}.scores: no award "${x}" in scoring.yaml`);
+    for (const x of t.watched?.events ?? []) if (!d.scoring.awards[x]) errors.push(`${dir}/${at}.watched.events: no award "${x}" in scoring.yaml`);
+    thought(t.thought, `${at}.thought`);
+    thought(t.crowd?.thought, `${at}.crowd.thought`);
+    thought(t.watched?.thought, `${at}.watched.thought`);
+    thought(t.exposedThought, `${at}.exposedThought`);
+  }
 
   if (errors.length) throw new DataError(`Bad data:\n${errors.map((e) => `  ${e}`).join('\n')}`);
 }

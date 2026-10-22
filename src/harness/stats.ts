@@ -44,6 +44,9 @@ export interface SeedStats {
   fightsOutsideCage: number;
   beds: Record<string, number>; // lovin' by place and minutes, bed-share asks, nights, bedmates, noise
   wakeMinutes: Record<string, number[]>; // time of day of each morning wake after a night, night owls and others
+  fearAtNight: number; // fear thoughts' total at each day's end (capped as mood counts it), summed
+  traits: Record<string, { days: number; mood: number; deaths: number; arrivals: number }>; // by trait
+  traitCounts: Record<string, number>; // arrivals by how many traits they rolled
 }
 
 function add(m: Record<string, number>, k: string, v = 1): void {
@@ -92,7 +95,11 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
     fightsOutsideCage: 0,
     beds: {},
     wakeMinutes: { owl: [], other: [] },
+    fearAtNight: 0,
+    traits: {},
+    traitCounts: {},
   };
+  const traitsOf = new Map<string, string[]>();
   const owls = new Set<string>();
   const wokeToday = new Set<string>();
   const stage = new Map<string, { stage: string; since: number }>();
@@ -111,7 +118,14 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
       if (notable.has(e.type)) isNotable = true;
       if (e.type === 'sentence') sentenced = true;
       tally(s, e);
-      if (e.type === 'arrive' && data.generator.quirks[e.data!.quirk as string]?.nightShift) owls.add(e.actors[0]!);
+      if (e.type === 'arrive') {
+        const ts = e.data!.traits as string[];
+        traitsOf.set(e.actors[0]!, ts);
+        add(s.traitCounts, String(ts.length));
+        for (const id of ts) traitRow(s, id).arrivals++;
+        if (ts.some((id) => data.traits.traits[id]!.nightShift > 0)) owls.add(e.actors[0]!);
+      }
+      if (e.type === 'death') for (const id of traitsOf.get(e.actors[0]!) ?? []) traitRow(s, id).deaths++;
       // The first wake after a night, each day: when do night owls get up?
       const m = e.t % MINUTES_PER_DAY;
       if (e.type === 'wake' && (e.data!.slept as number) >= data.thoughts.sleepMinutes && m >= 180 && m < 840 && !wokeToday.has(e.actors[0]!)) {
@@ -144,6 +158,10 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
   if (bottom !== null) s.bottomStreaks.push(streak);
   for (const prev of stage.values()) if (prev.stage !== 'sober') add(s.intoxMinutes, prev.stage, world.t - prev.since);
   return s;
+}
+
+function traitRow(s: SeedStats, id: string) {
+  return (s.traits[id] ??= { days: 0, mood: 0, deaths: 0, arrivals: 0 });
 }
 
 function tally(s: SeedStats, e: SimEvent): void {
@@ -244,6 +262,14 @@ function endOfDay(s: SeedStats, w: World, data: GameData, day: number, together:
   for (const c of w.contestants) {
     for (const [k, v] of Object.entries(c.needs)) add(s.needsAtNight, k, v);
     s.moodAtNight += c.mood;
+    for (const id of c.traits) {
+      const t = traitRow(s, id);
+      t.days++;
+      t.mood += c.mood;
+    }
+    let fear = 0;
+    for (const x of c.thoughts) if (x.value < 0 && data.thoughts.thoughts[x.id]!.source === 'fear') fear += x.value;
+    s.fearAtNight += Math.max(fear, -(data.thoughts.caps.fear ?? data.thoughts.sourceCap));
     s.meterAtNight += c.meter;
     if (c.meter <= 0) s.noticeAtNight++;
     for (const r of Object.values(c.ledger)) {
@@ -310,6 +336,9 @@ export interface Report {
   mealsPerContestantDay: Record<string, number>;
   needsAtNight: Record<string, number>;
   moodAtNight: number;
+  fearAtNight: number; // average fear thoughts' total, as mood counts it
+  /** By trait: share of arrivals with it, mood at night with it, contestant-weeks aboard per death. */
+  traits: { shareOfArrivals: Record<string, number>; mood: Record<string, number>; stayWeeks: Record<string, number | null>; perContestant: Record<string, number> };
   knockYesShare: number | null;
   /** Shares of directed relationships at the end of each day, and the average affection. */
   relations: { friends: number; rivals: number; crushes: number; affection: number } | null;
@@ -426,6 +455,28 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
     mealsPerContestantDay: Object.fromEntries(Object.entries(sum((s) => s.meals)).map(([k, v]) => [k, v / cDays])),
     needsAtNight: Object.fromEntries(Object.entries(needs).map(([k, v]) => [k, v / cDays])),
     moodAtNight: seeds.reduce((a, s) => a + s.moodAtNight, 0) / cDays,
+    fearAtNight: seeds.reduce((a, s) => a + s.fearAtNight, 0) / cDays,
+    traits: (() => {
+      const rows: Record<string, { days: number; mood: number; deaths: number; arrivals: number }> = {};
+      for (const s of seeds) {
+        for (const [id, t] of Object.entries(s.traits)) {
+          const r = (rows[id] ??= { days: 0, mood: 0, deaths: 0, arrivals: 0 });
+          r.days += t.days;
+          r.mood += t.mood;
+          r.deaths += t.deaths;
+          r.arrivals += t.arrivals;
+        }
+      }
+      const counts = sum((s) => s.traitCounts);
+      const arrivals = Object.values(counts).reduce((a, b) => a + b, 0);
+      const ids = Object.keys(rows).sort((a, b) => rows[b]!.arrivals - rows[a]!.arrivals);
+      return {
+        shareOfArrivals: Object.fromEntries(ids.map((id) => [id, rows[id]!.arrivals / Math.max(1, arrivals)])),
+        mood: Object.fromEntries(ids.map((id) => [id, rows[id]!.days ? rows[id]!.mood / rows[id]!.days : 0])),
+        stayWeeks: Object.fromEntries(ids.map((id) => [id, rows[id]!.deaths ? rows[id]!.days / rows[id]!.deaths / 7 : null])),
+        perContestant: Object.fromEntries(Object.entries(counts).map(([k, v]) => [k, v / Math.max(1, arrivals)])),
+      };
+    })(),
     knockYesShare: ratio(knocks.yes ?? 0, (knocks.yes ?? 0) + (knocks.no ?? 0)),
     show: {
       infractionsPerDay: perDay(sum((s) => s.infractions)),

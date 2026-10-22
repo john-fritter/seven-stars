@@ -2,10 +2,12 @@
 // outside the world so the hot loop doesn't recompute them every minute. Never serialized.
 import { NEEDS, type ActionDef, type GameData, type Need } from '../data/schema.js';
 import { axisFactor } from './needs.js';
+import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
 
 export interface Derived {
   data: GameData;
+  traits: string[];
   awake: number[]; // drain per minute by NEEDS index
   asleep: number[];
   comfortLo: number;
@@ -19,15 +21,17 @@ const cache = new WeakMap<Contestant, Derived>();
 
 export function derived(data: GameData, c: Contestant): Derived {
   let d = cache.get(c);
-  if (!d || d.data !== data) {
+  if (!d || d.data !== data || d.traits !== c.traits) {
     const sp = data.species.species[c.species]!;
+    const tdrain = traitFx(data, c).drain;
     const awake = NEEDS.map((n) => {
       const axis = data.personality.needDrain[n];
       const p = axis ? axisFactor(data.personality.k, c.personality[axis]) : 1;
-      return n === 'comfort' ? 0 : (data.needs.needs[n].drainPerHour * (sp.drain[n] ?? 1) * p) / 60;
+      return n === 'comfort' ? 0 : (data.needs.needs[n].drainPerHour * (sp.drain[n] ?? 1) * (tdrain[n] ?? 1) * p) / 60;
     });
     d = {
       data,
+      traits: c.traits,
       awake,
       asleep: awake.map((r, i) => r * data.needs.asleepDrain[NEEDS[i]!]),
       comfortLo: sp.comfort[0],
@@ -53,14 +57,18 @@ export function gainsOf(data: GameData, c: Contestant, def: ActionDef): [Need, n
   return g;
 }
 
-/** The personality grid's multiplier for an action's tags. */
+/** The personality grid's multiplier for an action's tags, traits included. */
 export function personalityOf(data: GameData, c: Contestant, def: ActionDef): number {
   const d = derived(data, c);
   let m = d.personality.get(def);
   if (m === undefined) {
     const p = data.personality;
     m = 1;
-    for (const tag of def.tags) for (const e of p.tags[tag] ?? []) m *= axisFactor(e.k ?? p.k, c.personality[e.axis]);
+    const tags = traitFx(data, c).tags;
+    for (const tag of def.tags) {
+      for (const e of p.tags[tag] ?? []) m *= axisFactor(e.k ?? p.k, c.personality[e.axis]);
+      m *= tags[tag] ?? 1;
+    }
     d.personality.set(def, m);
   }
   return m;

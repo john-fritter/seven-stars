@@ -171,6 +171,7 @@ describe('spacing', () => {
     rest.forEach((o, i) => {
       o.thoughts = [];
       o.intox = 0;
+      o.traits = []; // no Worrier or Ice cold
       Object.assign(o.personality, { calm: 5, brave: 5, loyal: 5, kind: i === 5 ? 9 : 2 });
       feelings[o.id] = { affection: plan[i]!, enemy: plan[i]! <= -30 };
     });

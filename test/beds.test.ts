@@ -183,8 +183,8 @@ describe('sleep disturbance', () => {
     const dorm = cast.filter((c) => c.bed?.startsWith('dorm'));
     const [sleeper, snorer] = dorm as [Contestant, Contestant];
     alone(w, sleeper, snorer);
-    sleeper.quirk = 'hoards';
-    snorer.quirk = 'snores';
+    sleeper.traits = ['hoards'];
+    snorer.traits = ['snores'];
     for (const c of [sleeper, snorer]) {
       endActivity(ctx, c, 'interrupted');
       Object.assign(c, { room: 'dorm' });
@@ -213,15 +213,15 @@ describe('night owls', () => {
     step(w, 1440 + at(6, 59));
     const owl = w.contestants.find((c) => c.asleep && c.activity?.object === c.bed && !c.guest)!;
     const lark = w.contestants.find((c) => c.asleep && c !== owl);
-    owl.quirk = 'night_owl';
+    owl.traits = ['night_owl'];
     owl.needs.rest = 60;
     owl.needs.bladder = 100;
-    for (const c of w.contestants) if (c !== owl) c.quirk = 'hoards'; // nobody snoring them awake
+    for (const c of w.contestants) if (c !== owl) c.traits = ['hoards']; // nobody snoring them awake
     const ctx = { data, st: undefined as never, w, events: [] };
     expect(isNightFor(ctx as never, owl, w.t + 1)).toBe(true);
     step(w, 2);
     expect(owl.asleep).toBe(true);
-    if (lark && lark.quirk !== 'night_owl' && lark.needs.rest > data.schedule.wakeChime.minRest) expect(lark.asleep).toBe(false);
+    if (lark && !lark.traits.includes('night_owl') && lark.needs.rest > data.schedule.wakeChime.minRest) expect(lark.asleep).toBe(false);
   });
 });
 
@@ -235,7 +235,7 @@ describe('bedtime', () => {
     for (const [x, y] of [[a, b], [b, a]] as const) {
       Object.assign(rel(x, y)!, { attraction: 10, affection: 100, label: 'dating' });
       endActivity(ctx, x, 'interrupted');
-      Object.assign(x, { room: 'suite', intox: 60, quirk: 'hoards', personality: { ...x.personality, kind: 10, loyal: 5 } });
+      Object.assign(x, { room: 'suite', intox: 60, traits: ['hoards'], personality: { ...x.personality, kind: 10, loyal: 5 } });
     }
     b.guest = { room: 'suite', host: a.id, since: w.t };
     return { w, ctx, a, b };

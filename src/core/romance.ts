@@ -15,6 +15,7 @@ import { between, chance } from './rng.js';
 import { walkMinutes, type ObjectInstance } from './station.js';
 import { interact, shareOdds } from './social.js';
 import { think } from './thoughts.js';
+import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
 
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
@@ -27,10 +28,10 @@ export function labelOf(a: Contestant, b: Contestant): Label {
   return rel(a, b)?.label ?? 'none';
 }
 
-/** Romance moves toward anyone but whoever they're dating are rarer for the loyal. */
+/** Romance moves toward anyone but whoever they're dating are rarer for the loyal (less so for a Heartbreaker). */
 export function attachedMult(ctx: Ctx, c: Contestant, o: Contestant): number {
   const attached = Object.entries(c.ledger).some(([id, r]) => id !== o.id && ATTACHED.includes(r.label));
-  return attached ? Math.max(0, 1 - (ctx.data.romance.attachedK * c.personality.loyal) / 10) : 1;
+  return attached ? Math.min(1, Math.max(0, 1 - (ctx.data.romance.attachedK * c.personality.loyal) / 10) * traitFx(ctx.data, c).attached) : 1;
 }
 
 /** Gates on a move beyond the interaction's own `needs`: privacy for lovin', a reason to break up. */
@@ -73,8 +74,10 @@ export function kiss(ctx: Ctx, c: Contestant, o: Contestant): void {
     const r = relation(ctx, a, b);
     r.kisses++;
     if (r.label === 'none') r.label = k.label;
-    // Enough kisses and the monogamous think they're seeing each other.
-    if (r.label === 'flirting' && r.kisses >= k.datingAfter && a.monogamy >= ctx.data.romance.proposition.datingAt) r.label = 'dating';
+    // Enough kisses and the monogamous think they're seeing each other; a Romantic always does.
+    const romantic = traitFx(ctx.data, a).datingAfter;
+    const dating = romantic !== undefined ? r.kisses >= romantic : r.kisses >= k.datingAfter && a.monogamy >= ctx.data.romance.proposition.datingAt;
+    if (r.label === 'flirting' && dating) r.label = 'dating';
     think(ctx, a, k.thought, b.id);
   }
   log(ctx, 'kiss', [c.id, o.id], c.room, { odds: round2(odds) });
@@ -282,13 +285,21 @@ export function evidence(ctx: Ctx, a: Contestant, b: Contestant, c: Contestant, 
     feel(ctx, a, b, 'affection', ro.betrayal.affection, 'betrayal');
     think(ctx, a, ro.betrayal.thought, b.id);
     log(ctx, 'betrayal', [a.id, b.id, c.id], a.room, { what });
-    const sm = ctx.data.social.interactions.find((d) => d.id === 'insult');
-    if (sm && a.room === b.room && !b.asleep && chance(ctx.w.rng, ro.betrayal.confront)) interact(ctx, a, b, sm);
+    confront(ctx, a, b, traitFx(ctx.data, a).confront ?? ro.betrayal.confront);
   } else if (JEALOUS.includes(label)) {
     feel(ctx, a, b, 'affection', ro.jealousy.affection, 'jealousy');
     think(ctx, a, ro.jealousy.thought, b.id);
     log(ctx, 'jealous', [a.id, b.id, c.id], a.room, { what, label });
+    // Only the Jealous confront over mere jealousy.
+    const always = traitFx(ctx.data, a).confront;
+    if (always) confront(ctx, a, b, always);
   }
+}
+
+/** Having it out: an insult to their face, if they're both here and awake. */
+function confront(ctx: Ctx, a: Contestant, b: Contestant, odds: number): void {
+  const sm = ctx.data.social.interactions.find((d) => d.id === 'insult');
+  if (sm && a.room === b.room && !b.asleep && chance(ctx.w.rng, odds)) interact(ctx, a, b, sm);
 }
 
 /** Odds of a yes to exclusivity: their attraction, monogamy and loyalty. */

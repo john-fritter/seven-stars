@@ -5,10 +5,11 @@ import type { Ctx } from './context.js';
 import { axisFactor } from './needs.js';
 import { derived } from './derived.js';
 import { clothingWarmth, discomfortAt } from './temperature.js';
+import { traitFx } from './traits.js';
 import type { Axis, Contestant } from './types.js';
 
 /**
- * A thought's value for this contestant: personality, volatility and species applied. `base`
+ * A thought's value for this contestant: personality, volatility, species and traits applied. `base`
  * replaces the data's value for thoughts whose size depends on the situation (the meter's dread).
  */
 export function thoughtValue(ctx: Ctx, c: Contestant, id: string, base?: number): number {
@@ -18,7 +19,8 @@ export function thoughtValue(ctx: Ctx, c: Contestant, id: string, base?: number)
   const of = (a: Axis | 'modesty') => (a === 'modesty' ? c.modesty : c.personality[a]);
   for (const s of def.scale) v *= axisFactor(s.k, of(s.axis));
   for (const s of th.sources[def.source] ?? []) v *= axisFactor(s.k, of(s.axis));
-  return v;
+  const fx = traitFx(ctx.data, c);
+  return v * (fx.thoughts[id] ?? 1) * (fx.sources[def.source] ?? 1);
 }
 
 /** Adds a thought. At the stacking limit for that thought about that person, the oldest goes. */
@@ -63,9 +65,15 @@ export function condition(ctx: Ctx, c: Contestant, id: string, base: number | nu
   }
 }
 
-/** Every ten minutes: low (and well-met) needs and the temperature reach mood. */
+/** Every ten minutes: low (and well-met) needs, the temperature and a crowd (Loners) reach mood. */
 export function conditions(ctx: Ctx, c: Contestant): void {
   const th = ctx.data.thoughts;
+  const crowd = traitFx(ctx.data, c).crowd;
+  if (crowd) {
+    let n = 0;
+    for (const o of ctx.w.contestants) if (o !== c && o.room === c.room) n++;
+    condition(ctx, c, crowd.thought, n >= crowd.at ? th.thoughts[crowd.thought]!.value : null);
+  }
   for (const n of th.needs) {
     const v = c.needs[n.need];
     const on = n.below !== undefined ? v < n.below : v > n.above!;
@@ -80,6 +88,13 @@ export function conditions(ctx: Ctx, c: Contestant): void {
   condition(ctx, c, tp.hot, cold ? null : value);
 }
 
+/** "Trapped here", easing over their first days aboard. Refreshed hourly, and on arrival. */
+export function trappedHere(ctx: Ctx, c: Contestant): void {
+  const tr = ctx.data.thoughts.trapped;
+  const x = Math.min(1, (ctx.w.t - c.arrivedAt) / (tr.days * 1440));
+  condition(ctx, c, tr.thought, tr.from + (tr.to - tr.from) * x);
+}
+
 /** Drops expired thoughts. */
 export function expireThoughts(ctx: Ctx, c: Contestant): void {
   const t = ctx.w.t;
@@ -88,7 +103,10 @@ export function expireThoughts(ctx: Ctx, c: Contestant): void {
   updateMood(ctx, c);
 }
 
-/** The base plus every thought, with each source's bad thoughts adding up to at most `sourceCap`. */
+/**
+ * The base plus every thought, with each source's bad thoughts adding up to at most its cap
+ * (`caps`, else `sourceCap`).
+ */
 export function updateMood(ctx: Ctx, c: Contestant): void {
   const th = ctx.data.thoughts;
   let m = ctx.data.personality.mood.base;
@@ -97,7 +115,7 @@ export function updateMood(ctx: Ctx, c: Contestant): void {
     if (x.value >= 0 || !th.sourceCap) m += x.value;
     else bad.set(th.thoughts[x.id]!.source, (bad.get(th.thoughts[x.id]!.source) ?? 0) + x.value);
   }
-  for (const v of bad.values()) m += Math.max(-th.sourceCap, v);
+  for (const [src, v] of bad) m += Math.max(-(th.caps[src] ?? th.sourceCap), v);
   c.mood = Math.min(100, Math.max(0, m));
 }
 

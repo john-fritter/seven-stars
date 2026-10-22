@@ -3,6 +3,7 @@
 import type { GameData } from '../data/schema.js';
 import { award } from './scoring.js';
 import type { Station } from './station.js';
+import { traitFx } from './traits.js';
 import type { Contestant, SimEvent, World } from './types.js';
 
 export interface Ctx {
@@ -31,18 +32,18 @@ export function isNight(ctx: Ctx, t: number): boolean {
   return s.lightsDim > s.wakeChime.at ? m >= s.lightsDim || m < s.wakeChime.at : m >= s.lightsDim && m < s.wakeChime.at;
 }
 
-/** Their own night: a night owl's runs later (generator.yaml quirks `nightShift`). */
+/** Their own night: a night owl's runs later, an early bird's earlier (traits.yaml `nightShift`). */
 export function isNightFor(ctx: Ctx, c: Contestant, t: number): boolean {
   return isNight(ctx, t - nightShift(ctx, c));
 }
 
 export function nightShift(ctx: Ctx, c: Contestant): number {
-  return ctx.data.generator.quirks[c.quirk]?.nightShift ?? 0;
+  return traitFx(ctx.data, c).nightShift;
 }
 
-/** What their quirk does to sleepers nearby, if anything: noise while asleep (snoring) or awake (humming). */
+/** Whether they're keeping sleepers nearby up: noise while asleep (snoring) or awake (humming). */
 export function noisy(ctx: Ctx, c: Contestant): boolean {
-  const n = ctx.data.generator.quirks[c.quirk]?.noise;
+  const n = traitFx(ctx.data, c).noise;
   return n === 'asleep' ? c.asleep : n === 'awake' ? !c.asleep : false;
 }
 

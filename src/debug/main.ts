@@ -169,7 +169,7 @@ function renderSheet(): void {
       ${row('monogamy', String(c.monogamy))}
       ${row('favorite recreation', esc(c.favoriteRecreation.join(', ')))}
       ${row('drinking / modesty', `${c.drinking} / ${c.modesty}`)}
-      ${row('quirk', esc(c.quirk))}
+      ${row('traits', c.traits.map((id) => { const t = data.traits.traits[id]; return t ? `<b>${esc(t.label)}</b> <small>${esc(t.rule)}</small>` : esc(id); }).join('<br>') || 'none')}
     </table>
     <h4>Thoughts</h4>${thoughtsHtml(c)}
     <h4>Ledger</h4>${ledgerHtml(c)}`;
@@ -177,7 +177,8 @@ function renderSheet(): void {
 
 function breakLine(c: Contestant): string {
   const l = data.breaks.lines;
-  const minor = l.minorBase + l.minorPerVolatile * (10 - c.personality.calm);
+  const shift = c.traits.reduce((a, id) => a + (data.traits.traits[id]?.breakLine ?? 0), 0); // a Drama queen's
+  const minor = l.minorBase + l.minorPerVolatile * (10 - c.personality.calm) + shift;
   return `${minor.toFixed(0)} / ${(minor * l.majorShare).toFixed(0)} / ${(minor * l.extremeShare).toFixed(0)}`;
 }
 

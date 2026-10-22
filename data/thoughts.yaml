@@ -31,9 +31,12 @@ sources:
 # bad week of executions, sentences and doom can't pin mood at zero on its own. Each source (fear,
 # humiliation, status, ...) is capped separately; good thoughts aren't capped. 0 turns it off.
 sourceCap: 20
+# Fear tuning (D-110, proposal): fear's bad thoughts add up to at most this instead.
+caps: { fear: 12 }
 
-# Everyone carries this from the moment they arrive.
-trapped: trapped
+# Everyone carries this from the moment they arrive. Fear tuning (D-110, proposal): it eases from
+# `from` to `to` over their first `days` aboard, refreshed hourly.
+trapped: { thought: trapped, from: -5, to: -2, days: 7 }
 
 # Proposal: low needs reach mood through these, refreshed every ten minutes while the need is
 # below the line ("hungry, exhausted, filthy, lonely, bored").
@@ -57,7 +60,14 @@ temperature: { cold: too_cold, hot: too_hot, perDegree: 0.5, max: 8 }
 sleepMinutes: 180   # proposal
 
 thoughts:
-  trapped:     { label: "Trapped here", value: -5, hours: 100000, stack: 1, source: fear }
+  trapped:     { label: "Trapped here", value: -5, hours: 100000, stack: 1, source: fear }   # value set by `trapped` above
+
+  # Traits (traits.yaml). All proposal.
+  sunny:       { label: "Sunny disposition", value: 4, hours: 100000, stack: 1, source: temperament }
+  gloomy:      { label: "Gloomy disposition", value: -4, hours: 100000, stack: 1, source: temperament }
+  crowded:     { label: "Too many people", value: -2, hours: 0.5, stack: 1, source: discomfort }
+  everyone_watching: { label: "Everyone was watching", value: 4, hours: 3, stack: 1, source: status }
+  enjoyed_attention: { label: "Enjoyed the attention", value: 3, hours: 6, stack: 1, source: status }
 
   # Needs and comfort
   hungry:      { label: "Hungry", value: -4, hours: 0.5, stack: 1, source: hunger }            # proposal

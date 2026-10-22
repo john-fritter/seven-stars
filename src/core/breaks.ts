@@ -14,20 +14,24 @@ import { chance } from './rng.js';
 import { infraction, kill } from './show.js';
 import { brawl, interact } from './social.js';
 import { grievance, think } from './thoughts.js';
+import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
 
 type Kind = Ctx['data']['breaks']['kinds'][string];
 
-/** The three break lines for a calmness: minor = 30 + 1.5 × (10 − calm), major and extreme below it. */
-export function breakLines(ctx: Ctx, calm: number): Record<Level, number> {
+/**
+ * The three break lines for a calmness: minor = 30 + 1.5 × (10 − calm) + `shift` (a Drama queen's
+ * +10), major and extreme below it.
+ */
+export function breakLines(ctx: Ctx, calm: number, shift = 0): Record<Level, number> {
   const l = ctx.data.breaks.lines;
-  const minor = l.minorBase + l.minorPerVolatile * (10 - calm);
+  const minor = l.minorBase + l.minorPerVolatile * (10 - calm) + shift;
   return { minor, major: minor * l.majorShare, extreme: minor * l.extremeShare };
 }
 
 /** The deepest line their mood is under, if any. */
 export function breakLevel(ctx: Ctx, c: Contestant): Level | null {
-  const lines = breakLines(ctx, c.personality.calm);
+  const lines = breakLines(ctx, c.personality.calm, traitFx(ctx.data, c).breakLine);
   if (c.mood < lines.extreme) return 'extreme';
   if (c.mood < lines.major) return 'major';
   if (c.mood < lines.minor) return 'minor';
@@ -110,8 +114,9 @@ export function startBreak(ctx: Ctx, c: Contestant, level: Level, source: string
   }
   let target = targetFor(ctx, c, kind, about);
   let room = roomFor(ctx, c, kind, target);
-  // In the fishbowl, or with nobody to take it out on, it becomes the fallback.
-  if ((kind.target && !target) || room === null || (c.confined && room !== c.room)) {
+  // In the fishbowl, with nobody to take it out on, or a bender for someone who never drinks, it
+  // becomes the fallback.
+  if ((kind.target && !target) || room === null || (c.confined && room !== c.room) || (kind.drinks && traitFx(ctx.data, c).drink === 0)) {
     id = b.fallback;
     kind = b.kinds[id]!;
     target = null;

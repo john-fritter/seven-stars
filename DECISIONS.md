@@ -280,3 +280,21 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Company, worry, missing and envy thoughts; dislike fades at half the rate of liking; friction from clashing personalities; target rivals 5–10% of directed pairs.
 - [ ] Below the doom line, the violent-break cutoffs loosen by one point (kind 4, calm 3).
 - [ ] Build order: traits and fear; then the ratings pull and scoring; then people as mood.
+
+**Proposed while building named traits and the fear tuning (Oct 22, step 1).** Details the design left open, all in `data/traits.yaml`, `data/thoughts.yaml` and `data/meter.yaml` and written up in DESIGN.md Part two, Named traits (How the build does it). A 200-seed, 30-day run hits all 11 targets (deaths 2.55 a week, stay 2.61 weeks, breaks 2.10 a day, fights 3.28 a week, 0.29 brawls per hookup, hookups 2.88 a week). Average mood at night is 43 (was 38) and average fear at night −8.3 (was −12.8).
+
+- [ ] Lean strength 0.8: a trait's weight × 1 + 0.8 × (value − 5) ÷ 5 for what it leans on, so the far end of a slider makes a trait about nine times likelier than the other end. Leans can be on modesty, drinking or monogamy as well as the sliders.
+- [ ] Opposites beyond the drafted pairs: Charmer / Abrasive, Clingy / Loner, Show-off / Stage fright, Romantic / Heartbreaker, Teetotaler / Lightweight, Ice cold / Worrier, Night owl / Early bird.
+- [ ] Gossip isn't rolled (weight 0) until rumors exist. Early bird weighs half, like the night owl.
+- [ ] Peacemaker: a 50% chance to stop an insult's fight in their room; never a cage match or an attack. Insults and slights near them × 0.5.
+- [ ] Drama queen: "lines 10 higher" means the minor line, with major and extreme following from it (so the extreme line moves about 1.4).
+- [ ] Abrasive: −0.1 affection toward them per social round from everyone awake in the room.
+- [ ] Jealous: "always confronts" covers jealousy as well as betrayal (an insult to the face when both are there and awake).
+- [ ] Clingy: the pull toward a partner's room is the company pull for someone they're dating or exclusive with, × 3.
+- [ ] Teetotaler: a drink-binge break becomes moping; mildly dislikes drunks is −0.2 affection per social round toward anyone drunk or worse in the room. Neat freak dislikes anyone in the room with hygiene under 20 the same way.
+- [ ] Show-off: karaoke and dance-offs pay × 1.5, and "everyone was watching" (+4 for 3 hours) after either with an audience.
+- [ ] Exhibitionist: "enjoyed the attention" (+3 for 6 hours) after being seen in the shower or on an open toilet. Sunny and Gloomy are permanent ±4 thoughts.
+- [ ] Sleepwalking: a 4% chance each hour asleep (about one night in four) of getting up and wandering for 20 minutes to another room they're allowed in.
+- [ ] Early birds have their own wake chime at 05:30 (rest above 40), as night owls sleep through the real one.
+- [ ] Meter drain 0.95 → 0.9 an hour. Less fear means fewer breaks (2.9 → 2.1 a day) and fewer break points, which had pushed deaths to 2.9 a week and the average stay down to 2.3 weeks.
+- [ ] Still open: Stage fright is the hardest trait to live with (about 1.5 contestant-weeks per death against 2.6 overall), since karaoke is the biggest everyday earner and they avoid it; the ratings pull and surprise bonus in step 2 are meant to rescue them. Drama queen (about 4.0) and Show-off (about 3.8) live longest. Mood by trait spans about 39 (Stage fright) to 47 (Sunny).
