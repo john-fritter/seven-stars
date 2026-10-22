@@ -298,3 +298,16 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Early birds have their own wake chime at 05:30 (rest above 40), as night owls sleep through the real one.
 - [ ] Meter drain 0.95 → 0.9 an hour. Less fear means fewer breaks (2.9 → 2.4 a day) and fewer break points. With the lower fear cap, deaths had reached 2.9 a week; without it, 0.9 puts them at 2.39, mid-range.
 - [ ] Still open: Stage fright is the hardest trait to live with (about 1.7 contestant-weeks per death against 2.8 overall), since karaoke is the biggest everyday earner and they avoid it; the ratings pull and surprise bonus in step 2 are meant to rescue them. Drama queen (about 4.2) and Show-off (about 3.8) live longest. Mood by trait spans about 38 (Stage fright) to 44 (Sunny).
+
+**Proposed while building the ratings pull and surprise bonus (Oct 22, step 2).** Details the design left open, all in `data/scoring.yaml`, `data/traits.yaml`, `data/meter.yaml` and `data/romance.yaml`, written up in DESIGN.md Part two, The ratings pull (How the build does it). A 200-seed, 30-day run hits all 11 targets (deaths 2.41 a week, stay 2.77 weeks, breaks 2.96 a day, fights 3.88 a week, 0.53 brawls per hookup, hookups 2.76 a week, hookups within a couple 0.53).
+
+- [ ] Action pull strength 10, interaction pull strength 5. For interactions the pull multiplies the type's weight (1 + pull) instead of adding, since that pick is a weighted draw.
+- [ ] Desperate contestants start more interactions: chance × 1 + desperation.
+- [ ] Desperation overcomes shyness: for that chance, outgoing counts as outgoing + (10 − outgoing) × 0.5 × desperation. Not in the design, but the surprise bonus alone left the reserved where they were; this took them from 1.37 to 1.58 contestant-weeks per death and the outgoing from 6.96 to 5.26.
+- [ ] Propositions and breakups aren't pulled (they cost the couple targets).
+- [ ] Taste for a romance move while attached includes the attached factor, so a loyal partner's flirt is a surprise.
+- [ ] Own repeats count only acts they started or received, not witnessing.
+- [ ] Stage fright's performing × 0.2 eases to × 3 at meter zero; Survivor's ratings pull × 1.5.
+- [ ] Meter drain 0.9 → 1.15 an hour. The pull compresses the bottom of the meter, so the average meter at night fell from 58 to 47.5, mood from 41 to 38 and fear rose from −10.9 to −11.2; breaks went from 2.4 to 3.0 a day. The lower fear cap john held back would offset some of this.
+- [ ] Each earlier lovin' counts as 3.5 monogamy toward calling it dating (was 1.5), to keep hookups within a couple above 0.5 (it had fallen to 0.48).
+- [ ] Still open: Stage fright is still the hardest trait (1.84 contestant-weeks per death against 2.77), mostly because it rolls on reserved contestants; it's now a little better off than other reserved contestants (1.58).

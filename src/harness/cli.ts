@@ -109,6 +109,8 @@ function printReport(r: Report, ms: number): void {
   console.log(top(sh.sentencesPerDay, 10, (v) => v.toFixed(2)));
   console.log('Points per contestant-day, by event');
   console.log(top(sh.pointsPerContestantDay, 14, (v) => v.toFixed(2)));
+  console.log(`Surprise bonuses a week (acts against type; ${pct(sh.surprise.pointsShare)} of all points)`);
+  console.log(top(sh.surprise.perWeek, 10, (v) => v.toFixed(2)));
   const br = r.breaks;
   console.log(`\nMental breaks: ${br.perContestantDay.toFixed(2)} per contestant-day`);
   console.log(`  by level (a week)     ${Object.entries(br.byLevel).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(', ')}`);

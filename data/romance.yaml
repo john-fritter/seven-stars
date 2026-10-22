@@ -44,7 +44,7 @@ proposition:
   # Each earlier lovin' with the same person counts as datingPerLovin more monogamy, so a fling
   # that keeps happening turns into dating (proposal, relationship tuning).
   datingAt: 5
-  datingPerLovin: 1.5
+  datingPerLovin: 3.5             # personality step 2: was 1.5. Desperate contestants spread their lovin' around, so a repeat fling now reads as dating for almost anyone
 
 # Bedtime (john, Oct 21: couples share beds and hook up mostly in bed at night). Getting into a
 # bed at night with someone already in it, anyone at the proposition's bars toward them asks with

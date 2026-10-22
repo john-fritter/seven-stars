@@ -19,6 +19,8 @@ filthyBelow: 20
 # Each trait: label, group, a one-line rule for the sheet, weight in the roll, what it leans on,
 # the traits it can't roll with (both ways), and its effects. Every effect is optional:
 #   tags:          action scoring by tag, × this (personality.yaml tags)
+#   desperate:     what a tag's multiplier above eases to as their meter falls (at meter 0 it's this;
+#                  scoring.yaml ratings desperation)
 #   interactions:  their weight for starting these interactions (social.yaml), × this
 #   nearby:        everyone else's weight for these interactions while sharing a room with them
 #   thoughts:      the value of these thoughts for them, × this
@@ -46,6 +48,7 @@ filthyBelow: 20
 #   hangover:      hangover weight per drink, × this
 #   intox:         intoxication per drink, × this
 #   carry:         the chance of taking a drink along, × this
+#   ratingsPull:   the ratings pull (scoring.yaml ratings), × this
 #   dislikes:      affection per social round toward each person in the room who is drunk / filthy
 #   noise:         asleep (snoring) or awake (humming) keeps sleepers in the same room up
 #   nightShift:    minutes their night runs later (negative: earlier) than lights-dim to the chime
@@ -178,17 +181,19 @@ traits:
   stage_fright:
     label: Stage fright
     group: show
-    rule: "Avoids performing"   # unless desperate, and a big surprise when they do (step 2)
+    rule: "Avoids performing unless desperate, and it's a big surprise when they do"
     weight: 1
     lean: { by: outgoing, k: -0.8 }
     tags: { performing: 0.2 }
+    desperate: { performing: 3 }   # step 2 (proposal): eases from 0.2 to 3 as the meter falls to 0 (about 0.9 at meter 25)
   survivor:
     label: Survivor
     group: show
-    rule: "Doom weighs half as much"   # ratings pull × 1.5 arrives with the ratings pull (step 2)
+    rule: "Doom weighs half as much, and they play harder for the cameras"
     weight: 1
     lean: { by: brave }
     thoughts: { doomed: 0.5 }
+    ratingsPull: 1.5
 
   # Romance
   romantic:

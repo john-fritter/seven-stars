@@ -231,6 +231,21 @@ export const scoringSchema = z.object({
     repeatDays: num.nonnegative(),
     repeatFactor: unit,
     boredom: unit,
+    ownRepeat: unit,
+  }),
+  ratings: z.object({
+    from: num.positive(),
+    power: num.positive(),
+    actions: num.nonnegative(),
+    interactions: num.nonnegative(),
+    chance: num.nonnegative(),
+    shyness: unit.default(0),
+    pays: z.record(z.string(), z.string()).default({}),
+    ignore: z.array(z.string()).default([]),
+  }),
+  surprise: z.object({
+    bonus: num.nonnegative(),
+    acts: z.record(z.string(), z.string()).default({}),
   }),
 });
 
@@ -577,6 +592,7 @@ export const traitSchema = z.object({
   lean: z.object({ by: leanBy, k: num.optional() }).optional(),
   excludes: z.array(z.string()).default([]),
   tags: mults,
+  desperate: mults,
   interactions: mults,
   nearby: mults,
   thoughts: mults,
@@ -609,6 +625,7 @@ export const traitSchema = z.object({
   nightShift: num.default(0),
   sleepwalk: z.object({ perHour: unit, minutes: z.number().int().positive() }).optional(),
   peacemaker: unit.default(0),
+  ratingsPull: num.min(0).default(1),
 });
 
 export const traitsSchema = z.object({

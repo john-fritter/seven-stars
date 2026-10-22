@@ -47,6 +47,7 @@ export interface SeedStats {
   fearAtNight: number; // fear thoughts' total at each day's end (capped as mood counts it), summed
   traits: Record<string, { days: number; mood: number; deaths: number; arrivals: number }>; // by trait
   traitCounts: Record<string, number>; // arrivals by how many traits they rolled
+  surprise: Record<string, number>; // acts that scored a surprise bonus, by type, and the extra points ("+type")
 }
 
 function add(m: Record<string, number>, k: string, v = 1): void {
@@ -98,6 +99,7 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
     fearAtNight: 0,
     traits: {},
     traitCounts: {},
+    surprise: {},
   };
   const traitsOf = new Map<string, string[]>();
   const owls = new Set<string>();
@@ -119,11 +121,18 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
       if (e.type === 'sentence') sentenced = true;
       tally(s, e);
       if (e.type === 'arrive') {
-        const ts = e.data!.traits as string[];
+        const ts = [...(e.data!.traits as string[])];
         traitsOf.set(e.actors[0]!, ts);
         add(s.traitCounts, String(ts.length));
         for (const id of ts) traitRow(s, id).arrivals++;
-        if (ts.some((id) => data.traits.traits[id]!.nightShift > 0)) owls.add(e.actors[0]!);
+        // Outgoing bands ride along in the trait table: how the reserved fare.
+        const c = world.contestants.find((x) => x.id === e.actors[0]);
+        if (c) {
+          const band = outgoingBand(c.personality.outgoing);
+          ts.push(band);
+          traitRow(s, band).arrivals++;
+        }
+        if (ts.some((id) => (data.traits.traits[id]?.nightShift ?? 0) > 0)) owls.add(e.actors[0]!);
       }
       if (e.type === 'death') for (const id of traitsOf.get(e.actors[0]!) ?? []) traitRow(s, id).deaths++;
       // The first wake after a night, each day: when do night owls get up?
@@ -160,6 +169,11 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
   return s;
 }
 
+/** A pseudo-trait for the trait table: reserved (0–3), middling (4–6) or outgoing (7–10). */
+function outgoingBand(v: number): string {
+  return v <= 3 ? '(outgoing 0-3)' : v >= 7 ? '(outgoing 7-10)' : '(outgoing 4-6)';
+}
+
 function traitRow(s: SeedStats, id: string) {
   return (s.traits[id] ??= { days: 0, mood: 0, deaths: 0, arrivals: 0 });
 }
@@ -167,6 +181,11 @@ function traitRow(s: SeedStats, id: string) {
 function tally(s: SeedStats, e: SimEvent): void {
   const d = e.data ?? {};
   if (e.points) add(s.pointsByType, e.type, e.points);
+  if (typeof d.surprise === 'number') {
+    const got = ((d.awards ?? {}) as Record<string, number>)[e.actors[0]!] ?? 0;
+    add(s.surprise, e.type);
+    add(s.surprise, `+${e.type}`, got * (1 - 1 / d.surprise));
+  }
   switch (e.type) {
     case 'infraction':
       add(s.infractions, d.rule as string);
@@ -262,7 +281,7 @@ function endOfDay(s: SeedStats, w: World, data: GameData, day: number, together:
   for (const c of w.contestants) {
     for (const [k, v] of Object.entries(c.needs)) add(s.needsAtNight, k, v);
     s.moodAtNight += c.mood;
-    for (const id of c.traits) {
+    for (const id of [...c.traits, outgoingBand(c.personality.outgoing)]) {
       const t = traitRow(s, id);
       t.days++;
       t.mood += c.mood;
@@ -348,6 +367,8 @@ export interface Report {
     waivedPerWeek: number;
     fishbowlNightsPerWeek: number;
     pointsPerContestantDay: Record<string, number>; // by event type, with a total
+    /** Acts that scored a surprise bonus, a week by type, and the share of all points it added. */
+    surprise: { perWeek: Record<string, number>; pointsShare: number };
     meterAtNight: number;
     onNoticeAtNight: number; // share of contestants at zero at day's end
     couchStreak: number | null; // average ceremonies in a row on the couch
@@ -487,6 +508,12 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
         const p = sum((s) => s.pointsByType);
         const total = Object.values(p).reduce((a, b) => a + b, 0);
         return { total: total / cDays, ...sortDesc(Object.fromEntries(Object.entries(p).map(([k, v]) => [k, v / cDays]))) };
+      })(),
+      surprise: (() => {
+        const x = sum((s) => s.surprise);
+        const total = Object.values(sum((s) => s.pointsByType)).reduce((a, b) => a + b, 0);
+        const extra = Object.entries(x).filter(([k]) => k.startsWith('+')).reduce((a, [, v]) => a + v, 0);
+        return { perWeek: sortDesc(Object.fromEntries(Object.entries(x).filter(([k]) => !k.startsWith('+')).map(([k, v]) => [k, perWeek(v)]))), pointsShare: total ? extra / total : 0 };
       })(),
       meterAtNight: seeds.reduce((a, s) => a + s.meterAtNight, 0) / cDays,
       onNoticeAtNight: seeds.reduce((a, s) => a + s.noticeAtNight, 0) / cDays,

@@ -729,7 +729,7 @@ Mood starts at 50 and adds every active thought. Each thought has a value, a dur
 
 ## Personality, traits and mood: the next pass
 
-*Decided direction (john, Oct 22: D-108 to D-113). Step 1 (named traits and the "trapped here" easing) is built, with the lower fear cap held back (john, Oct 22); steps 2 and 3 are not yet. Every number below is a proposal set in data and tuned.*
+*Decided direction (john, Oct 22: D-108 to D-113). Step 1 (named traits and the "trapped here" easing) is built, with the lower fear cap held back (john, Oct 22). Step 2 (the ratings pull, personal boredom, the surprise bonus and deep talk) is built; step 3 is not yet. Every number below is a proposal set in data and tuned.*
 
 **Why.** A review on Oct 22 (160 seeds × 30 days, 2,791 contestants, main after the dread tuning) found:
 
@@ -791,12 +791,12 @@ A starting list (proposal; john to edit):
   - Charmer: positive affection from interactions they start × 1.5. Abrasive: slights × 2; everyone awake in the room with them loses 0.1 affection for them every social round (10 minutes), about a point every 100 minutes, fading like any affection.
   - Grudge-holder: negative affection never fades. Forgiving: it fades twice as fast.
   - Clingy: the company pull of someone they're dating or exclusive with × 3. Loner: social drains at half; "too many people" (−2) while four or more others share the room.
-  - Show-off: karaoke and the dance-off pay × 1.5, and "everyone was watching" (+4, 3 hours) after either with an audience. Stage fright: performing actions score × 0.2. Survivor: the doom thought × 0.5.
+  - Show-off: karaoke and the dance-off pay × 1.5, and "everyone was watching" (+4, 3 hours) after either with an audience. Stage fright: performing actions score × 0.2, easing to × 3 as their meter falls to zero (step 2; at meter 25 it's about × 0.9), and their performance is close to the biggest surprise there is. Survivor: the doom thought × 0.5, and the ratings pull × 1.5 (step 2).
   - Romantic: attraction moves toward its target twice as fast; the second landed kiss means dating, whatever their monogamy. Heartbreaker: the attached factor × 2 (never above 1); no guilt. Jealous: jealousy and betrayal thoughts × 2, and they confront (an insult to the face) every time, over jealousy too.
   - Prude / Exhibitionist: modesty set to 10 / 0 at the roll; an exhibitionist seen in the shower gets "enjoyed the attention" (+3).
   - Party animal: the company pull to drink × 2, hangover weight × 0.5. Teetotaler: drinks score 0, a bender becomes moping, and −0.2 affection a social round toward anyone drunk in the room. Lightweight: intoxication per drink × 1.5. Glutton: hunger drains × 1.3, gourmet and leftovers thoughts × 2. Neat freak: "couldn't wash" × 2, and −0.2 affection a social round toward anyone in the room with hygiene under 20. Slob: "couldn't wash" × 0.3.
   - Snores, Hums, Hoards (carrying a drink × 3) and Night owl as before; Early bird and Sleepwalks as in Beds and sleep.
-- **Waiting for later steps:** Stage fright's "unless desperate" and surprise, and Survivor's ratings pull × 1.5 (step 2); Worrier's worry about friends and Clingy's "missing them" (step 3); Gossip (rumors).
+- **Waiting for later steps:** Worrier's worry about friends and Clingy's "missing them" (step 3); Gossip (rumors).
 - **The sheet and the log.** Traits show on the debug view's sheet with their rules and are in the "arrive" event. The harness reports each trait's share of arrivals, mood at night and contestant-weeks aboard per death.
 
 ### The ratings pull
@@ -810,6 +810,23 @@ As a contestant's meter falls, anything that scores gets an extra pull when they
 **Surprise bonus:** an act scores × 1 + S × max(0, 1 − taste), where taste is the same multiplier as above (0.5 to 1.5 from the sliders, more with traits). A reserved contestant's karaoke, a sweetheart's insult or a loyal partner's cheating scores up to about × 1.5 (S = 1 proposed). This is the main route for reserved characters to be surprisingly interesting.
 
 Also: deep talk scores more (proposal 2 → 4 each), and reserved contestants' interaction choice depends less on outgoing (outgoing sets how often they start one, but no longer squeezes out the types the other sliders favour).
+
+**How the build does it (step 2, built; numbers in `data/scoring.yaml` and `data/traits.yaml`, all proposals; the code is `src/core/ratings.ts`).**
+
+- **Desperation** = max(0, 1 − meter ÷ 50)², so 0 at 50 or above, 0.25 at 25 and 1 at zero.
+- **Points** are what the act would pay them right now as its starter: the actor's share in the scoring table (each + actor), after the judge's boredom today, their own repeats today and their trait multipliers. A proposition pays nothing of its own and isn't pulled (pointing it at lovin' would have desperate singles hooking up for the cameras, against the couple targets; it can be switched on in data).
+- **Actions:** only actions that log a scoring event are pulled; today that's karaoke. The pull, 10 × desperation × points ÷ 10 × taste, is added after the personality and mood multipliers, so taste counts once. At zero a middling contestant's karaoke gets +3.
+- **Interactions:** the pick among interaction types is a weighted draw, not a score, so the pull multiplies the type's weight by 1 + 5 × desperation × points ÷ 10 × taste. At zero, a middling contestant's insult is × 3, deep talk × 3, a flirt × 3, kind words × 1.5, chitchat unchanged. Breakups are never pulled (nobody dumps someone for the cameras).
+- **Starting interactions:** desperation also makes them start more: the chance × 1 + desperation, and **desperation overcomes shyness**: outgoing counts as outgoing + (10 − outgoing) × 0.5 × desperation, so at zero a reserved 2 starts interactions like a 6. This is what actually gave the reserved a way back (see the numbers below); the surprise bonus alone barely moved them.
+- **Taste** is the multiplier their sliders and traits already give the act: for an action, the personality grid for its tags with trait tag multipliers; for an interaction, its slider scale factors (each kept within 0.1 to 5) and trait interaction multipliers, not the relationship, and for a romance move while attached to someone else, the attached factor (a loyal partner's flirt is out of character).
+- **Reserved interaction choice** already didn't depend on outgoing: outgoing only sets how often they start one, and no interaction type scales by it. Nothing to change.
+- **Their act gets old:** each time a contestant has already scored an event type today as an actor (not as a witness), it pays × 0.7 more, on top of the judge's boredom, resetting at midnight. The pull sees it too, so a karaoke regular's pull fades over the day.
+- **Surprise:** the first actor's award × 1 + 1 × max(0, 1 − taste), logged on the event as `surprise`. A rebuffed flirt counts as a flirt. A saint's insult (kind 10) pays × 1.9; a reserved, plain contestant's karaoke about × 1.3; a Stage fright contestant's about × 1.9.
+- **The harness** now shows stay and mood by outgoing band (0–3, 4–6, 7–10) in the trait table, and surprise bonuses a week by act with their share of all points.
+
+**Step 2 numbers** (200 seeds × 30 days, before → after, all 11 targets hit both times): deaths 2.39 → 2.41 a week, average stay 2.79 → 2.77 weeks. Contestant-weeks per death: reserved (outgoing 0–3) 1.37 → 1.58, middling 2.78 → 2.79, outgoing (7–10) 6.96 → 5.26, so the outgoing advantage went from about 5× to 3.3×. Stage fright 1.72 → 1.84, now a little better than other reserved contestants but still well under average; Survivor 3.0 → 3.3. Points per contestant-day 29.9 → 33.7. A week, station-wide: karaoke 97 → 128, deep talk 60 → 75, insults 6.9 → 9.7, slights 8.0 → 10.3, kind words 12.9 → 16.0, flirts 7.6 → 10.0, kisses 6.2 → 8.4, fights 3.4 → 3.9, breaks 17 → 21. Surprise bonuses fire about 64 times a week (36 of them karaoke) and add 2.5% of all points.
+
+What it cost: with everyone earning more, the drain went 0.9 → 1.15 an hour to keep deaths in range, and because the desperate claw their way back up, the meter sits lower on average (58 → 47.5 at night). More time under the doom line means more fear (−10.9 → −11.2), more breaks (2.4 → 3.0 a day) and average mood 41 → 38. Lower moods and more outgoing deaths thinned couples, so hookups within a couple fell to 0.48; a fling now reads as dating sooner (each earlier lovin' counts as 3.5 monogamy, was 1.5), bringing it back to 0.53.
 
 ### Fear tuned down
 
@@ -873,7 +890,7 @@ The enjoyment thought lasts 3 hours and stacks to three drinks. Drinks can be ca
 
 ## The meter and scoring
 
-**The meter** runs 0–100. Newcomers start at 60. It drains 0.9 per hour (tuned from 1, then 0.95), day and night. Awards refill it, capped at 100. At zero a contestant is on notice; if they're still at zero at the ceremony, they're spaced, unless they hold an immunity, which is spent instead.
+**The meter** runs 0–100. Newcomers start at 60. It drains 1.15 per hour (tuned from 1, then 0.95 and 0.9, then up again for the ratings pull), day and night. Awards refill it, capped at 100. At zero a contestant is on notice; if they're still at zero at the ceremony, they're spaced, unless they hold an immunity, which is spent instead.
 
 **Lifetime points** collect every award, uncapped, for the leaderboard and hall of fame. Murder awards are hidden until the killer dies.
 
@@ -881,7 +898,7 @@ The enjoyment thought lasts 3 hours and stacks to three drinks. Drinks can be ca
 
 | Event | Points |
 | --- | --- |
-| Deep talk | 2 each |
+| Deep talk | 4 each (was 2; personality step 2) |
 | Gift; kind words | 2 giver; 1 |
 | Slight; insult | 2 each; 4 instigator, 2 target |
 | Fight outside the cage | 12 each, +6 winner |
@@ -901,7 +918,7 @@ The enjoyment thought lasts 3 hours and stacks to three drinks. Drinks can be ca
 | Witnessed a death | 3 |
 | Murder | 40 to the meter (visible), 100 hidden lifetime |
 
-**Modifiers.** Witnesses multiply an award by 1 + 0.15 each (up to ×2). The same event between the same pair within three days is worth half each repeat. Each event type loses 10% of its value every time it happens station-wide that day, recovering overnight: the judge's boredom.
+**Modifiers.** Witnesses multiply an award by 1 + 0.15 each (up to ×2). The same event between the same pair within three days is worth half each repeat. Each event type loses 10% of its value every time it happens station-wide that day, recovering overnight: the judge's boredom. A contestant's own repeats of a type that day, as an actor, pay × 0.7 more each time, and an act against their type pays a surprise bonus (Personality, traits and mood: the next pass).
 
 **The ceremony, in order:** today's infractions and sentences, meter penalties applied, anyone at zero spaced, ranks assigned, the Wheel spun by the new bottom rank, room moves.
 

@@ -141,6 +141,7 @@ export interface Trial {
 export interface ShowState {
   day: number; // the day `today` counts
   today: Record<string, number>; // event type -> times scored today, station-wide
+  mine: Record<string, Record<string, number>>; // contestant -> event type -> times they scored it today as an actor
   pairs: Record<string, number[]>; // "type|a|b" -> when that pair last scored it, within the repeat window
   pending: Infraction[];
   effects: Record<string, number>; // station effect -> the day it's on
