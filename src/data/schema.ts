@@ -265,7 +265,16 @@ export const rulesSchema = z.object({
     douseSpecies: z.record(z.string(), num).default({}),
     thought: z.string(),
   }),
-  spacing: z.object({ watched: z.string(), died: z.string(), friend: z.string(), rival: z.string() }),
+  spacing: z.object({
+    watched: z.string(),
+    died: z.string(),
+    friend: z.string(),
+    rival: z.string(),
+    diedPerAffection: num,
+    dislikedAt: num,
+    disliked: z.string(),
+    kindForgives: num,
+  }),
 });
 
 
@@ -378,6 +387,7 @@ export const thoughtsSchema = z.object({
   volatileK: num,
   species: z.record(z.string(), z.record(z.string(), num)).default({}),
   sources: z.record(z.string(), axisScale).default({}),
+  sourceCap: num.min(0),
   trapped: z.string(),
   needs: z.array(z.object({ need: needEnum, below: num.optional(), above: num.optional(), thought: z.string() }).refine((x) => (x.below === undefined) !== (x.above === undefined), 'give exactly one of below or above')),
   temperature: z.object({ cold: z.string(), hot: z.string(), perDegree: num, max: num }),

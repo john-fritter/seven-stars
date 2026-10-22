@@ -19,6 +19,18 @@ species:
 sources:
   fear:   [{ axis: brave, k: -0.5 }]
   status: [{ axis: vain }]
+  # Proposals (dread tuning, Oct 22; john: personality should change what hurts): the loyal and
+  # the kind grieve harder, the vain feel humiliation more, the outgoing feel rejection and
+  # loneliness more, the honest and the kind feel guilt more.
+  grief:       [{ axis: loyal }, { axis: kind, k: 0.3 }]
+  humiliation: [{ axis: vain }]
+  rejection:   [{ axis: outgoing }]
+  guilt:       [{ axis: honest }, { axis: kind }]
+
+# Proposal (dread tuning, Oct 22): bad thoughts of one source add up to at most this much, so a
+# bad week of executions, sentences and doom can't pin mood at zero on its own. Each source (fear,
+# humiliation, status, ...) is capped separately; good thoughts aren't capped. 0 turns it off.
+sourceCap: 20
 
 # Everyone carries this from the moment they arrive.
 trapped: trapped
@@ -129,7 +141,10 @@ thoughts:
   watched_execution: { label: "Watched an execution", value: -8, hours: 48, stack: 3, source: fear }
   someone_died:  { label: "{who} died", value: -6, hours: 72, stack: 1, source: fear }
   friend_died:   { label: "My friend {who} died", value: -12, hours: 168, stack: 1, source: grief }
-  rival_died:    { label: "{who} got what was coming", value: 6, hours: 72, stack: 1, source: person }
+  rival_died:    { label: "{who} got what was coming", value: 6, hours: 72, stack: 1, source: person,
+                   scale: [{ axis: kind, k: -0.8 }] }      # proposal: the cruel gloat more
+  relieved_died: { label: "Can't say I'll miss {who}", value: 3, hours: 48, stack: 1, source: person,
+                   scale: [{ axis: kind, k: -0.8 }] }      # proposal
   saw_murder:    { label: "Saw {who} kill someone", value: -12, hours: 72, stack: 1, source: fear }  # proposal
   found_body:    { label: "Found {who}'s body", value: -10, hours: 72, stack: 1, source: fear }
 

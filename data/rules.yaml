@@ -55,3 +55,12 @@ spacing:
   died: someone_died            # everyone else
   friend: friend_died
   rival: rival_died
+  # Proposals (dread tuning, Oct 22; john: who dies should matter). Between rival and friend,
+  # "someone died" is its value + perAffection × affection: worse for someone they liked, milder
+  # for someone they didn't (−6 at 0, −9 at +29, −3 at −29). Down to `dislikedAt`, it's relief
+  # instead. The kind (`kindForgives` and up, drunk kindness counts) feel a death they'd gloat
+  # over as a plain "someone died".
+  diedPerAffection: -0.1
+  dislikedAt: -15
+  disliked: relieved_died
+  kindForgives: 8

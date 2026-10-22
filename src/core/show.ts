@@ -5,6 +5,7 @@
 // ceremony, where the guilty are sentenced in front of everyone.
 import { CEREMONY, endActivity } from './actions.js';
 import { dayOf, log, MINUTES_PER_DAY, timeOfDay, type Ctx } from './context.js';
+import { axis } from './booze.js';
 import { addNeed } from './needs.js';
 import { chance } from './rng.js';
 import { feel } from './ledger.js';
@@ -155,14 +156,20 @@ export function kill(ctx: Ctx, c: Contestant, cause: string, room: string, witne
   remove(ctx, c);
 }
 
-/** Friends grieve, rivals gloat, everyone else is shaken. */
+/**
+ * Friends grieve, rivals gloat, the disliked are no great loss, and everyone else is shaken, the
+ * more so the more they liked them. The kind don't gloat.
+ */
 export function mourn(ctx: Ctx, id: string, feelings: Body['feelings']): void {
   const sp = ctx.data.rules.spacing;
   const l = ctx.data.social.ledger;
+  const died = ctx.data.thoughts.thoughts[sp.died]!.value;
   for (const o of ctx.w.contestants) {
     if (o.id === id) continue;
     const aff = feelings[o.id]?.affection ?? 0;
-    think(ctx, o, aff >= l.friendAt ? sp.friend : aff <= l.rivalAt ? sp.rival : sp.died, id);
+    if (aff >= l.friendAt) think(ctx, o, sp.friend, id);
+    else if (aff <= sp.dislikedAt && axis(ctx, o, 'kind') < sp.kindForgives) think(ctx, o, aff <= l.rivalAt ? sp.rival : sp.disliked, id);
+    else think(ctx, o, sp.died, id, Math.min(0, died + sp.diedPerAffection * Math.max(aff, l.rivalAt)));
   }
 }
 
