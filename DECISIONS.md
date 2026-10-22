@@ -243,12 +243,15 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] A night owl's night runs 2.5 hours later (01:30 to 09:30). The wake chime doesn't wake them; summonses (trials, events, the ceremony) still do. They get up around 09:00 on average against 06:54 for everyone else.
 - [ ] Sleepwalking still has no hook. It could wander someone into a room above their rank (an infraction they didn't choose); left for later.
 
-**Proposed while tuning relationships (Oct 21).** John: relationships were too thin, and couples should have plenty of unremarkable repeat hookups. Numbers are in `data/romance.yaml`, `data/social.yaml` and `data/targets.yaml`; DESIGN.md Part two has the details. A 200-seed, 30-day run hits all eleven targets (deaths 2.34 a week, stay 2.85 weeks, breaks 4.0 a day, fights 4.65 a week, 0.58 brawls per hookup, hookups 3.9 a week, a couple aboard on 55% of nights, 67% of hookups within a couple).
+**Proposed while tuning relationships (Oct 21).** John: relationships were too thin, and couples should have plenty of unremarkable repeat hookups. Numbers are in `data/romance.yaml`, `data/social.yaml` and `data/targets.yaml`; DESIGN.md Part two has the details. A 200-seed, 30-day run hits all eleven targets (deaths 2.42 a week, stay 2.75 weeks, breaks 3.95 a day, fights 4.67 a week, 0.67 brawls per hookup, hookups 3.2 a week, a couple aboard on 55% of nights, 60% of hookups within a couple). About two thirds of hookups now start in a bed, at bedtime or on waking.
 
 - [ ] Two new targets: a couple aboard on at least half of all nights, and at least half of hookups within a couple. The first week is a slow start (24% of nights) while attraction builds; weeks two to five run 55–74%.
 - [ ] Showmances: from the second landed kiss, someone flirting with monogamy 5+ thinks they're dating.
 - [ ] Each earlier lovin' with the same person counts as 1.5 more monogamy toward dating, and a fling that clears the bar becomes dating.
-- [ ] "Back to mine?": someone flirting, dating or exclusive can proposition from anywhere (not just a private spot) at × 0.25 weight, if either has a bed to go to. The "right here" roll still applies, so public lovin' rose from 0.29 to 0.5 a week.
+- [ ] Spend the night? A new interaction (weight 2, attraction 6+) from two hours before lights dim: answered with the bed-share odds, and on a yes both go to bed together.
+- [ ] Bedtime lovin': getting into a bed at night with someone settled in it, anyone at the proposition's bars asks with odds 0.9 (0.5 if the other has dozed off for 20 minutes), answered as a proposition; afterwards they sleep there. Waking beside them after a night, odds 0.5. Not twice in a night.
+- [ ] Daytime propositions weigh 0.12 (were 0.2), so they're now the rarer, spontaneous kind.
+- [ ] Bed sharing: bedmate label bonuses fling 1, dating 3, exclusive 4 (were 0.5, 1, 1.5); a partner is let in even if it wakes the host; a host seeing someone else is less willing to share with anyone else (the attached factor). Fixed: partners each heading for the other's bed, and knocking offering only the friendliest roommate's bed. Even so, couples sleep beside each other on only about a third of their nights: they go to bed at different times, get woken by snorers, get sentenced to the fishbowl, or share with someone else.
 - [ ] Affection toward someone they believe they're dating or exclusive with fades at half the usual daily rate.
 - [ ] Kiss weight 0.02 → 0.03, ask to be exclusive 0.02 → 0.05.
 

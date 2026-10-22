@@ -4,7 +4,7 @@ import type { InteractionDef } from '../data/schema.js';
 import { actionDef, bedmateFeeling, begin, endActivity, FIGHT } from './actions.js';
 import { axis, giftDrink, moveMult, stageMult } from './booze.js';
 import { log, type Ctx } from './context.js';
-import { askExclusive, attachedMult, breakUp, evidence, kiss, moveAllowed, placeMult, proposition } from './romance.js';
+import { askExclusive, attachedMult, breakUp, evidence, kiss, invite, moveAllowed, proposition } from './romance.js';
 import { witnessesOf } from './scoring.js';
 import { infraction } from './show.js';
 import { feel, meet, rel, relation, warm } from './ledger.js';
@@ -91,7 +91,6 @@ export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: I
   const [lo, hi] = ctx.data.social.factorRange;
   let w = def.weight * moveMult(ctx, c, def.id);
   if (def.move && def.move !== 'gift' && def.move !== 'breakup') w *= attachedMult(ctx, c, o);
-  if (def.move === 'proposition') w *= placeMult(ctx, c, o);
   for (const s of def.scale) {
     const k = s.k ?? 1;
     let f: number;
@@ -140,6 +139,8 @@ export function interact(ctx: Ctx, c: Contestant, o: Contestant, def: Interactio
       return kiss(ctx, c, o);
     case 'proposition':
       return proposition(ctx, c, o);
+    case 'invite':
+      return invite(ctx, c, o);
     case 'exclusive':
       return askExclusive(ctx, c, o);
     case 'breakup':
@@ -290,9 +291,14 @@ export function guestOf(ctx: Ctx, host: Contestant): Contestant | undefined {
   return ctx.w.contestants.find((g) => g.guest?.host === host.id);
 }
 
-/** A host asked to share their bed is far less willing with someone they'd rather not sleep beside. */
+/**
+ * A host asked to share their bed is far less willing with someone they'd rather not sleep beside,
+ * and the loyal keep it for whoever they're seeing (the attached factor, as for romance moves).
+ * Someone they're seeing (share.partners) is let in even if it means being woken.
+ */
 export function shareOdds(ctx: Ctx, host: Contestant, c: Contestant): number {
-  const odds = knockOdds(ctx, host, c);
+  const partner = ctx.data.needs.sleep.share.partners.includes(rel(host, c)?.label ?? 'none');
+  const odds = knockOdds(ctx, host, c, host.asleep && !partner) * attachedMult(ctx, host, c);
   return bedmateFeeling(ctx, host, c) < 0 ? odds * ctx.data.needs.sleep.share.reluctant : odds;
 }
 

@@ -23,7 +23,8 @@ sleep:
   share:
     neutral: 5
     pull: 3
-    labels: { fling: 0.5, dating: 1, exclusive: 1.5 }
+    labels: { fling: 1, dating: 3, exclusive: 4 }
+    partners: [dating, exclusive]   # proposal (relationship tuning): a host lets these in even if it means being woken
     reluctant: 0.3       # asked to share (a knock or a roommate asking), a host who'd rather not says yes this much less often
     refused: share_refused   # the asker's thought on a no (milder than being turned away at the door)
     good: slept_beside

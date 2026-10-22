@@ -56,8 +56,10 @@ interactions:
   # Romance moves (romance.yaml). Weights are proposals.
   - { id: kiss, weight: 0.03, move: kiss, needs: { attraction: 6, flirted: true }, social: 4,   # relationship tuning: was 0.02
       scale: [{ by: attraction }, { by: privacy, k: 1 }, { by: brave, k: 0.5 }] }
-  - { id: proposition, weight: 0.2, move: proposition, needs: { attraction: 6, affection: 20 }, social: 4,
+  - { id: proposition, weight: 0.12, move: proposition, needs: { attraction: 6, affection: 20 }, social: 4,
       scale: [{ by: attraction }, { by: brave, k: 0.5 }] }
+  - { id: invite, weight: 2, move: invite, needs: { attraction: 6 }, social: 4,       # proposal (relationship tuning)
+      scale: [{ by: attraction }, { by: affection, k: 1 }] }
   - { id: ask_exclusive, weight: 0.05, move: exclusive, needs: { labels: [dating] }, social: 4,   # relationship tuning: was 0.02
       scale: [{ by: monogamy, k: 1 }, { by: affection, k: 1 }] }
   - { id: breakup, weight: 0.05, move: breakup, needs: { labels: [flirting, fling, dating, exclusive] },

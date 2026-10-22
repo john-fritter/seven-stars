@@ -20,7 +20,7 @@ export interface Activity {
   meal?: string; // meal id for meal activities
   food?: string; // what they were served
   booze?: string; // what they're drinking
-  partner?: string; // who they're having lovin' with
+  partner?: string; // who they're having lovin' with (on a sleep: who they just had it with)
   length?: number; // how long the lovin' lasts once both are there
   bedmate?: string; // who slept beside them
   kept?: string; // who kept them up (a snorer, a hummer)

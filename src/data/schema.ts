@@ -107,7 +107,7 @@ export const needsSchema = z.object({
   sleep: z.object({
     restPerHour: num,
     // Sharing a bed: how a contestant feels about a bedmate, and the thoughts it leaves.
-    share: z.object({ neutral: num, pull: num, reluctant: unit, refused: z.string(), labels: z.record(z.string(), num).default({}), good: z.string(), bad: z.string() }),
+    share: z.object({ neutral: num, pull: num, partners: z.array(z.string()).default([]), reluctant: unit, refused: z.string(), labels: z.record(z.string(), num).default({}), good: z.string(), bad: z.string() }),
     // Noisy people (quirks with `noise`) disturb sleepers in the same room.
     noise: z.object({ restMult: num.min(0), wakeChance: unit, cost: num, thought: z.string(), affection: num }),
   }),
@@ -275,7 +275,7 @@ const dimMap = z.partialRecord(z.enum(DIMS), num);
 
 const scaleBy = z.union([axisEnum, z.enum(['affection', 'attraction', 'chemistry', 'privacy', 'monogamy'])]);
 
-export const MOVES = ['flirt', 'kiss', 'proposition', 'exclusive', 'breakup', 'gift'] as const;
+export const MOVES = ['flirt', 'kiss', 'proposition', 'invite', 'exclusive', 'breakup', 'gift'] as const;
 export type Move = (typeof MOVES)[number];
 export const LABELS = ['none', 'flirting', 'fling', 'dating', 'exclusive', 'ex'] as const;
 export type Label = (typeof LABELS)[number];
@@ -473,11 +473,12 @@ export const romanceSchema = z.object({
     disturbed: z.string(),
     datingAt: num,
     datingPerLovin: num.nonnegative(),
-    anywhere: z.object({ labels: z.array(z.enum(LABELS)), weight: unit }),
     // Where: a bed by default; sometimes right here, which is a show for anyone watching.
     bed: z.object({ walkCost: num, crowd: num }),
     here: z.object({ chance: unit, noBed: unit, modestyK: num, braveK: num, witnessThought: z.string() }),
   }),
+  bedtime: z.object({ chance: unit, asleep: unit, doze: num.nonnegative(), morning: unit }),
+  invite: z.object({ lead: num.nonnegative() }),
   exclusive: z.object({ loyalK: num, thought: z.string(), refused: z.string() }),
   breakup: z.object({ affectionBelow: num, dumped: z.string() }),
   attachedK: num,

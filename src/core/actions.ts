@@ -12,7 +12,7 @@ import { gainsOf, personalityOf } from './derived.js';
 import { feel, rel } from './ledger.js';
 import { addNeed, needUrgency } from './needs.js';
 import { between, chance, weightedIndex } from './rng.js';
-import { labelOf, lovinArrive } from './romance.js';
+import { bedtime, labelOf, lovinArrive, morning } from './romance.js';
 import { walkMinutes, type ObjectInstance } from './station.js';
 import { caughtIn, infraction, sneakCost } from './show.js';
 import { askToShare, companyPull, expectedKnockOdds, guestOf, knock, occupants } from './social.js';
@@ -161,11 +161,15 @@ export function bedmateFeeling(ctx: Ctx, c: Contestant, mate: Contestant): numbe
   return (s.pull * ((rel(c, mate)?.attraction ?? 0) - s.neutral)) / 10 + (s.labels[labelOf(c, mate)] ?? 0);
 }
 
-/** Who'd be in this bed with them: whoever's in it or heading there, and its owner if it isn't theirs. */
+/**
+ * Who'd be in this bed with them: whoever's in it or heading there, and its owner if it isn't theirs,
+ * unless the owner is already in (or heading for) another bed.
+ */
 function bedmates(ctx: Ctx, c: Contestant, o: ObjectInstance): Contestant[] {
   const ids = new Set(ctx.w.objects[o.id]!.filter((id) => id !== c.id));
   const owner = ownerOf(ctx, o);
-  if (owner && owner !== c) ids.add(owner.id);
+  const away = owner?.activity && owner.activity.object !== o.id && (owner.activity.action === LOVIN || actionDef(ctx, owner.activity)?.kind === 'sleep');
+  if (owner && owner !== c && !away) ids.add(owner.id);
   return ctx.w.contestants.filter((x) => ids.has(x.id));
 }
 
@@ -228,23 +232,27 @@ function candidates(ctx: Ctx, c: Contestant): Candidate[] {
 
 /**
  * Bedrooms `c` can't enter but could knock on: each action there is scored as if they were
- * let in, × the odds they expect from the most promising occupant, minus the awkwardness of asking.
+ * let in, × the odds they expect from the most promising occupant (for a bed, from its owner),
+ * minus the awkwardness of asking.
  */
 function knockCandidates(ctx: Ctx, c: Contestant, others: Map<string, number>, night: boolean, out: Candidate[]): void {
   const k = ctx.data.social.knock;
   for (const room of ctx.st.rooms) {
     if (room.access !== 'occupants' || canEnter(ctx, c, room.id)) continue;
-    let host: Contestant | undefined;
-    let odds = 0;
+    let best: Contestant | undefined;
+    let bestOdds = 0;
     for (const o of occupants(ctx, room.id, c)) {
       const p = expectedKnockOdds(ctx, c, o);
-      if (p > odds) [host, odds] = [o, p];
+      if (p > bestOdds) [best, bestOdds] = [o, p];
     }
-    if (!host) continue;
+    if (!best) continue;
     const pull = companyPull(ctx, c, room.id);
     for (const o of ctx.st.objectsInRoom.get(room.id)!) {
       const users = ctx.w.objects[o.id]!;
       if (users.length >= o.capacity) continue;
+      const owner = ownerOf(ctx, o);
+      const host = o.actions.some((d) => d.assigned) && owner && owner !== c ? owner : best;
+      const odds = host === best ? bestOdds : expectedKnockOdds(ctx, c, host);
       for (const def of o.actions) {
         if (def.assigned && !bedAllowed(ctx, c, o, host)) continue;
         if (!k.actions.includes(def.id) || !usable(ctx, c, def)) continue;
@@ -371,6 +379,7 @@ function arrive(ctx: Ctx, c: Contestant): void {
   if (def?.kind === 'sleep') c.asleep = true;
   if (a.action === LOVIN) lovinArrive(ctx, c);
   if (c.breakdown && a.action === c.breakdown.kind) breakArrive(ctx, c);
+  if (def?.kind === 'sleep' && def.assigned) bedtime(ctx, c);
 }
 
 /** Ends the current activity. Completion effects only apply when it finished properly. */
@@ -417,6 +426,13 @@ export function endActivity(ctx: Ctx, c: Contestant, how: 'done' | 'interrupted'
   if (a.action === LOVIN && how !== 'done') {
     const p = ctx.w.contestants.find((o) => o.id === a.partner);
     if (p?.activity?.action === LOVIN && p.activity.partner === c.id) endActivity(ctx, p, how);
+  }
+  // Waking after a night in a bed with someone still in it.
+  if (def?.kind === 'sleep' && def.assigned && how !== 'interrupted' && doing >= ctx.data.thoughts.sleepMinutes) morning(ctx, c, a.object!);
+  // Lovin' in a bed at night: afterwards they sleep right there.
+  if (a.action === LOVIN && how === 'done' && a.object && isNightFor(ctx, c, ctx.w.t)) {
+    const sleep = ctx.st.object.get(a.object)!.actions.find((d) => d.kind === 'sleep');
+    if (sleep) begin(ctx, c, { action: sleep.id, object: a.object, room: a.room, partner: a.partner });
   }
 }
 

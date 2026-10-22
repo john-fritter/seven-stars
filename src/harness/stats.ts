@@ -461,7 +461,7 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
     romance: (() => {
       const lb = sum((s) => s.labels);
       const { couples = 0, mismatched = 0, ...labels } = lb;
-      const ids = ['flirt', 'rebuff', 'kiss', 'kiss_rebuff', 'lovin', 'turned_down', 'exclusive', 'exclusive_refused', 'breakup', 'betrayal', 'jealous'];
+      const ids = ['flirt', 'rebuff', 'kiss', 'kiss_rebuff', 'invite', 'lovin', 'turned_down', 'exclusive', 'exclusive_refused', 'breakup', 'betrayal', 'jealous'];
       return {
         perWeek: Object.fromEntries(ids.map((k) => [k, perWeek(events[k] ?? 0)])),
         labelsAtNight: sortDesc(Object.fromEntries(Object.entries(labels).filter(([k]) => k !== 'none').map(([k, v]) => [k, v / cDays]))),
