@@ -686,7 +686,7 @@ Mood starts at 50 and adds every active thought. Each thought has a value, a dur
 | Thought (sample) | Value | Lasts | Source |
 | --- | --- | --- | --- |
 | Trapped here (everyone, always) | −5 | Permanent | Fear |
-| Someone died (per death) | −6, friend −12, rival +6 | 3 days, friend 7 | Fear or grief |
+| Someone died (per death) | −6 − 0.1 × affection; friend −12; disliked +3; rival +6 | 3 days, friend 7, disliked 2 | Fear, grief or person X |
 | Watched an execution | −8 | 2 days | Fear |
 | The show is going to kill me (own meter under 30) | −4 to −15 | While low | Fear |
 | Slept on the couch / in the dorm / in the suite | −6 / −2 / +6 | 1 day | Discomfort |
@@ -719,7 +719,7 @@ Mood starts at 50 and adds every active thought. Each thought has a value, a dur
 
 **How the build does it (proposed; numbers in `data/thoughts.yaml` and `data/breaks.yaml`).**
 
-- **Thoughts** carry a value, hours, a stacking limit and a source. Personality scales them: volatility as before, a per-thought `scale` (vain for the couch, the suite, clothes and fancy booze; kind for watching cruelty; loyal for betrayal; playful for boredom) and a per-source one (fear × 1 − 0.5 × (brave − 5) ÷ 5, status × vanity). A thought that works out to zero (an aquatic's cold shower) isn't added.
+- **Thoughts** carry a value, hours, a stacking limit and a source. Personality scales them: volatility as before, a per-thought `scale` (vain for the couch, the suite, clothes and fancy booze; kind for watching cruelty; loyal for betrayal; playful for boredom) and a per-source one (fear × 1 − 0.5 × (brave − 5) ÷ 5; status and humiliation × vanity; grief × loyalty and × kindness at 0.3; rejection, loneliness included, × outgoing; guilt × honesty and × kindness). **The misery cap:** each source's bad thoughts add up to at most −20 (`sourceCap`), so a week of executions, sentences and doom can't pin someone at zero by itself; good thoughts aren't capped, and the grievance that picks a break still reads the uncapped totals. A thought that works out to zero (an aquatic's cold shower) isn't added.
 - **Where they come from:** "trapped here" (−5) from arrival, forever. Low needs, refreshed every ten minutes while under the line: hungry (hunger under 20, −4), exhausted (rest under 15, −6), couldn't wash (hygiene under 20, −6), lonely (social under 20, −4), bored (fun under 20, −4). Well-met needs lift it the same way (tuning): good company (social over 80, +6), having a good time (fun over 80, +6, × playful) and comfortable (comfort over 70, +3); without them almost nothing good reached mood.  Too cold or too hot, −0.5 per °F felt outside the range up to −8. Sleep leaves its thought on waking if it lasted three hours. Meals leave gourmet +6 or leftovers −4 (plain nothing). A cold shower and a sink bath leave theirs when finished. Clothes leave "dressed like a star" (+3, rank 1) or "dressed like nobody" (−3, rank 7) from one ceremony to the next. Witnesses of an insult, a mocking or a fight get "watched them be cruel" (−2, × kindness).
 - **Break checks** run on the hour for anyone awake and not asleep, fighting, in lovin' or on the toilet. They roll the chance of the deepest line their mood is under. The biggest grievance is the source whose bad thoughts add up to the most, among the sources in the table (guilt, romance and booze never pick a break); for a break aimed at someone, the target is whoever those thoughts are most about.
 - **The breaks:** binge (the cafe, 30 minutes, hunger +40), steal food (the cafe, hunger +50, theft), sulk in bed (two hours), tantrum (where they are, damaging the set), cry in the confessional (30 minutes), drink binge (the best bar they can enter, four drinks in an hour), hide (a restroom stall, an hour), panic (30 minutes), insulting spree (follows the target, an insult every 10 minutes for an hour), wreck their things (the target's bedroom, damage; the target gets "wrecked my things" −8 and affection −15), and the attacks. "Attack whoever outranks them most" goes for rank 1; "lash out at the feared person" goes for whoever they fear most (fear 10+). An attacker chases a target who moved on up to three times. Anything with no possible target, or that would need to leave the fishbowl, becomes an hour of moping instead. Broken contestants skip meals and are excused from the ceremony.
@@ -759,7 +759,7 @@ The enjoyment thought lasts 3 hours and stacks to three drinks. Drinks can be ca
 
 ## The meter and scoring
 
-**The meter** runs 0–100. Newcomers start at 60. It drains 1 per hour, day and night. Awards refill it, capped at 100. At zero a contestant is on notice; if they're still at zero at the ceremony, they're spaced, unless they hold an immunity, which is spent instead.
+**The meter** runs 0–100. Newcomers start at 60. It drains 0.95 per hour (tuned from 1), day and night. Awards refill it, capped at 100. At zero a contestant is on notice; if they're still at zero at the ceremony, they're spaced, unless they hold an immunity, which is spent instead.
 
 **Lifetime points** collect every award, uncapped, for the leaderboard and hall of fame. Murder awards are hidden until the killer dies.
 
@@ -800,7 +800,7 @@ The enjoyment thought lasts 3 hours and stacks to three drinks. Drinks can be ca
 - **Boredom** counts each event type station-wide per day and resets at midnight. An event that doesn't score (a fight in the cage) doesn't bore the judge.
 - **The dread thought** "the show is going to kill me" is refreshed hourly while the meter is under 30, from −4 just under the line to −15 at zero.
 - **The ceremony** also takes a roll call first: anyone not there (asleep included) has skipped it. The ceremony chime wakes sleepers with rest above 40, so only the exhausted sleep through it. Rank changes give "rank went up" (+5) or "down" (−8) thoughts.
-- **Spacing** takes everyone at zero at once, decided before anyone goes, so the points for watching one spacing can't save the next person. Everyone at the ceremony gets "witnessed a death" (3 points) and "watched an execution"; everyone gets "someone died", "my friend died" (affection 30+) or "got what was coming" (affection −30 or less). A dead contestant leaves the world: their guests are shown out and others' ledger entries about them go.
+- **Spacing** takes everyone at zero at once, decided before anyone goes, so the points for watching one spacing can't save the next person. Everyone at the ceremony gets "witnessed a death" (3 points) and "watched an execution"; everyone gets "my friend died" (affection 30+), "can't say I'll miss them" (+3, affection −15 to −30), "got what was coming" (+6, affection −30 or less), or else "someone died" at −6 − 0.1 × affection (−9 for someone they nearly called a friend, −3 for someone they nearly couldn't stand). Relief and gloating scale with cruelty (× 1 − 0.8 × (kind − 5) ÷ 5), and anyone with kindness 8 or more (drunk kindness counts) feels a death they would have welcomed as a plain "someone died". A dead contestant leaves the world: their guests are shown out and others' ledger entries about them go.
 
 ## Rank, privileges, rules and punishments
 

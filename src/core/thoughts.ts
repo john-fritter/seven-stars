@@ -88,9 +88,16 @@ export function expireThoughts(ctx: Ctx, c: Contestant): void {
   updateMood(ctx, c);
 }
 
+/** The base plus every thought, with each source's bad thoughts adding up to at most `sourceCap`. */
 export function updateMood(ctx: Ctx, c: Contestant): void {
+  const th = ctx.data.thoughts;
   let m = ctx.data.personality.mood.base;
-  for (const x of c.thoughts) m += x.value;
+  const bad = new Map<string, number>();
+  for (const x of c.thoughts) {
+    if (x.value >= 0 || !th.sourceCap) m += x.value;
+    else bad.set(th.thoughts[x.id]!.source, (bad.get(th.thoughts[x.id]!.source) ?? 0) + x.value);
+  }
+  for (const v of bad.values()) m += Math.max(-th.sourceCap, v);
   c.mood = Math.min(100, Math.max(0, m));
 }
 

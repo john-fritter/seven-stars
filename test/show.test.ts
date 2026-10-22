@@ -3,7 +3,7 @@ import { log, type Ctx } from '../src/core/context.js';
 import { createWorld, step } from '../src/core/index.js';
 import { meet } from '../src/core/ledger.js';
 import { addMeter, witnessMultiplier } from '../src/core/scoring.js';
-import { caughtIn, confine, infraction, sentenceStep, sentencing, sneakCost, space, spacings } from '../src/core/show.js';
+import { caughtIn, confine, infraction, mourn, sentenceStep, sentencing, sneakCost, space, spacings } from '../src/core/show.js';
 import { socialRound } from '../src/core/social.js';
 import { station } from '../src/core/station.js';
 import type { Contestant, World } from '../src/core/types.js';
@@ -86,13 +86,13 @@ describe('scoring', () => {
     expect(ctx.events.filter((e) => e.type === 'on_notice')).toHaveLength(1);
   });
 
-  it('drains the meter one point an hour', () => {
+  it('drains the meter by the hourly drain', () => {
     const { w } = aboard();
     const before = w.contestants.map((c) => c.meter);
     const events = step(w, 60);
     const paid = new Map<string, number>();
     for (const e of events) for (const [id, p] of Object.entries((e.data?.awards ?? {}) as Record<string, number>)) paid.set(id, (paid.get(id) ?? 0) + p);
-    w.contestants.forEach((c, i) => expect(c.meter).toBeCloseTo(before[i]! - 1 + (paid.get(c.id) ?? 0)));
+    w.contestants.forEach((c, i) => expect(c.meter).toBeCloseTo(before[i]! - data.meter.drainPerHour + (paid.get(c.id) ?? 0)));
   });
 });
 
@@ -161,6 +161,30 @@ describe('spacing', () => {
     expect(c.thoughts.map((t) => t.id)).toEqual(expect.arrayContaining(['friend_died', 'watched_execution']));
     expect((death.data!.awards as Record<string, number>)[c.id]).toBe(3);
     for (const x of w.contestants) expect(x.ledger[a.id]).toBeUndefined();
+  });
+
+  it('feels a death by how they felt about them, and the kind don\'t gloat', () => {
+    const { ctx, cast } = aboard();
+    const [dead, ...rest] = cast as [Contestant, ...Contestant[]];
+    const feelings: Record<string, { affection: number; enemy: boolean }> = {};
+    const plan = [50, 20, 0, -20, -50, -50] as const;
+    rest.forEach((o, i) => {
+      o.thoughts = [];
+      o.intox = 0;
+      Object.assign(o.personality, { calm: 5, brave: 5, loyal: 5, kind: i === 5 ? 9 : 2 });
+      feelings[o.id] = { affection: plan[i]!, enemy: plan[i]! <= -30 };
+    });
+    mourn(ctx, dead.id, feelings);
+    const got = rest.map((o) => o.thoughts.find((t) => t.about === dead.id)!);
+    expect(got.map((t) => t.id)).toEqual(['friend_died', 'someone_died', 'someone_died', 'relieved_died', 'rival_died', 'someone_died']);
+    const sd = data.thoughts.thoughts.someone_died!.value;
+    const fear = 1; // brave 5
+    expect(got[1]!.value).toBeCloseTo((sd + 20 * data.rules.spacing.diedPerAffection) * fear);
+    expect(got[2]!.value).toBeCloseTo(sd * fear);
+    expect(got[1]!.value).toBeLessThan(got[2]!.value); // liked them: worse
+    expect(got[3]!.value).toBeGreaterThan(0);
+    expect(got[4]!.value).toBeGreaterThan(data.thoughts.thoughts.rival_died!.value); // unkind: gloats more
+    expect(got[5]!.value).toBeLessThan(0); // kind: sorry anyway
   });
 
   it('shows a dead host\'s guest out', () => {

@@ -117,7 +117,7 @@ function crossCheck(d: GameData, dir: string): void {
   const r = d.rules;
   thought(r.sentencedThought, 'rules.yaml: sentencedThought');
   thought(r.fishbowl.thought, 'rules.yaml: fishbowl.thought');
-  for (const [k, id] of Object.entries(r.spacing)) thought(id, `rules.yaml: spacing.${k}`);
+  for (const k of ['watched', 'died', 'friend', 'rival', 'disliked'] as const) thought(r.spacing[k], `rules.yaml: spacing.${k}`);
   if (!rooms.has(r.fishbowl.room)) errors.push(`${dir}/rules.yaml: fishbowl.room: no room "${r.fishbowl.room}"`);
   else if (!d.rooms.rooms.find((x) => x.id === r.fishbowl.room)!.glass) errors.push(`${dir}/rooms.yaml: the fishbowl room "${r.fishbowl.room}" needs a glass: room`);
   for (const s of Object.keys(r.fishbowl.douseSpecies)) if (!species.has(s)) errors.push(`${dir}/rules.yaml: fishbowl.douseSpecies.${s}: no such species`);

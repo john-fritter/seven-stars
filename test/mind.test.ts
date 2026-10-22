@@ -3,7 +3,7 @@ import { attack, breakLevel, breakLines, startBreak } from '../src/core/breaks.j
 import { createWorld, step } from '../src/core/index.js';
 import { meet, rel } from '../src/core/ledger.js';
 import { spacings } from '../src/core/show.js';
-import { condition, conditions, grievance, think, thoughtValue } from '../src/core/thoughts.js';
+import { condition, conditions, grievance, think, thoughtValue, updateMood } from '../src/core/thoughts.js';
 import type { Contestant, World } from '../src/core/types.js';
 import { ctxFor, data } from './helpers.js';
 
@@ -36,6 +36,12 @@ describe('thoughts', () => {
     expect(thoughtValue(ctx, c, 'watched_execution')).toBeCloseTo(-8);
     c.personality.brave = 10;
     expect(thoughtValue(ctx, c, 'watched_execution')).toBeCloseTo(-4);
+    // Each source has the traits that feel it: the loyal grieve harder, the outgoing feel rejection more.
+    expect(thoughtValue(ctx, c, 'friend_died')).toBeCloseTo(-12);
+    c.personality.loyal = 10;
+    expect(thoughtValue(ctx, c, 'friend_died')).toBeCloseTo(-18);
+    c.personality.outgoing = 0;
+    expect(thoughtValue(ctx, c, 'rebuffed')).toBeCloseTo(-4);
   });
 
   it('come and go with conditions: low needs and the cold', () => {
@@ -59,6 +65,23 @@ describe('thoughts', () => {
     Object.assign(c.needs, { social: 90, fun: 90, comfort: 90 }); // well-met needs lift mood
     conditions(ctx, c);
     expect(c.thoughts.map((x) => x.id).sort()).toEqual(['comfortable', 'good_company', 'good_time']);
+  });
+
+  it('add up to mood with each source of misery capped', () => {
+    const { ctx, cast } = aboard();
+    const c = cast[0]!;
+    c.personality = flat(5);
+    c.thoughts = [];
+    const add = (id: string, value: number) => c.thoughts.push({ id, about: null, value, until: ctx.w.t + 600 });
+    add('watched_execution', -8);
+    add('watched_execution', -8);
+    add('someone_died', -6); // fear: −22, capped at −20
+    add('sentenced', -10); // humiliation: its own cap
+    add('ate_gourmet', 30); // good thoughts aren't capped
+    updateMood(ctx, c);
+    expect(c.mood).toBeCloseTo(50 - 20 - 10 + 30);
+    updateMood({ ...ctx, data: { ...data, thoughts: { ...data.thoughts, sourceCap: 0 } } }, c);
+    expect(c.mood).toBeCloseTo(50 - 22 - 10 + 30);
   });
 
   it('pick the biggest grievance and who it is about', () => {

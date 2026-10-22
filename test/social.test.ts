@@ -153,7 +153,7 @@ describe('thoughts', () => {
     a.personality.calm = 0; // ×1.4
     for (let i = 0; i < 5; i++) think(ctx, a, 'insulted', b.id); // stack 3
     expect(a.thoughts).toHaveLength(3);
-    expect(a.mood).toBeCloseTo(50 - 3 * 6 * 1.4);
+    expect(a.mood).toBeCloseTo(50 - Math.min(data.thoughts.sourceCap, 3 * 6 * 1.4)); // one source, capped
   });
 });
 
