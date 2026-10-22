@@ -25,3 +25,9 @@ mood:
   base: 50              # mood starts here and adds every active thought
   lowBelow: 40
   multipliers: { solitary: 1.3, comforting: 1.3, social: 0.7 }
+  # Proposal (people as mood): mood changes who they are to others, both ways. Under lowBelow these
+  # interactions' weights are multiplied by `low`; above highAbove, by `high`.
+  highAbove: 60
+  interactions:
+    low:  { slight: 1.5, insult: 1.5, glass_mock: 1.5 }
+    high: { kind_words: 1.5, gift: 1.5, pass_food: 1.5 }

@@ -28,7 +28,7 @@ export function rel(a: Contestant, b: Contestant): Relation | undefined {
 export function meet(ctx: Ctx, a: Contestant, b: Contestant): void {
   if (a.ledger[b.id]) return;
   const chemistry = normal(ctx.w.rng, 0, ctx.data.social.attraction.chemistrySd);
-  const fresh = (): Relation => ({ affection: 0, trust: 0, fear: 0, attraction: 0, knows: 0, chemistry, met: ctx.w.t, reasons: [], label: 'none', flirts: 0, kisses: 0, lovin: 0 });
+  const fresh = (): Relation => ({ affection: 0, trust: 0, fear: 0, attraction: 0, knows: 0, chemistry, met: ctx.w.t, seen: ctx.w.t, reasons: [], label: 'none', flirts: 0, kisses: 0, lovin: 0 });
   a.ledger[b.id] = fresh();
   b.ledger[a.id] = fresh();
   const first = ctx.data.social.attraction.firstImpression;
@@ -62,13 +62,14 @@ export function feel(ctx: Ctx, a: Contestant, b: Contestant, dim: Dim, amount: n
 
 /**
  * Once a day, feelings fade a little toward neutral. Loyal people's affection fades slower, and
- * so does affection for someone they believe they're dating or exclusive with. Dislike fades at
- * the rate their traits say (never for a Grudge-holder, twice as fast for the Forgiving).
+ * so does affection for someone they believe they're dating or exclusive with. Grudges stick:
+ * dislike fades slower, slower still for the volatile, and at the rate their traits say (never
+ * for a Grudge-holder, twice as fast for the Forgiving).
  */
 export function fadeLedger(ctx: Ctx, c: Contestant): void {
   const l = ctx.data.social.ledger;
   const aff = l.fadePerDay.affection * axisFactor(l.loyalK, c.personality.loyal);
-  const grudge = traitFx(ctx.data, c).dislikeFade;
+  const grudge = traitFx(ctx.data, c).dislikeFade * l.dislikeFade * axisFactor(l.dislikeCalmK, c.personality.calm);
   for (const r of Object.values(c.ledger)) {
     const rate = aff * (r.label === 'dating' || r.label === 'exclusive' ? l.loverFade : 1) * (r.affection < 0 ? grudge : 1);
     r.affection *= 1 - Math.min(1, rate);

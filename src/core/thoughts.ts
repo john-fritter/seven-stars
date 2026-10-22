@@ -44,8 +44,11 @@ export function forget(ctx: Ctx, c: Contestant, id: string): void {
   updateMood(ctx, c);
 }
 
-/** A thought that lasts while a condition holds: refreshed with the current value, or dropped. */
-export function condition(ctx: Ctx, c: Contestant, id: string, base: number | null): void {
+/**
+ * A thought that lasts while a condition holds: refreshed with the current value, or dropped.
+ * `about` is who it's about now (the friend in the room, say), which can change while it lasts.
+ */
+export function condition(ctx: Ctx, c: Contestant, id: string, base: number | null, about: string | null = null): void {
   const i = c.thoughts.findIndex((x) => x.id === id);
   if (base === null) {
     if (i >= 0) forget(ctx, c, id);
@@ -56,11 +59,13 @@ export function condition(ctx: Ctx, c: Contestant, id: string, base: number | nu
   if (i >= 0) {
     const x = c.thoughts[i]!;
     x.until = until;
+    if (value === 0) return forget(ctx, c, id);
+    x.about = about;
     if (x.value === value) return;
     x.value = value;
     updateMood(ctx, c);
   } else if (value !== 0) {
-    c.thoughts.push({ id, about: null, value, until });
+    c.thoughts.push({ id, about, value, until });
     updateMood(ctx, c);
   }
 }

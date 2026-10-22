@@ -48,6 +48,8 @@ export interface SeedStats {
   traits: Record<string, { days: number; mood: number; deaths: number; arrivals: number }>; // by trait
   traitCounts: Record<string, number>; // arrivals by how many traits they rolled
   surprise: Record<string, number>; // acts that scored a surprise bonus, by type, and the extra points ("+type")
+  people: Record<string, number>; // sampled hourly while awake: "hours", each people thought's value, and mood and hours by friends aboard ("mood.<band>", "hours.<band>")
+  reactions: Record<string, number>; // reactions to deaths, by kind
 }
 
 function add(m: Record<string, number>, k: string, v = 1): void {
@@ -100,6 +102,8 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
     traits: {},
     traitCounts: {},
     surprise: {},
+    people: {},
+    reactions: {},
   };
   const traitsOf = new Map<string, string[]>();
   const owls = new Set<string>();
@@ -111,7 +115,11 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
   const together = new Map<string, number>(); // couple → day it was first seen
   const world = createWorld(data, seed);
   for (let d = 0; d < days; d++) {
-    const events = step(world, MINUTES_PER_DAY);
+    const events: SimEvent[] = [];
+    for (let h = 0; h < 24; h++) {
+      events.push(...step(world, 60));
+      sampleHour(s, world, data);
+    }
     wokeToday.clear();
     let isNotable = false;
     let sentenced = false;
@@ -187,6 +195,9 @@ function tally(s: SeedStats, e: SimEvent): void {
     add(s.surprise, `+${e.type}`, got * (1 - 1 / d.surprise));
   }
   switch (e.type) {
+    case 'mourned':
+      for (const [k, v] of Object.entries(d)) add(s.reactions, k, v as number);
+      break;
     case 'infraction':
       add(s.infractions, d.rule as string);
       break;
@@ -271,6 +282,27 @@ function tally(s: SeedStats, e: SimEvent): void {
       add(s.murders, 'trials');
       add(s.murders, d.right ? 'right' : 'wrong');
       break;
+  }
+}
+
+/** A band for how many friends someone has aboard. */
+function friendBand(n: number): string {
+  return n === 0 ? '0' : n === 1 ? '1' : n <= 3 ? '2-3' : '4+';
+}
+
+/** On the hour, everyone awake: what the people thoughts are worth, and mood by friends aboard. */
+function sampleHour(s: SeedStats, w: World, data: GameData): void {
+  const p = data.social.people;
+  const ids = new Set([p.friend.thought, p.partner.thought, p.enemy.thought, p.worry.thought, p.missing.thought, p.envy.thought]);
+  for (const c of w.contestants) {
+    if (c.asleep) continue;
+    add(s.people, 'hours');
+    for (const x of c.thoughts) if (ids.has(x.id)) add(s.people, x.id, x.value);
+    let friends = 0;
+    for (const r of Object.values(c.ledger)) if (r.affection >= data.social.ledger.friendAt) friends++;
+    const band = friendBand(friends);
+    add(s.people, `hours.${band}`);
+    add(s.people, `mood.${band}`, c.mood);
   }
 }
 
@@ -361,6 +393,13 @@ export interface Report {
   knockYesShare: number | null;
   /** Shares of directed relationships at the end of each day, and the average affection. */
   relations: { friends: number; rivals: number; crushes: number; affection: number } | null;
+  /** People as mood, sampled hourly while awake. */
+  people: {
+    thoughts: Record<string, number>; // each people thought's average value per awake hour
+    moodAwake: number; // average mood over awake hours
+    moodByFriends: Record<string, { share: number; mood: number }>; // by friends aboard: share of awake hours, average mood
+    reactionsPerWeek: Record<string, number>; // to deaths: grief, gloat, relief, shaken
+  };
   show: {
     infractionsPerDay: Record<string, number>; // by rule
     sentencesPerDay: Record<string, number>; // by ladder step
@@ -593,6 +632,26 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
         disturbedNightShare: ratio(b.disturbedNights ?? 0, b.nights ?? 0),
         keptUpWakingsPerWeek: perWeek(b.keptUpWakings ?? 0),
         wakeTime: { owl: avg(seeds.flatMap((s) => s.wakeMinutes.owl!)), other: avg(seeds.flatMap((s) => s.wakeMinutes.other!)) },
+      };
+    })(),
+    people: (() => {
+      const p = sum((s) => s.people);
+      const hours = p.hours ?? 0;
+      const thoughts: Record<string, number> = {};
+      const moodByFriends: Record<string, { share: number; mood: number }> = {};
+      for (const [k, v] of Object.entries(p)) {
+        if (k.startsWith('hours.')) {
+          const band = k.slice(6);
+          moodByFriends[band] = { share: hours ? v / hours : 0, mood: v ? (p[`mood.${band}`] ?? 0) / v : 0 };
+        } else if (k !== 'hours' && !k.startsWith('mood.')) thoughts[k] = hours ? v / hours : 0;
+      }
+      const order = ['0', '1', '2-3', '4+'];
+      const moodAwake = Object.entries(p).filter(([k]) => k.startsWith('mood.')).reduce((a, [, v]) => a + v, 0) / Math.max(1, hours);
+      return {
+        thoughts: sortDesc(thoughts),
+        moodAwake,
+        moodByFriends: Object.fromEntries(order.filter((b) => moodByFriends[b]).map((b) => [b, moodByFriends[b]!])),
+        reactionsPerWeek: Object.fromEntries(Object.entries(sum((s) => s.reactions)).map(([k, v]) => [k, perWeek(v)])),
       };
     })(),
     relations: rel.pairs ? { friends: (rel.friends ?? 0) / rel.pairs, rivals: (rel.rivals ?? 0) / rel.pairs, crushes: (rel.crushes ?? 0) / rel.pairs, affection: (rel.affection ?? 0) / rel.pairs } : null,

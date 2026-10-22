@@ -96,6 +96,12 @@ function printReport(r: Report, ms: number): void {
     console.log(`  ${'crushes'.padEnd(16)} ${pct(r.relations.crushes)}`);
     console.log(`  ${'avg affection'.padEnd(16)} ${r.relations.affection.toFixed(1)}`);
   }
+  const pe = r.people;
+  console.log('\nPeople as mood (awake hours)');
+  console.log(`  thoughts, average a contestant carries: ${Object.entries(pe.thoughts).map(([k, v]) => `${k} ${v.toFixed(2)}`).join(', ')}`);
+  console.log(`  mood while awake: ${pe.moodAwake.toFixed(1)}`);
+  console.log(`  mood by friends aboard: ${Object.entries(pe.moodByFriends).map(([k, v]) => `${k}: ${v.mood.toFixed(0)} (${pct(v.share)} of hours)`).join(', ')}`);
+  console.log(`  reactions to deaths, a week: ${Object.entries(pe.reactionsPerWeek).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(', ')}`);
   if (r.knockYesShare !== null) console.log(`\nKnocks answered yes: ${pct(r.knockYesShare)}`);
   const sh = r.show;
   console.log('\nThe show');

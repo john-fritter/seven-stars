@@ -729,7 +729,7 @@ Mood starts at 50 and adds every active thought. Each thought has a value, a dur
 
 ## Personality, traits and mood: the next pass
 
-*Decided direction (john, Oct 22: D-108 to D-113). Step 1 (named traits and the "trapped here" easing) is built, with the lower fear cap held back (john, Oct 22). Step 2 (the ratings pull, personal boredom, the surprise bonus and deep talk) is built; step 3 is not yet. Every number below is a proposal set in data and tuned.*
+*Decided direction (john, Oct 22: D-108 to D-113). Step 1 (named traits and the "trapped here" easing) is built, with the lower fear cap held back (john, Oct 22). Step 2 (the ratings pull, personal boredom, the surprise bonus and deep talk) is built. Step 3 is built in part: people as mood, grudges, friction, envy and mood both ways; joys and pains and the murder nudge are not yet. Every number below is a proposal set in data and tuned.*
 
 **Why.** A review on Oct 22 (160 seeds × 30 days, 2,791 contestants, main after the dread tuning) found:
 
@@ -796,7 +796,7 @@ A starting list (proposal; john to edit):
   - Prude / Exhibitionist: modesty set to 10 / 0 at the roll; an exhibitionist seen in the shower gets "enjoyed the attention" (+3).
   - Party animal: the company pull to drink × 2, hangover weight × 0.5. Teetotaler: drinks score 0, a bender becomes moping, and −0.2 affection a social round toward anyone drunk in the room. Lightweight: intoxication per drink × 1.5. Glutton: hunger drains × 1.3, gourmet and leftovers thoughts × 2. Neat freak: "couldn't wash" × 2, and −0.2 affection a social round toward anyone in the room with hygiene under 20. Slob: "couldn't wash" × 0.3.
   - Snores, Hums, Hoards (carrying a drink × 3) and Night owl as before; Early bird and Sleepwalks as in Beds and sleep.
-- **Waiting for later steps:** Worrier's worry about friends and Clingy's "missing them" (step 3); Gossip (rumors).
+- **Step 3 hooks:** Worrier's worry about friends × 2 and Clingy's "missing them" × 2 (thought multipliers in their rows). **Waiting:** Gossip (rumors).
 - **The sheet and the log.** Traits show on the debug view's sheet with their rules and are in the "arrive" event. The harness reports each trait's share of arrivals, mood at night and contestant-weeks aboard per death.
 
 ### The ratings pull
@@ -845,6 +845,20 @@ What it cost: with everyone earning more, the drain went 0.9 → 1.15 an hour to
 - **Joys and pains from the blend:** helped someone (kind, loyal), a thrill after something risky (brave), being watched while performing (vain, Show-off), guilt after sneaking or stealing (honest), seeing someone break down (kind). Risky gets tagged on the still, the hot tub after hours and sneaking above rank.
 - **Target:** rivals in about 5 to 10% of directed pairs (2% today), so gloating, insult sprees, wrecked rooms and attacks on someone in particular actually happen.
 
+**How the build does it (step 3, people as mood; numbers in `data/social.yaml` people and ledger, `data/thoughts.yaml` and `data/personality.yaml` mood, all proposals; the code is `src/core/people.ts`).**
+
+- **Company,** every ten minutes while awake: the best-liked person in the room at +30 or more gives "hanging out with them" (+6, × outgoing); someone they believe they're dating or exclusive with gives "with them" (+6, × loyal) instead; the most disliked person in the room at −30 or worse gives "stuck with them" (−6, more for the volatile, source person). One of each at most, about that person, gone when they part or fall asleep. Because "stuck with" is about someone, a person-source break (an insult spree, wrecking their things, an attack) goes for them.
+- **Worry,** hourly while awake: "they're on the chopping block" (−2, × loyal, source grief) about the lowest-metered friend (+30) under the doom line (meter 30). Worrier × 2.
+- **Missing them,** hourly while awake: a partner (dating or exclusive) they haven't shared a room with for 24 hours, "missing them" (−4, × loyal, source rejection). Clingy × 2. Each relation now remembers when they last shared a room.
+- **Envy,** hourly while awake: "they've got it better" (−3, × vain, source envy) about the most disliked contestant (−15 or worse) ranked above them. Envy picks the binge and food-theft breaks when it's the biggest grievance.
+- **Grudges stick:** dislike fades at half the rate of liking, × 1 + 0.5 × (calm − 5) ÷ 5, so the fully volatile hold it twice as long again and the fully calm let it go half again as fast; loyalty slows all fading as before, and the traits still apply on top.
+- **Friction,** every social round: two awake people in the same room each move 0.09 × (2.5 − d) affection toward the other, where d is how far apart they are on honest, calm, kind and playful, on average. Casting spreads people out, so a typical pair is about 2.8 apart and drifts apart very slightly (about 0.15 an hour together); the closest tenth (1.5 or less) warm by about 0.5 an hour and the furthest tenth (4 or more) cool by about 0.8; opposite ends (d = 10) would lose about 4 an hour. The ledger keeps one running "clash" or "click" reason rather than one per round.
+- **Mood both ways:** under mood 40, slights, insults and mocking through the glass × 1.5 (as well as the old action multipliers); over 60, kind words, gifts and passing food × 1.5.
+- **Deaths are logged** with how the station took it ("mourned": grief, gloat, relief, shaken).
+- **The harness** samples every awake hour: what each people thought is worth on average, mood by friends aboard, mood while awake, and reactions to deaths a week.
+
+**Step 3 numbers** (200 seeds × 30 days, before → after, all 11 targets hit both times; no meter change needed): rivals 2.6% → 7.7% of directed pairs, friends 30.9% → 27.5%, average affection 22 → 15. Gloats at a death 0.2 → 0.7 a week, "can't say I'll miss them" 0.3 → 0.8, grief 4.4 → 3.8. On an average awake hour a contestant carries +3.0 from a friend in the room, +1.0 from a partner, −1.0 from someone they can't stand, −0.9 envy, −0.7 worry, and almost nothing from missing someone (partners are rarely apart a whole day). Mood while awake 38.6 → 40.6; at night (mostly asleep, so no company) 38 → 37. Mood by friends aboard (0 / 1 / 2–3 / 4+) went from 41 / 37 / 37 / 41, flat, to 40 / 39 / 41 / 45. A week: slights 10.3 → 13.9, insults 9.7 → 11.5, kind words 16.0 → 16.5, breaks 20.7 → 19.2 (2.96 → 2.74 a day), fights 3.9 either way. Deaths 2.41 → 2.37 a week, stay 2.77 → 2.81 weeks, hookups 2.76 → 2.77, hookups within a couple 0.53 → 0.58, nights with a couple 0.57 → 0.54. Still open: envy is never the biggest grievance (fear and person thoughts outweigh it), so envy breaks still don't happen.
+
 ### Murder
 
 Murder stays a crime of passion in slice one (planned murders are out of scope). One nudge: below the doom line, the violent-break cutoffs loosen by one point for that contestant (kind 4 or under, calm 3 or under), so a desperate, cruel or brave contestant is a little likelier to turn a break violent; the existing 40-point meter award does the rest. Killing deliberately for ratings waits for planned murders.
@@ -855,7 +869,7 @@ One PR per step, each tuned back to all targets before the next:
 
 1. Named traits replacing quirks, and the fear tuning.
 2. The ratings pull, personal act boredom, the surprise bonus and the deep-talk change.
-3. People as mood, grudges, friction, envy, joys and pains, and the murder nudge.
+3. People as mood, grudges, friction, envy, joys and pains, and the murder nudge. (People as mood through mood both ways is built; joys and pains and the murder nudge are next.)
 
 ## Booze
 

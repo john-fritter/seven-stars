@@ -174,6 +174,7 @@ export interface Relation {
   knows: number; // 0..1: how well they know the other's real personality
   chemistry: number; // hidden per-pair roll, the same on both sides
   met: number;
+  seen: number; // the last time they shared a room
   reasons: Reason[];
   label: Label; // what this contestant believes the relationship is
   flirts: number; // flirts that landed between them, either way

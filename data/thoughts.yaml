@@ -106,6 +106,13 @@ thoughts:
                  scale: [{ axis: kind }] }                                                         # cruelty hurts more"
   gifted:      { label: "{who} brought me a drink", value: 4, hours: 12, stack: 2, source: person } # proposal
   wrecked:     { label: "{who} wrecked my things", value: -8, hours: 48, stack: 1, source: person } # proposal
+  # People as mood (social.yaml people). All proposal.
+  with_friend:   { label: "Hanging out with {who}", value: 6, hours: 0.5, stack: 1, source: person, scale: [{ axis: outgoing }] }
+  with_partner:  { label: "With {who}", value: 6, hours: 0.5, stack: 1, source: romance, scale: [{ axis: loyal }] }
+  stuck_with:    { label: "Stuck with {who}", value: -6, hours: 0.5, stack: 1, source: person, scale: [{ axis: calm, k: -0.5 }] }
+  friend_doomed: { label: "{who} is on the chopping block", value: -2, hours: 1.5, stack: 1, source: grief, scale: [{ axis: loyal }] }
+  missing_them:  { label: "Missing {who}", value: -4, hours: 1.5, stack: 1, source: rejection, scale: [{ axis: loyal }] }
+  envy:          { label: "{who} has it better", value: -3, hours: 1.5, stack: 1, source: envy, scale: [{ axis: vain }] }
 
   # Romance
   kissed:        { label: "Kissed {who}", value: 6, hours: 24, stack: 1, source: romance }          # proposal

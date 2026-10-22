@@ -111,6 +111,11 @@ ledger:
   # Proposal (relationship tuning): affection for someone they believe they're dating or exclusive
   # with fades at this share of the usual rate, so couples don't drift apart in a week.
   loverFade: 0.5
+  # Proposal (people as mood: grudges stick): dislike fades at this share of the usual rate, and
+  # slower still for the volatile: × 1 + dislikeCalmK × (calm − 5) ÷ 5 (half the rate at calm 0, 1.5× at calm 10).
+  # Grudge-holders never let go and the Forgiving fade it twice as fast (traits.yaml).
+  dislikeFade: 0.5
+  dislikeCalmK: 0.5
   # Proposal: labels for the harness and debug view only. Crushes need no label in the sim.
   friendAt: 30
   rivalAt: -30
@@ -139,6 +144,28 @@ attraction:
 # Proposal: a believed-private spot pulls harder when they're up to something: the attraction term for
 # anyone they fancy past romance.yaml proposition.attraction is × 1 + private × the room's privacy.
 companyPull: { affection: 0.3, attraction: 0.3, fear: -0.3, private: 2 }
+
+# People as mood (DESIGN.md Part two, Personality, traits and mood: People as mood, grudges and
+# friction). All proposal.
+people:
+  # Every ten minutes while awake: the best-liked person in the room at `at` or more, a partner
+  # (by the labels they believe in), and the most disliked one at `at` or worse, each one thought
+  # about that person.
+  friend:  { thought: with_friend, at: 30 }
+  partner: { thought: with_partner, labels: [dating, exclusive] }
+  enemy:   { thought: stuck_with, at: -30 }
+  # Hourly: a friend (affection `at` or more) whose meter is under the doom line (meter.yaml doomed).
+  worry:   { thought: friend_doomed, at: 30 }
+  # Hourly: a partner they haven't shared a room with for `hours`.
+  missing: { thought: missing_them, labels: [dating, exclusive], hours: 24 }
+  # Hourly: someone they dislike (affection `at` or worse) ranked above them. Feeds the envy grievance.
+  envy:    { thought: envy, at: -15 }
+  # Every social round, two awake people in the same room drift by rate × (pivot − d) affection
+  # each way, where d is how far apart they are on these axes, on average (0..10). Casting spreads
+  # people out, so a typical pair is about 2.8 apart and drifts apart very slightly; the closest
+  # tenth (1.5 or less) warm by about 0.5 an hour together and the furthest tenth (4 or more)
+  # cool by about 0.8 an hour. Tuned at 0.09 for rivals in 5-10% of directed pairs (0.05: 5.6%).
+  friction: { axes: [honest, calm, kind, playful], pivot: 2.5, rate: 0.09 }
 
 # Knocking to be let into a bedroom (D-096). Odds of yes:
 #   (base + affection × affection + attraction × attraction) × (1 + kindK × (kind − 5) ÷ 5), × asleep if asleep.
