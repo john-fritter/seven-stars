@@ -31,8 +31,9 @@ sources:
 # bad week of executions, sentences and doom can't pin mood at zero on its own. Each source (fear,
 # humiliation, status, ...) is capped separately; good thoughts aren't capped. 0 turns it off.
 sourceCap: 20
-# Fear tuning (D-110, proposal): fear's bad thoughts add up to at most this instead.
-caps: { fear: 12 }
+# Per-source caps that replace sourceCap, e.g. { fear: 12 }. Empty for now: john (Oct 22) held off
+# on lowering the fear cap until later steps.
+caps: {}
 
 # Everyone carries this from the moment they arrive. Fear tuning (D-110, proposal): it eases from
 # `from` to `to` over their first `days` aboard, refreshed hourly.

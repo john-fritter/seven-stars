@@ -227,14 +227,16 @@ describe('fear, tuned down', () => {
     expect(c.thoughts.find((t) => t.id === tr.thought)!.value).toBeCloseTo(tr.to);
   });
 
-  it('caps fear lower than other sources', () => {
+  it('a per-source cap replaces the shared one', () => {
     const { ctx, cast } = aboard();
     const c = plain(cast[0]!);
     const add = (id: string, value: number) => c.thoughts.push({ id, about: null, value, until: ctx.w.t + 600 });
     add('watched_execution', -15);
     add('watched_execution', -15);
     updateMood(ctx, c);
-    expect(c.mood).toBeCloseTo(data.personality.mood.base - data.thoughts.caps.fear!);
+    expect(c.mood).toBeCloseTo(data.personality.mood.base - data.thoughts.sourceCap);
+    updateMood({ ...ctx, data: { ...data, thoughts: { ...data.thoughts, caps: { fear: 12 } } } }, c);
+    expect(c.mood).toBeCloseTo(data.personality.mood.base - 12);
   });
 
   it('every trait is wired: traitFx reads each one without error', () => {

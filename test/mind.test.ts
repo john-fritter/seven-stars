@@ -75,12 +75,11 @@ describe('thoughts', () => {
     const add = (id: string, value: number) => c.thoughts.push({ id, about: null, value, until: ctx.w.t + 600 });
     add('watched_execution', -8);
     add('watched_execution', -8);
-    add('someone_died', -6); // fear: −22, capped at fear's own cap (lower than the rest)
+    add('someone_died', -6); // fear: −22, capped at −20
     add('sentenced', -10); // humiliation: its own cap
     add('ate_gourmet', 30); // good thoughts aren't capped
     updateMood(ctx, c);
-    expect(data.thoughts.caps.fear).toBeLessThan(data.thoughts.sourceCap);
-    expect(c.mood).toBeCloseTo(50 - data.thoughts.caps.fear! - 10 + 30);
+    expect(c.mood).toBeCloseTo(50 - 20 - 10 + 30);
     updateMood({ ...ctx, data: { ...data, thoughts: { ...data.thoughts, sourceCap: 0 } } }, c);
     expect(c.mood).toBeCloseTo(50 - 22 - 10 + 30);
   });
