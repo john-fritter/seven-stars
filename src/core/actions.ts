@@ -11,13 +11,14 @@ import { gathering } from './schedule.js';
 import { gainsOf, personalityOf } from './derived.js';
 import { feel, rel } from './ledger.js';
 import { addNeed, needUrgency } from './needs.js';
-import { between, chance, weightedIndex } from './rng.js';
+import { between, chance, pick, weightedIndex } from './rng.js';
 import { bedtime, labelOf, lovinArrive, morning } from './romance.js';
 import { walkMinutes, type ObjectInstance } from './station.js';
 import { caughtIn, infraction, sneakCost } from './show.js';
 import { askToShare, companyPull, expectedKnockOdds, guestOf, knock, occupants } from './social.js';
 import { discomfortAt, preferredSetting, setThermostat, situationComfort } from './temperature.js';
 import { think } from './thoughts.js';
+import { traitFx } from './traits.js';
 import type { Activity, Contestant } from './types.js';
 
 /** Scheduled actions that aren't advertised by objects. */
@@ -30,6 +31,7 @@ export const WAIT = 'wait'; // waiting for a toilet to free up
 export const FIGHT = 'fight';
 export const AT_DOOR = 'at_door'; // turned away after knocking
 export const LOVIN = 'lovin'; // lumps under the covers (romance.ts)
+export const SLEEPWALK = 'sleepwalk'; // a sleepwalker's wander (traits.yaml)
 
 const defCache = new WeakMap<Activity, ActionDef | undefined>();
 
@@ -111,7 +113,7 @@ function scoreAction(ctx: Ctx, c: Contestant, def: ActionDef, room: string, othe
   let costs = walk * a.walkCostPerMinute + (def.speciesCost[c.species] ?? def.cost);
   if (def.tags.includes('exposed') && !def.private && others.get(room)) costs += (c.modesty / 10) * a.modestyCost;
 
-  const enough = def.kind === 'drink' ? soberFactor(ctx, c) : 1;
+  const enough = def.kind === 'drink' ? soberFactor(ctx, c) * traitFx(ctx.data, c).drink : 1;
   return (needs + pulls - costs) * personalityOf(ctx.data, c, def) * moodMult(ctx, c, def.tags) * enough;
 }
 
@@ -399,7 +401,11 @@ export function endActivity(ctx: Ctx, c: Contestant, how: 'done' | 'interrupted'
     if (def?.logs) log(ctx, def.logs, [c.id], a.room);
     if (def?.thought && def.kind !== 'sleep') think(ctx, c, def.thought);
     // Seen in the shower (or on an open toilet): the modest mind.
-    if (def?.tags.includes('exposed') && !def.private && ctx.w.contestants.some((o) => o !== c && o.room === c.room && !o.asleep)) think(ctx, c, ctx.data.actions.modestyThought);
+    if (def?.tags.includes('exposed') && !def.private && ctx.w.contestants.some((o) => o !== c && o.room === c.room && !o.asleep)) {
+      think(ctx, c, ctx.data.actions.modestyThought);
+      const enjoyed = traitFx(ctx.data, c).exposedThought; // an exhibitionist enjoys it
+      if (enjoyed) think(ctx, c, enjoyed);
+    }
   }
   if (def?.kind === 'sleep') wokeUp(ctx, c, a, def);
   if (c.breakdown && a.action === c.breakdown.kind) endBreak(ctx, c);
@@ -506,13 +512,29 @@ function sleepMinute(ctx: Ctx, c: Contestant, a: Activity, def: ActionDef): bool
     gain *= s.noise.restMult;
     a.kept = culprit.id;
     if (chance(ctx.w.rng, s.noise.wakeChance)) {
-      log(ctx, 'kept_up', [c.id, culprit.id], c.room, { quirk: culprit.quirk });
+      log(ctx, 'kept_up', [c.id, culprit.id], c.room, { noise: traitFx(ctx.data, culprit).noise });
       endActivity(ctx, c, 'woke');
       return true;
     }
   }
   addNeed(c, 'rest', gain);
   return false;
+}
+
+/**
+ * Every hour asleep, a sleepwalker may get up and wander off to another room they're allowed in,
+ * then find their way back to bed (or not) like anyone else.
+ */
+export function sleepwalk(ctx: Ctx, c: Contestant): void {
+  const sw = traitFx(ctx.data, c).sleepwalk;
+  if (!sw || !c.asleep || c.confined || !chance(ctx.w.rng, sw.perHour)) return;
+  const rooms = ctx.st.rooms.filter((r) => r.id !== c.room && r.access !== 'robots' && canEnter(ctx, c, r.id));
+  if (!rooms.length) return;
+  const to = pick(ctx.w.rng, rooms).id;
+  const from = c.room;
+  endActivity(ctx, c, 'interrupted');
+  log(ctx, 'sleepwalk', [c.id], from, { to });
+  begin(ctx, c, { action: SLEEPWALK, object: null, room: to, minutes: sw.minutes });
 }
 
 /** Comfort drifts toward the comfort of the current situation, over `minutes`. */

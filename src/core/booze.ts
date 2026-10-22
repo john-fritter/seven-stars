@@ -7,6 +7,7 @@ import { feel } from './ledger.js';
 import { addNeed, axisFactor } from './needs.js';
 import { chance } from './rng.js';
 import { think } from './thoughts.js';
+import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
 
 type Stage = Ctx['data']['booze']['stages'][number];
@@ -53,11 +54,11 @@ export function rankQuality(ctx: Ctx, c: Contestant): string {
   return ctx.data.booze.byRank[String(accessRank(ctx, c)) as '1']!;
 }
 
-/** Why they reach for a drink: taste, company, and a bad mood (doubled for the volatile). */
+/** Why they reach for a drink: taste, company (more for party animals), and a bad mood (doubled for the volatile). */
 export function drinkPull(ctx: Ctx, c: Contestant, company: boolean): number {
   const p = ctx.data.booze.pull;
   const taste = (p.taste * c.drinking) / 10;
-  const social = company ? (p.social * (c.personality.outgoing + c.personality.playful)) / 20 : 0;
+  const social = company ? ((p.social * (c.personality.outgoing + c.personality.playful)) / 20) * traitFx(ctx.data, c).drinkCompany : 0;
   const self = c.mood < p.lowMood ? ((p.self * (p.lowMood - c.mood)) / p.lowMood) * Math.max(0, axisFactor(p.selfVolatileK, c.personality.calm)) : 0;
   return taste + social + self;
 }
@@ -80,10 +81,11 @@ export function drink(ctx: Ctx, c: Contestant, quality: string, room: string, fr
   const b = ctx.data.booze;
   const q = b.qualities[quality]!;
   const sp = ctx.data.species.species[c.species]!;
+  const fx = traitFx(ctx.data, c);
   const before = stageOf(ctx, c)?.id;
-  c.intox = Math.min(100, c.intox + b.intoxication.perDrink / sp.size);
+  c.intox = Math.min(100, c.intox + (b.intoxication.perDrink * fx.intox) / sp.size);
   addNeed(c, 'bladder', -b.bladderPerDrink);
-  c.drinks += q.hangover;
+  c.drinks += q.hangover * fx.hangover;
   think(ctx, c, q.thought);
   log(ctx, 'drink', from ? [c.id, from] : [c.id], room, { quality, intox: Math.round(c.intox) });
   staged(ctx, c, before);
@@ -112,7 +114,7 @@ export function finishDrink(ctx: Ctx, c: Contestant, quality: string, room: stri
     feel(ctx, c, o, 'affection', b.together.affection, 'drank together');
   }
   if (c.inventory.length < b.carry.max) {
-    const p = b.carry.chance * Math.max(0, axisFactor(b.carry.kindK, axis(ctx, c, 'kind'))) * (b.carry.quirks[c.quirk] ?? 1);
+    const p = b.carry.chance * Math.max(0, axisFactor(b.carry.kindK, axis(ctx, c, 'kind'))) * traitFx(ctx.data, c).carry;
     if (chance(ctx.w.rng, p)) c.inventory.push(quality);
   }
 }

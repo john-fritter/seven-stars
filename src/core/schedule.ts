@@ -1,7 +1,7 @@
 // The daily schedule: arrivals, the wake chime, trials, meals, the daily event, lights-dim and the
 // ceremony. DESIGN.md Part two, Clock and daily schedule.
 import { actionDef, CEREMONY, endActivity, EVENT, onToilet, openMeals, TRIAL, type Plan } from './actions.js';
-import { canEnter, dayOf, isNightFor, log, timeOfDay, type Ctx } from './context.js';
+import { canEnter, dayOf, isNightFor, log, nightShift, timeOfDay, type Ctx } from './context.js';
 import { eventToday, openEvent, resolveEvent, revealButton } from './events.js';
 import { announceBodies, findBodies, holdTrials, trialsToday } from './trials.js';
 import { spinWheel, unswapBeds } from './wheel.js';
@@ -10,7 +10,8 @@ import { cast } from './generator.js';
 import { shuffle } from './rng.js';
 import { confine, fishbowlMinute, rollCall, sentencing, spacings } from './show.js';
 import { hangover } from './booze.js';
-import { forget, think } from './thoughts.js';
+import { forget, think, trappedHere } from './thoughts.js';
+import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
 
 export const CAST_SIZE = 7;
@@ -41,6 +42,11 @@ export function runSchedule(ctx: Ctx): void {
       fadeLedger(ctx, c);
       hangover(ctx, c);
     }
+  }
+  // Early birds have their own chime: their night ends before everyone else's.
+  for (const c of ctx.w.contestants) {
+    const shift = nightShift(ctx, c);
+    if (shift < 0 && c.asleep && m === (s.wakeChime.at + shift + 1440) % 1440 && c.needs.rest > s.wakeChime.minRest) endActivity(ctx, c, 'woke');
   }
   if (m === s.arrivals) arrivals(ctx);
   if (m === s.lightsDim) log(ctx, 'lights_dim', []);
@@ -141,8 +147,9 @@ function arrivals(ctx: Ctx): void {
   while (w.contestants.length < CAST_SIZE) {
     const c = cast(ctx.data, w.rng, w.contestants, `c${w.nextId++}`, w.t);
     w.contestants.push(c);
-    log(ctx, 'arrive', [c.id], c.room, { name: c.name, species: c.species, pronouns: c.pronouns, quirk: c.quirk });
-    think(ctx, c, ctx.data.thoughts.trapped);
+    log(ctx, 'arrive', [c.id], c.room, { name: c.name, species: c.species, pronouns: c.pronouns, traits: c.traits });
+    trappedHere(ctx, c);
+    for (const id of traitFx(ctx.data, c).arrival) think(ctx, c, id);
   }
 }
 

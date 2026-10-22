@@ -1,12 +1,12 @@
 // The core API: createWorld, step, save, load.
 import type { GameData } from '../data/schema.js';
-import { decide, endActivity, followComfort, onToilet, runActivity } from './actions.js';
+import { decide, endActivity, followComfort, onToilet, runActivity, sleepwalk } from './actions.js';
 import type { Ctx } from './context.js';
 import { drainNeeds } from './needs.js';
 import { socialRound } from './social.js';
 import { soberMinute } from './booze.js';
 import { maybeBreak } from './breaks.js';
-import { conditions, expireThoughts } from './thoughts.js';
+import { conditions, expireThoughts, trappedHere } from './thoughts.js';
 import { createRng } from './rng.js';
 import { drainMeter, fearTheMeter } from './scoring.js';
 import { runSchedule } from './schedule.js';
@@ -78,7 +78,9 @@ function tick(ctx: Ctx): void {
       conditions(ctx, c);
       if (hour) {
         fearTheMeter(ctx, c);
+        trappedHere(ctx, c);
         maybeBreak(ctx, c);
+        sleepwalk(ctx, c);
       }
       c.health = Math.min(100, c.health + ctx.data.social.health.recoverPerHour / 6);
     }

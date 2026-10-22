@@ -4,8 +4,10 @@
 //
 //   points = base × witnesses (1 + 0.15 each, up to ×2) × repeats (½ per repeat by the same pair
 //            within three days) × boredom (−10% per time that type already scored today)
+//            × their traits (a Show-off's karaoke, a Drama queen's breaks)
 import { dayOf, log, MINUTES_PER_DAY, type Ctx } from './context.js';
 import { think } from './thoughts.js';
+import { traitFx } from './traits.js';
 import type { Contestant, SimEvent } from './types.js';
 
 const round2 = (x: number) => Math.round(x * 100) / 100;
@@ -68,12 +70,20 @@ export function award(ctx: Ctx, e: SimEvent): void {
   for (const [id, v] of base) {
     const c = ctx.w.contestants.find((x) => x.id === id);
     if (!c) continue;
-    const pts = round2(v * mult);
+    const pts = round2(v * mult * (traitFx(ctx.data, c).scores[e.type] ?? 1));
     if (pts <= 0) continue;
     addMeter(ctx, c, pts);
     if (!row.meterOnly) c.lifetime = round2(c.lifetime + pts);
     awards[id] = pts;
     total += pts;
+  }
+  // Show-offs love an audience (traits.yaml `watched`); events everyone watches count as watched.
+  if (witnesses.length || !row.witnessed) {
+    for (const id of e.actors) {
+      const c = ctx.w.contestants.find((x) => x.id === id);
+      if (!c || !awards[id]) continue;
+      for (const w of traitFx(ctx.data, c).watched) if (w.events.includes(e.type)) think(ctx, c, w.thought);
+    }
   }
   // Hidden lifetime points go to the first actor, kept secret until they die.
   const actor = row.secret ? ctx.w.contestants.find((x) => x.id === e.actors[0]) : undefined;

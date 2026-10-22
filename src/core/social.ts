@@ -2,7 +2,7 @@
 // and romance, and Rank, privileges, rules and punishments (Getting let in).
 import type { InteractionDef } from '../data/schema.js';
 import { actionDef, bedmateFeeling, begin, endActivity, FIGHT } from './actions.js';
-import { axis, giftDrink, moveMult, stageMult } from './booze.js';
+import { axis, giftDrink, moveMult, stageMult, stageOf } from './booze.js';
 import { log, type Ctx } from './context.js';
 import { askExclusive, attachedMult, breakUp, evidence, kiss, invite, moveAllowed, proposition } from './romance.js';
 import { witnessesOf } from './scoring.js';
@@ -11,6 +11,7 @@ import { feel, meet, rel, relation, warm } from './ledger.js';
 import { addNeed, axisFactor } from './needs.js';
 import { between, chance, next, weightedIndex } from './rng.js';
 import { think } from './thoughts.js';
+import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
 
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
@@ -44,6 +45,7 @@ export function socialRound(ctx: Ctx): void {
       if (a.room === b.room && !a.ledger[b.id] && !a.asleep && !b.asleep) meet(ctx, a, b);
     }
   }
+  traitRound(ctx);
   for (const c of cast) {
     if (!available(ctx, c)) continue;
     const others = cast.filter((o) => o !== c && (o.room === c.room || throughGlass(ctx, c, o)) && available(ctx, o));
@@ -59,6 +61,26 @@ export function socialRound(ctx: Ctx): void {
     if (!defs.length) continue;
     const def = defs[weightedIndex(ctx.w.rng, defs.map((d) => interactionWeight(ctx, c, o, d)))]!;
     interact(ctx, c, o, def);
+  }
+}
+
+/**
+ * Traits that work on whoever shares a room, every social round: an Abrasive contestant wears
+ * on people; a Teetotaler sours on drunks and a Neat freak on the filthy.
+ */
+function traitRound(ctx: Ctx): void {
+  const tr = ctx.data.traits;
+  const drunkAt = ctx.data.booze.stages.find((x) => x.id === tr.drunkFrom)?.at ?? Infinity;
+  for (const c of ctx.w.contestants) {
+    if (c.asleep) continue;
+    const fx = traitFx(ctx.data, c);
+    if (!fx.aura && !fx.dislikesDrunk && !fx.dislikesFilthy) continue;
+    for (const o of ctx.w.contestants) {
+      if (o === c || o.room !== c.room || o.asleep) continue;
+      if (fx.aura) feel(ctx, o, c, 'affection', fx.aura, 'grating');
+      if (fx.dislikesDrunk && (stageOf(ctx, o)?.at ?? 0) >= drunkAt) feel(ctx, c, o, 'affection', fx.dislikesDrunk, 'drunk');
+      if (fx.dislikesFilthy && o.needs.hygiene < tr.filthyBelow) feel(ctx, c, o, 'affection', fx.dislikesFilthy, 'filthy');
+    }
   }
 }
 
@@ -89,7 +111,11 @@ export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: I
   if (n.inventory && c.inventory.length === 0) return 0;
   if (!moveAllowed(ctx, c, o, def)) return 0;
   const [lo, hi] = ctx.data.social.factorRange;
-  let w = def.weight * moveMult(ctx, c, def.id);
+  let w = def.weight * moveMult(ctx, c, def.id) * (traitFx(ctx.data, c).interactions[def.id] ?? 1);
+  // Some traits change what others do around them (a Peacemaker in the room makes insults rarer).
+  for (const x of ctx.w.contestants) {
+    if (x !== c && x.room === c.room && !x.asleep) w *= traitFx(ctx.data, x).nearby[def.id] ?? 1;
+  }
   if (def.move && def.move !== 'gift' && def.move !== 'breakup') w *= attachedMult(ctx, c, o);
   for (const s of def.scale) {
     const k = s.k ?? 1;
@@ -128,7 +154,9 @@ export function interact(ctx: Ctx, c: Contestant, o: Contestant, def: Interactio
   warm(ctx, c, o);
   warm(ctx, o, c);
   for (const [dim, v] of Object.entries(def.actor)) feel(ctx, c, o, dim as never, v, def.id);
-  for (const [dim, v] of Object.entries(def.target)) feel(ctx, o, c, dim as never, v, def.id);
+  // A Charmer's warmth lands harder.
+  const charm = traitFx(ctx.data, c).charm;
+  for (const [dim, v] of Object.entries(def.target)) feel(ctx, o, c, dim as never, dim === 'affection' && v > 0 ? v * charm : v, def.id);
   for (const [n, v] of Object.entries(def.targetGains)) addNeed(o, n as never, v);
   if (def.thought) think(ctx, o, def.thought, c.id);
 
@@ -150,7 +178,21 @@ export function interact(ctx: Ctx, c: Contestant, o: Contestant, def: Interactio
   }
   const e = log(ctx, def.id, [c.id, o.id], c.room);
   if (def.witnessThought) for (const id of witnessesOf(ctx, e)) think(ctx, ctx.w.contestants.find((x) => x.id === id)!, def.witnessThought, c.id);
-  if (def.fight && chance(ctx.w.rng, fightChance(ctx, o, c))) fight(ctx, c, o);
+  // A Hothead can come out swinging over less than an insult.
+  if ((def.fight || traitFx(ctx.data, o).fightOn.includes(def.id)) && chance(ctx.w.rng, fightChance(ctx, o, c)) && !brokenUp(ctx, c, o)) fight(ctx, c, o);
+}
+
+/** A Peacemaker in the room may step in before the first punch. Returns whether they did. */
+function brokenUp(ctx: Ctx, a: Contestant, b: Contestant): boolean {
+  for (const p of ctx.w.contestants) {
+    if (p === a || p === b || p.room !== a.room || p.asleep || p.breakdown) continue;
+    const odds = traitFx(ctx.data, p).peacemaker;
+    if (odds && chance(ctx.w.rng, odds)) {
+      log(ctx, 'broke_up_fight', [p.id, a.id, b.id], a.room);
+      return true;
+    }
+  }
+  return false;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -184,13 +226,13 @@ const round2 = (x: number) => Math.round(x * 100) / 100;
 // Fights
 
 /**
- * Chance an insult turns into a fight: chance × the insulted person's volatility, × the drunker
- * of the two's stage.
+ * Chance an insult turns into a fight: chance × the insulted person's volatility and traits
+ * (a Hothead's × 2), × the drunker of the two's stage.
  */
 export function fightChance(ctx: Ctx, insulted: Contestant, insulter?: Contestant): number {
   const f = ctx.data.social.fight;
   const drunk = Math.max(stageMult(ctx, insulted, 'fight'), insulter ? stageMult(ctx, insulter, 'fight') : 1);
-  return clamp(f.chance * axisFactor(f.calmK, insulted.personality.calm) * drunk, 0, 1);
+  return clamp(f.chance * axisFactor(f.calmK, insulted.personality.calm) * traitFx(ctx.data, insulted).fight * drunk, 0, 1);
 }
 
 /** Fighting power without the die: strength and stamina. */
@@ -358,13 +400,16 @@ export function companyPull(ctx: Ctx, c: Contestant, roomId: string): number {
   const k = ctx.data.social.companyPull;
   const fancy = ctx.data.romance.proposition.attraction;
   const privacy = ctx.st.room.get(roomId)!.privacy;
+  const clingy = traitFx(ctx.data, c).partnerPull;
+  const partners = ctx.data.needs.sleep.share.partners;
   let p = 0;
   for (const o of ctx.w.contestants) {
     if (o === c || (o.activity?.room ?? o.room) !== roomId) continue;
     const r = c.ledger[o.id];
     if (!r) continue;
     const up = r.attraction >= fancy ? 1 + k.private * privacy : 1; // up to something
-    p += (r.affection / 100) * k.affection + (r.attraction / 10) * k.attraction * up + (r.fear / 100) * k.fear;
+    const x = (r.affection / 100) * k.affection + (r.attraction / 10) * k.attraction * up;
+    p += (clingy !== 1 && partners.includes(r.label) ? x * clingy : x) + (r.fear / 100) * k.fear;
   }
   return p;
 }

@@ -1,0 +1,320 @@
+# Named traits (D-108, D-109). DESIGN.md Part two, Personality, traits and mood: the next pass.
+# Each contestant rolls one to three, RimWorld-style: one strong, readable rule each, on top of the
+# sliders, never instead of them. The old quirks (snores, hums, hoards, sleepwalks, night owl) are
+# traits here now. Every number is a proposal.
+
+# How many each contestant gets: weights for one, two and three (proposal: 50%, 35%, 15%).
+count: [50, 35, 15]
+
+# Sliders tilt the odds without deciding them: a trait's roll weight is
+# × 1 + k × (value − 5) ÷ 5 for whatever it leans on (a personality axis, or modesty, drinking or
+# monogamy), never below 0. k defaults to leanK; a negative k leans the other way.
+leanK: 0.8
+
+# What "drunk" and "filthy" mean for the dislikes below: a booze.yaml stage (or worse) and the
+# hygiene level under which someone counts as filthy.
+drunkFrom: drunk
+filthyBelow: 20
+
+# Each trait: label, group, a one-line rule for the sheet, weight in the roll, what it leans on,
+# the traits it can't roll with (both ways), and its effects. Every effect is optional:
+#   tags:          action scoring by tag, × this (personality.yaml tags)
+#   interactions:  their weight for starting these interactions (social.yaml), × this
+#   nearby:        everyone else's weight for these interactions while sharing a room with them
+#   thoughts:      the value of these thoughts for them, × this
+#   sources:       the value of every thought of these sources for them, × this
+#   drain:         need drain, × this
+#   scores:        what these event types pay them (scoring.yaml), × this
+#   thought:       a thought they carry from the moment they arrive (Sunny, Gloomy)
+#   breakLine:     points added to their minor break line (major and extreme follow from it)
+#   fight:         the chance an insult aimed at them turns into a fight, × this
+#   fightOn:       other interactions aimed at them that can start a fight too, at the insult's odds
+#   charm:         affection the target gains from interactions they start, × this
+#   aura:          affection everyone sharing a room with them gains toward them each social round
+#   dislikeFade:   how fast their dislike (negative affection) fades, × this
+#   partnerPull:   the company pull of someone they're dating or exclusive with, × this
+#   crowd:         a thought while `at` or more others share the room
+#   watched:       a thought after one of these events with anyone watching
+#   attraction:    how fast their attraction moves toward its target, × this
+#   datingAfter:   kisses after which they think it's dating, whatever their monogamy
+#   attached:      romance moves while dating someone else, × this (never above 1)
+#   confront:      the chance they confront on betrayal or jealousy (romance.yaml betrayal.confront)
+#   modesty:       their modesty is this, whatever they rolled
+#   exposedThought: a thought after an exposed action with someone watching
+#   drink:         a drink's whole score, × this (0: never drinks; their benders turn to moping)
+#   drinkCompany:  the pull of drinking with company, × this
+#   hangover:      hangover weight per drink, × this
+#   intox:         intoxication per drink, × this
+#   carry:         the chance of taking a drink along, × this
+#   dislikes:      affection per social round toward each person in the room who is drunk / filthy
+#   noise:         asleep (snoring) or awake (humming) keeps sleepers in the same room up
+#   nightShift:    minutes their night runs later (negative: earlier) than lights-dim to the chime
+#   sleepwalk:     an hourly chance while asleep of getting up and wandering to another room
+#   peacemaker:    the chance they break up an insult's fight in the room before a punch is thrown
+
+traits:
+  # Temper
+  hothead:
+    label: Hothead
+    group: temper
+    rule: "Slights can start fights too; fight chance × 2"
+    weight: 1
+    lean: { by: calm, k: -0.8 }
+    excludes: [peacemaker]
+    fight: 2
+    fightOn: [slight]
+  peacemaker:
+    label: Peacemaker
+    group: temper
+    rule: "Steps in to break up fights in the room; insults near them rarer"
+    weight: 1
+    lean: { by: kind }
+    peacemaker: 0.5
+    nearby: { insult: 0.5, slight: 0.5 }
+  drama_queen:
+    label: Drama queen
+    group: temper
+    rule: "Breaks down sooner (break lines 10 higher); breaks score × 1.5"
+    weight: 1
+    lean: { by: vain }
+    breakLine: 10
+    scores: { break: 1.5 }
+  ice_cold:
+    label: Ice cold
+    group: temper
+    rule: "Death and grief thoughts × 0.3; never comforts anyone"
+    weight: 1
+    lean: { by: kind, k: -0.8 }
+    excludes: [worrier]
+    sources: { grief: 0.3 }
+    thoughts: { someone_died: 0.3, watched_execution: 0.3, saw_murder: 0.3, found_body: 0.3 }
+    interactions: { kind_words: 0, gift: 0, pass_food: 0 }
+  worrier:
+    label: Worrier
+    group: temper
+    rule: "Fear × 1.5"     # worry about friends × 2 arrives with that thought (step 3)
+    weight: 1
+    lean: { by: brave, k: -0.8 }
+    sources: { fear: 1.5 }
+  sunny:
+    label: Sunny
+    group: temper
+    rule: "Always a little happier (+4)"
+    weight: 1
+    excludes: [gloomy]
+    thought: sunny
+  gloomy:
+    label: Gloomy
+    group: temper
+    rule: "Always a little glummer (−4)"
+    weight: 1
+    thought: gloomy
+
+  # Social
+  charmer:
+    label: Charmer
+    group: social
+    rule: "Affection from interactions they start × 1.5"
+    weight: 1
+    lean: { by: outgoing }
+    excludes: [abrasive]
+    charm: 1.5
+  abrasive:
+    label: Abrasive
+    group: social
+    rule: "Slights × 2; people sharing a room with them slowly like them less"
+    weight: 1
+    lean: { by: kind, k: -0.8 }
+    interactions: { slight: 2 }
+    aura: -0.1            # a point every 100 minutes in the same room; fades like any affection
+  grudge_holder:
+    label: Grudge-holder
+    group: social
+    rule: "Dislike never fades"
+    weight: 1
+    lean: { by: loyal }
+    excludes: [forgiving]
+    dislikeFade: 0
+  forgiving:
+    label: Forgiving
+    group: social
+    rule: "Dislike fades twice as fast"
+    weight: 1
+    lean: { by: kind }
+    dislikeFade: 2
+  clingy:
+    label: Clingy
+    group: social
+    rule: "Strong pull toward a partner's room"   # "missing them" × 2 arrives with that thought (step 3)
+    weight: 1
+    lean: { by: loyal }
+    excludes: [loner]
+    partnerPull: 3
+  loner:
+    label: Loner
+    group: social
+    rule: "Social drains at half; a crowd of four or more is a small bad thought"
+    weight: 1
+    lean: { by: outgoing, k: -0.8 }
+    drain: { social: 0.5 }
+    crowd: { at: 4, thought: crowded }
+  gossip:
+    label: Gossip
+    group: social
+    rule: "Passes rumors twice as often"
+    weight: 0             # no rumors yet, so it isn't rolled; it arrives with rumors
+    lean: { by: honest, k: -0.8 }
+
+  # Show
+  show_off:
+    label: Show-off
+    group: show
+    rule: "Performing scores × 1.5 for them, and they love an audience"
+    weight: 1
+    lean: { by: vain }
+    excludes: [stage_fright]
+    scores: { karaoke: 1.5, dance_off: 1.5 }
+    watched: { events: [karaoke, dance_off], thought: everyone_watching }
+  stage_fright:
+    label: Stage fright
+    group: show
+    rule: "Avoids performing"   # unless desperate, and a big surprise when they do (step 2)
+    weight: 1
+    lean: { by: outgoing, k: -0.8 }
+    tags: { performing: 0.2 }
+  survivor:
+    label: Survivor
+    group: show
+    rule: "Doom weighs half as much"   # ratings pull × 1.5 arrives with the ratings pull (step 2)
+    weight: 1
+    lean: { by: brave }
+    thoughts: { doomed: 0.5 }
+
+  # Romance
+  romantic:
+    label: Romantic
+    group: romance
+    rule: "Attraction grows faster; reads every second kiss as dating"
+    weight: 1
+    lean: { by: monogamy }
+    excludes: [heartbreaker]
+    attraction: 2
+    datingAfter: 2
+  heartbreaker:
+    label: Heartbreaker
+    group: romance
+    rule: "Romance moves while attached × 2; no guilt"
+    weight: 1
+    lean: { by: loyal, k: -0.8 }
+    attached: 2
+    thoughts: { guilty: 0 }
+  jealous:
+    label: Jealous
+    group: romance
+    rule: "Jealousy and betrayal hurt twice as much; always confronts"
+    weight: 1
+    lean: { by: loyal }
+    thoughts: { jealous: 2, betrayed: 2 }
+    confront: 1
+  prude:
+    label: Prude
+    group: romance
+    rule: "Modesty acts as 10"
+    weight: 1
+    lean: { by: modesty }
+    excludes: [exhibitionist]
+    modesty: 10
+  exhibitionist:
+    label: Exhibitionist
+    group: romance
+    rule: "Modesty acts as 0; enjoys being seen"
+    weight: 1
+    lean: { by: modesty, k: -0.8 }
+    modesty: 0
+    exposedThought: enjoyed_attention
+
+  # Appetite
+  party_animal:
+    label: Party animal
+    group: appetite
+    rule: "Drink pull × 2 with company; half hangovers"
+    weight: 1
+    lean: { by: drinking }
+    excludes: [teetotaler]
+    drinkCompany: 2
+    hangover: 0.5
+  teetotaler:
+    label: Teetotaler
+    group: appetite
+    rule: "Never drinks; mildly dislikes drunks"
+    weight: 1
+    lean: { by: drinking, k: -0.8 }
+    excludes: [lightweight]
+    drink: 0
+    dislikes: { drunk: -0.2 }
+  lightweight:
+    label: Lightweight
+    group: appetite
+    rule: "Intoxication per drink × 1.5"
+    weight: 1
+    intox: 1.5
+  glutton:
+    label: Glutton
+    group: appetite
+    rule: "Hunger drains × 1.3; gourmet and leftovers hit twice as hard"
+    weight: 1
+    drain: { hunger: 1.3 }
+    thoughts: { ate_gourmet: 2, ate_leftovers: 2 }
+  neat_freak:
+    label: Neat freak
+    group: appetite
+    rule: "Hygiene thoughts × 2; dislikes slobs in the room"
+    weight: 1
+    excludes: [slob]
+    thoughts: { filthy: 2 }
+    dislikes: { filthy: -0.2 }
+  slob:
+    label: Slob
+    group: appetite
+    rule: "Hygiene thoughts × 0.3"
+    weight: 1
+    thoughts: { filthy: 0.3 }
+
+  # Body (the old quirks, plus the early bird)
+  snores:
+    label: Snores
+    group: body
+    rule: "Keeps sleepers in the room up"
+    weight: 1
+    noise: asleep
+  hums:
+    label: Hums
+    group: body
+    rule: "Hums while awake, keeping sleepers in the room up"
+    weight: 1
+    noise: awake
+  hoards:
+    label: Hoards
+    group: body
+    rule: "Carries drinks off three times as often"
+    weight: 1
+    carry: 3
+  night_owl:
+    label: Night owl
+    group: body
+    rule: "Their night runs 01:30 to 09:30; the wake chime doesn't wake them"
+    weight: 0.5           # "the occasional night owl"
+    excludes: [early_bird]
+    nightShift: 150
+  early_bird:
+    label: Early bird
+    group: body
+    rule: "Up 90 minutes before the chime"
+    weight: 0.5
+    nightShift: -90
+  sleepwalks:
+    label: Sleepwalks
+    group: body
+    rule: "Some nights, gets up and wanders to another room"
+    weight: 1
+    sleepwalk: { perHour: 0.04, minutes: 20 }   # about one night in four

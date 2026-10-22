@@ -43,7 +43,7 @@ load(data: GameData, saved: string): World
 ## Proposed layout
 
 ```
-data/            YAML: schedule, rooms, objects, species, clothing, generator, needs, personality,
+data/            YAML: schedule, rooms, objects, species, clothing, generator, traits, needs, personality,
                  actions, interactions, romance, thoughts, breaks, booze, scoring,
                  ranks, rules, wheel, events
 src/core/        the pure sim library (world, rng, needs, actions, social, romance,

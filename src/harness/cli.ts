@@ -82,6 +82,13 @@ function printReport(r: Report, ms: number): void {
   console.log('\nAverage needs at the end of each day');
   console.log(top(r.needsAtNight, 10, (v) => v.toFixed(0)));
   console.log(`  ${'(mood)'.padEnd(16)} ${r.moodAtNight.toFixed(0)}`);
+  console.log(`  ${'(fear)'.padEnd(16)} ${r.fearAtNight.toFixed(1)}  (fear thoughts' total, as mood counts it)`);
+  const tr = r.traits;
+  console.log(`\nTraits: ${Object.entries(tr.perContestant).map(([n, v]) => `${n} trait${n === '1' ? '' : 's'} ${pct(v)}`).join(', ')}`);
+  console.log(`  ${'trait'.padEnd(16)} ${'arrivals'.padStart(8)}  ${'mood'.padStart(5)}  ${'stay (wk)'.padStart(9)}`);
+  for (const id of Object.keys(tr.shareOfArrivals)) {
+    console.log(`  ${id.padEnd(16)} ${pct(tr.shareOfArrivals[id]!).padStart(8)}  ${tr.mood[id]!.toFixed(0).padStart(5)}  ${fmt(tr.stayWeeks[id] ?? null).padStart(9)}`);
+  }
   if (r.relations) {
     console.log('\nRelationships at the end of each day (share of who-feels-what-about-whom)');
     console.log(`  ${'friends'.padEnd(16)} ${pct(r.relations.friends)}`);

@@ -43,7 +43,7 @@ export interface Contestant {
   favoriteRecreation: string[];
   drinking: number;
   modesty: number;
-  quirk: string;
+  traits: string[]; // named traits (traits.yaml), in roll order
 
   arrivedAt: number;
   rank: number | null; // null until their first ceremony

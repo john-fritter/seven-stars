@@ -108,7 +108,7 @@ export const needsSchema = z.object({
     restPerHour: num,
     // Sharing a bed: how a contestant feels about a bedmate, and the thoughts it leaves.
     share: z.object({ neutral: num, pull: num, partners: z.array(z.string()).default([]), reluctant: unit, refused: z.string(), labels: z.record(z.string(), num).default({}), good: z.string(), bad: z.string() }),
-    // Noisy people (quirks with `noise`) disturb sleepers in the same room.
+    // Noisy people (traits with `noise`) disturb sleepers in the same room.
     noise: z.object({ restMult: num.min(0), wakeChance: unit, cost: num, thought: z.string(), affection: num }),
   }),
   bladder: z.object({ criticalBelow: num, waitMinutes: z.number().int().positive() }),
@@ -188,11 +188,6 @@ export const generatorSchema = z.object({
   }),
   recreation: z.array(z.string()).min(1),
   favoriteRecreations: z.number().int().nonnegative(),
-  // Each quirk's weight in the roll, and its hooks: `noise` (snoring while asleep, humming while
-  // awake) disturbs sleepers; `nightShift` moves their night later by that many minutes.
-  quirks: z
-    .record(z.string(), z.object({ weight: num.positive(), noise: z.enum(['asleep', 'awake']).optional(), nightShift: num.default(0) }))
-    .refine((q) => Object.keys(q).length > 0, 'needs at least one quirk'),
   names: z.array(z.string()).min(14),
 });
 
@@ -388,7 +383,10 @@ export const thoughtsSchema = z.object({
   species: z.record(z.string(), z.record(z.string(), num)).default({}),
   sources: z.record(z.string(), axisScale).default({}),
   sourceCap: num.min(0),
-  trapped: z.string(),
+  // Per-source caps that replace sourceCap (proposal, fear tuning: fear's is lower).
+  caps: z.record(z.string(), num.min(0)).default({}),
+  // "Trapped here" from arrival, easing from `from` to `to` over their first `days` aboard.
+  trapped: z.object({ thought: z.string(), from: num, to: num, days: num.positive() }),
   needs: z.array(z.object({ need: needEnum, below: num.optional(), above: num.optional(), thought: z.string() }).refine((x) => (x.below === undefined) !== (x.above === undefined), 'give exactly one of below or above')),
   temperature: z.object({ cold: z.string(), hot: z.string(), perDegree: num, max: num }),
   sleepMinutes: num.nonnegative(),
@@ -428,7 +426,7 @@ export const boozeSchema = z.object({
   hangover: z.object({ thought: z.string(), min: num, from: num, to: num }),
   together: z.object({ affection: num }),
   pull: z.object({ taste: num, social: num, self: num, lowMood: num.positive(), selfVolatileK: num, soberAt: num.positive() }),
-  carry: z.object({ chance: unit, kindK: num, quirks: z.record(z.string(), num).default({}), max: z.number().int().nonnegative() }),
+  carry: z.object({ chance: unit, kindK: num, max: z.number().int().nonnegative() }),
   gift: z.object({ affection: num, better: num, thought: z.string() }),
 });
 
@@ -568,6 +566,59 @@ export const trialsSchema = z.object({
   survivedThought: z.string(),
 });
 
+const leanBy = z.union([axisEnum, z.enum(['modesty', 'drinking', 'monogamy'])]);
+const mults = z.record(z.string(), num.min(0)).default({});
+
+export const traitSchema = z.object({
+  label: z.string(),
+  group: z.string(),
+  rule: z.string(),
+  weight: num.nonnegative(),
+  lean: z.object({ by: leanBy, k: num.optional() }).optional(),
+  excludes: z.array(z.string()).default([]),
+  tags: mults,
+  interactions: mults,
+  nearby: mults,
+  thoughts: mults,
+  sources: mults,
+  drain: z.partialRecord(needEnum, num.min(0)).default({}),
+  scores: mults,
+  thought: z.string().optional(),
+  breakLine: num.default(0),
+  fight: num.min(0).default(1),
+  fightOn: z.array(z.string()).default([]),
+  charm: num.min(0).default(1),
+  aura: num.default(0),
+  dislikeFade: num.min(0).default(1),
+  partnerPull: num.min(0).default(1),
+  crowd: z.object({ at: z.number().int().positive(), thought: z.string() }).optional(),
+  watched: z.object({ events: z.array(z.string()), thought: z.string() }).optional(),
+  attraction: num.min(0).default(1),
+  datingAfter: z.number().int().positive().optional(),
+  attached: num.min(0).default(1),
+  confront: unit.optional(),
+  modesty: num.min(0).max(10).optional(),
+  exposedThought: z.string().optional(),
+  drink: num.min(0).default(1),
+  drinkCompany: num.min(0).default(1),
+  hangover: num.min(0).default(1),
+  intox: num.min(0).default(1),
+  carry: num.min(0).default(1),
+  dislikes: z.object({ drunk: num.optional(), filthy: num.optional() }).default({}),
+  noise: z.enum(['asleep', 'awake']).optional(),
+  nightShift: num.default(0),
+  sleepwalk: z.object({ perHour: unit, minutes: z.number().int().positive() }).optional(),
+  peacemaker: unit.default(0),
+});
+
+export const traitsSchema = z.object({
+  count: z.array(num.nonnegative()).min(1),
+  leanK: num,
+  drunkFrom: z.string(),
+  filthyBelow: num,
+  traits: z.record(z.string(), traitSchema).refine((t) => Object.values(t).some((x) => x.weight > 0), 'needs at least one trait with weight above 0'),
+});
+
 /** Every data file, by file name (without .yaml). */
 export const fileSchemas = {
   schedule: scheduleSchema,
@@ -593,6 +644,7 @@ export const fileSchemas = {
   wheel: wheelSchema,
   events: eventsSchema,
   trials: trialsSchema,
+  traits: traitsSchema,
 } as const;
 
 export type GameData = { [K in keyof typeof fileSchemas]: z.output<(typeof fileSchemas)[K]> };
@@ -600,3 +652,4 @@ export type ActionDef = z.output<typeof actionSchema>;
 export type RoomDef = GameData['rooms']['rooms'][number];
 export type MealDef = GameData['schedule']['meals'][number];
 export type InteractionDef = z.output<typeof interactionSchema>;
+export type TraitDef = z.output<typeof traitSchema>;

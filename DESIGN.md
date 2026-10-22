@@ -183,7 +183,7 @@ Contestants pursue their own lives even when it isn't entertaining, and their ne
 
 | Need | How it's met | How contestants affect each other |
 | --- | --- | --- |
-| Rest | Beds of varied quality | Snorers (an individual quirk), late-night noise and shared rooms disturb sleep |
+| Rest | Beds of varied quality | Snorers (a trait), late-night noise and shared rooms disturb sleep |
 | Hunger | Simple meals for all; treats for the highly rated | Binging can leave others short; treats breed envy |
 | Social | Conversation, company | Some crave it, some are drained by it |
 | Recreation | Several types (games, music, screens, the spa, the garden), each preferred differently | Contested equipment; two-person activities need a partner |
@@ -523,7 +523,7 @@ Using an object in a room above your rank is an infraction, whether you walked i
 | Drawn to femininity, to masculinity | 0–10 each | Also stands in for desire |
 | Monogamy | 0–10 | Default expectation of exclusivity |
 | Tastes | Favorite recreation types, drinking appetite 0–10, modesty 0–10 |  |
-| Quirk | One from a weighted list | Snores, hums, hoards, sleepwalks, night owl (rarer). Snoring and humming disturb sleep, hoarders carry more drinks, a night owl's night runs later; sleepwalking has no hook yet. *Quirks become named traits next (D-108; see Personality, traits and mood: the next pass)* |
+| Traits | One to three named traits (D-108) | From `data/traits.yaml`; the old quirks (snores, hums, hoards, sleepwalks, night owl) are traits now. See Personality, traits and mood: the next pass |
 | Live state | Needs, mood, thoughts, health, intoxication, meter, lifetime points, rank, ledger, labels, inventory, immunity |  |
 
 **Species.** Mechanics are deliberately light; looks are in Part one. Comfort ranges are in °F before clothing.
@@ -537,7 +537,7 @@ Using an object in a room above your rank is an infraction, whether you walked i
 | Aquatic | Hygiene drains 2×; any shower, the hot tub or a sink bath refills it, with no cold-shower thought | 60–70 | 1.0 |
 | Reptilian | Prefers heat; rest drains 1.25× (sleeps more); social thoughts (person and rejection sources) ×0.7 | 74–84 | 1.0 |
 
-**Generator and casting.** Roll stats from bell curves (most people near 5, some extremes), apply species modifiers, pick a quirk. For each empty slot, generate five candidates and pick the one whose personality is furthest from the current cast's average, which favors friction and variety.
+**Generator and casting.** Roll stats from bell curves (most people near 5, some extremes), apply species modifiers, roll one to three named traits. For each empty slot, generate five candidates and pick the one whose personality is furthest from the current cast's average, which favors friction and variety.
 
 ## Needs
 
@@ -555,13 +555,14 @@ Needs run 0 (desperate) to 100 (satisfied).
 
 Low needs add bad thoughts (hungry, exhausted, filthy, lonely, bored), which is how they reach mood. Hunger never kills.
 
-**Beds and sleep, as built (proposed; `data/needs.yaml` sleep, `data/generator.yaml` quirks).**
+**Beds and sleep, as built (proposed; `data/needs.yaml` sleep, `data/traits.yaml` for the sleep traits).**
 
 - **Every bed sleeps two** (the couch and the fishbowl floor don't count). How someone feels about a bedmate is 3 × (attraction − 5) ÷ 10, plus 1 for a fling, 3 dating, 4 exclusive (tuned up from 0.5, 1 and 1.5 so couples sleep together): welcome with a crush, unwelcome otherwise. When choosing where to spend the night (not a nap), that feeling adds to the bed's score for whoever's in it or heading there, and for a bed's owner if it isn't theirs, unless the owner is already in or heading for another bed (otherwise two partners each head for the other's bed and sleep apart).
 - **Getting in** takes asking: knocking from outside (Getting let in) or asking a roommate, or an invitation to spend the night (Romance). Knocking for a bed asks that bed's owner (other actions in the room ask the most promising occupant). All use the knock odds, × 0.3 when the host would rather not have them beside them, × the attached factor when the host is seeing someone else (Romance). A host lets in someone they're dating or exclusive with even if it means being woken. A no gives "wouldn't share a bed" (−3, 12 hours). At the wake chime a roommate who shared goes back to their own bunk.
 - **Waking** after three hours or more beside someone leaves "slept beside them" (+4) if the feeling came out at 0 or more, otherwise "had to share a bed with them" (−5).
 - **Noise:** a snorer asleep or a hummer awake in the room cuts other sleepers' rest gain to 70% and wakes them with a 0.3% chance a minute. A bed in a room with someone noisy in it right now costs 1 in scoring. Waking leaves "they kept me up" (−4) and affection −3 toward the culprit.
-- **Night owls** (about one in nine) have a night 2.5 hours later than everyone's, 01:30 to 09:30: their sleep pull, when they stop sleeping, and the wake chime, which doesn't wake them. Summonses still do.
+- **Night owls** (a trait, about one contestant in forty) have a night 2.5 hours later than everyone's, 01:30 to 09:30: their sleep pull, when they stop sleeping, and the wake chime, which doesn't wake them. Summonses still do. **Early birds** are the opposite: their night runs 21:30 to 05:30 and their own chime wakes them at 05:30.
+- **Sleepwalkers** (a trait) have a 4% chance each hour asleep of getting up and wandering for 20 minutes to another room they're allowed in (about one night in four), logged as "sleepwalk". Then they find their way back to bed like anyone else.
 
 ## Temperature
 
@@ -685,7 +686,7 @@ Mood starts at 50 and adds every active thought. Each thought has a value, a dur
 
 | Thought (sample) | Value | Lasts | Source |
 | --- | --- | --- | --- |
-| Trapped here (everyone, always) | −5 | Permanent | Fear |
+| Trapped here (everyone, always) | −5, easing to −2 over the first week (fear tuning) | Permanent | Fear |
 | Someone died (per death) | −6 − 0.1 × affection; friend −12; disliked +3; rival +6 | 3 days, friend 7, disliked 2 | Fear, grief or person X |
 | Watched an execution | −8 | 2 days | Fear |
 | The show is going to kill me (own meter under 30) | −4 to −15 | While low | Fear |
@@ -719,8 +720,8 @@ Mood starts at 50 and adds every active thought. Each thought has a value, a dur
 
 **How the build does it (proposed; numbers in `data/thoughts.yaml` and `data/breaks.yaml`).**
 
-- **Thoughts** carry a value, hours, a stacking limit and a source. Personality scales them: volatility as before, a per-thought `scale` (vain for the couch, the suite, clothes and fancy booze; kind for watching cruelty; loyal for betrayal; playful for boredom) and a per-source one (fear × 1 − 0.5 × (brave − 5) ÷ 5; status and humiliation × vanity; grief × loyalty and × kindness at 0.3; rejection, loneliness included, × outgoing; guilt × honesty and × kindness). **The misery cap:** each source's bad thoughts add up to at most −20 (`sourceCap`), so a week of executions, sentences and doom can't pin someone at zero by itself; good thoughts aren't capped, and the grievance that picks a break still reads the uncapped totals. A thought that works out to zero (an aquatic's cold shower) isn't added.
-- **Where they come from:** "trapped here" (−5) from arrival, forever. Low needs, refreshed every ten minutes while under the line: hungry (hunger under 20, −4), exhausted (rest under 15, −6), couldn't wash (hygiene under 20, −6), lonely (social under 20, −4), bored (fun under 20, −4). Well-met needs lift it the same way (tuning): good company (social over 80, +6), having a good time (fun over 80, +6, × playful) and comfortable (comfort over 70, +3); without them almost nothing good reached mood.  Too cold or too hot, −0.5 per °F felt outside the range up to −8. Sleep leaves its thought on waking if it lasted three hours. Meals leave gourmet +6 or leftovers −4 (plain nothing). A cold shower and a sink bath leave theirs when finished. Clothes leave "dressed like a star" (+3, rank 1) or "dressed like nobody" (−3, rank 7) from one ceremony to the next. Witnesses of an insult, a mocking or a fight get "watched them be cruel" (−2, × kindness).
+- **Thoughts** carry a value, hours, a stacking limit and a source. Personality scales them: volatility as before, a per-thought `scale` (vain for the couch, the suite, clothes and fancy booze; kind for watching cruelty; loyal for betrayal; playful for boredom) and a per-source one (fear × 1 − 0.5 × (brave − 5) ÷ 5; status and humiliation × vanity; grief × loyalty and × kindness at 0.3; rejection, loneliness included, × outgoing; guilt × honesty and × kindness). **The misery cap:** each source's bad thoughts add up to at most −20 (`sourceCap`; per-source caps in `caps` can replace it, none set yet), so a week of executions, sentences and doom can't pin someone at zero by itself; good thoughts aren't capped, and the grievance that picks a break still reads the uncapped totals. A thought that works out to zero (an aquatic's cold shower) isn't added.
+- **Where they come from:** "trapped here" from arrival, forever: −5 on arrival, easing to −2 by the end of their first week (fear tuning, D-110). Low needs, refreshed every ten minutes while under the line: hungry (hunger under 20, −4), exhausted (rest under 15, −6), couldn't wash (hygiene under 20, −6), lonely (social under 20, −4), bored (fun under 20, −4). Well-met needs lift it the same way (tuning): good company (social over 80, +6), having a good time (fun over 80, +6, × playful) and comfortable (comfort over 70, +3); without them almost nothing good reached mood.  Too cold or too hot, −0.5 per °F felt outside the range up to −8. Sleep leaves its thought on waking if it lasted three hours. Meals leave gourmet +6 or leftovers −4 (plain nothing). A cold shower and a sink bath leave theirs when finished. Clothes leave "dressed like a star" (+3, rank 1) or "dressed like nobody" (−3, rank 7) from one ceremony to the next. Witnesses of an insult, a mocking or a fight get "watched them be cruel" (−2, × kindness).
 - **Break checks** run on the hour for anyone awake and not asleep, fighting, in lovin' or on the toilet. They roll the chance of the deepest line their mood is under. The biggest grievance is the source whose bad thoughts add up to the most, among the sources in the table (guilt, romance and booze never pick a break); for a break aimed at someone, the target is whoever those thoughts are most about.
 - **The breaks:** binge (the cafe, 30 minutes, hunger +40), steal food (the cafe, hunger +50, theft), sulk in bed (two hours), tantrum (where they are, damaging the set), cry in the confessional (30 minutes), drink binge (the best bar they can enter, four drinks in an hour), hide (a restroom stall, an hour), panic (30 minutes), insulting spree (follows the target, an insult every 10 minutes for an hour), wreck their things (the target's bedroom, damage; the target gets "wrecked my things" −8 and affection −15), and the attacks. "Attack whoever outranks them most" goes for rank 1; "lash out at the feared person" goes for whoever they fear most (fear 10+). An attacker chases a target who moved on up to three times. Anything with no possible target, or that would need to leave the fishbowl, becomes an hour of moping instead. Broken contestants skip meals and are excused from the ceremony.
 - **Catharsis** (+15 for a day) comes when the break ends, however it ends.
@@ -728,7 +729,7 @@ Mood starts at 50 and adds every active thought. Each thought has a value, a dur
 
 ## Personality, traits and mood: the next pass
 
-*Decided direction (john, Oct 22: D-108 to D-113), not built yet. Every number below is a proposal to be set in data and tuned.*
+*Decided direction (john, Oct 22: D-108 to D-113). Step 1 (named traits and the "trapped here" easing) is built, with the lower fear cap held back (john, Oct 22); steps 2 and 3 are not yet. Every number below is a proposal set in data and tuned.*
 
 **Why.** A review on Oct 22 (160 seeds × 30 days, 2,791 contestants, main after the dread tuning) found:
 
@@ -776,6 +777,28 @@ A starting list (proposal; john to edit):
 | Body | Early bird | The night owl's opposite: up 90 minutes before the chime |
 | Body | Sleepwalks | Wanders to another room once some nights (finally a hook) |
 
+**How the build does it (step 1, built; numbers in `data/traits.yaml`, all proposals).**
+
+- **Rolling.** One, two or three traits at 50 / 35 / 15. Each pick weighs every trait by its weight × 1 + 0.8 × (value − 5) ÷ 5 for what it leans on (a slider, or modesty, drinking or monogamy; a negative lean for the opposite end), never below 0, skipping anything excluded by a trait already rolled. So a fully volatile contestant rolls Hothead about nine times as often as a fully calm one, and a calm Hothead can still happen. Gossip has weight 0 until rumors exist. Night owl and Early bird weigh half (the occasional one).
+- **Opposites** that can't roll together: Hothead / Peacemaker, Sunny / Gloomy, Charmer / Abrasive, Grudge-holder / Forgiving, Clingy / Loner, Show-off / Stage fright, Romantic / Heartbreaker, Prude / Exhibitionist, Party animal / Teetotaler, Teetotaler / Lightweight, Neat freak / Slob, Ice cold / Worrier, Night owl / Early bird.
+- **Effects are data.** Each trait is a row of effects on systems that already exist; a contestant's rows are merged (multipliers multiply, offsets add). The kinds: action tags, the interactions they start, interactions anyone starts near them, thoughts, thought sources, need drain, what an event pays them, a thought carried from arrival, the break line, fight odds and what can start a fight, the affection their interactions give, an aura on whoever shares the room, how fast dislike fades, the pull of a partner, a crowd thought, an audience thought, attraction speed, kisses to dating, the attached factor, confronting, modesty, a thought when seen exposed, drink pull, hangovers, intoxication, carrying drinks, disliking drunks or the filthy, noise, a night shift, sleepwalking and breaking up fights.
+- **The rows as built:**
+  - Hothead: fight chance × 2 when insulted, and a slight can start a fight at the insult's odds.
+  - Peacemaker: in the room when an insult's fight is about to start, a 50% chance they step in ("broke_up_fight", no fight); insults and slights by anyone in the room with them × 0.5. Cage matches and attacks aren't stopped.
+  - Drama queen: the minor break line 10 higher (major and extreme follow from it); breaks pay × 1.5.
+  - Ice cold: grief × 0.3, and "someone died", "watched an execution", "saw them kill" and "found the body" × 0.3; never starts kind words, a gift or passing food.
+  - Worrier: fear × 1.5. Sunny / Gloomy: a permanent +4 / −4 ("sunny / gloomy disposition", scaled by volatility like any thought).
+  - Charmer: positive affection from interactions they start × 1.5. Abrasive: slights × 2; everyone awake in the room with them loses 0.1 affection for them every social round (10 minutes), about a point every 100 minutes, fading like any affection.
+  - Grudge-holder: negative affection never fades. Forgiving: it fades twice as fast.
+  - Clingy: the company pull of someone they're dating or exclusive with × 3. Loner: social drains at half; "too many people" (−2) while four or more others share the room.
+  - Show-off: karaoke and the dance-off pay × 1.5, and "everyone was watching" (+4, 3 hours) after either with an audience. Stage fright: performing actions score × 0.2. Survivor: the doom thought × 0.5.
+  - Romantic: attraction moves toward its target twice as fast; the second landed kiss means dating, whatever their monogamy. Heartbreaker: the attached factor × 2 (never above 1); no guilt. Jealous: jealousy and betrayal thoughts × 2, and they confront (an insult to the face) every time, over jealousy too.
+  - Prude / Exhibitionist: modesty set to 10 / 0 at the roll; an exhibitionist seen in the shower gets "enjoyed the attention" (+3).
+  - Party animal: the company pull to drink × 2, hangover weight × 0.5. Teetotaler: drinks score 0, a bender becomes moping, and −0.2 affection a social round toward anyone drunk in the room. Lightweight: intoxication per drink × 1.5. Glutton: hunger drains × 1.3, gourmet and leftovers thoughts × 2. Neat freak: "couldn't wash" × 2, and −0.2 affection a social round toward anyone in the room with hygiene under 20. Slob: "couldn't wash" × 0.3.
+  - Snores, Hums, Hoards (carrying a drink × 3) and Night owl as before; Early bird and Sleepwalks as in Beds and sleep.
+- **Waiting for later steps:** Stage fright's "unless desperate" and surprise, and Survivor's ratings pull × 1.5 (step 2); Worrier's worry about friends and Clingy's "missing them" (step 3); Gossip (rumors).
+- **The sheet and the log.** Traits show on the debug view's sheet with their rules and are in the "arrive" event. The harness reports each trait's share of arrivals, mood at night and contestant-weeks aboard per death.
+
 ### The ratings pull
 
 As a contestant's meter falls, anything that scores gets an extra pull when they choose actions and interactions: pull = R × desperation × the act's usual points ÷ 10 × their taste for it. Desperation runs from 0 at meter 50 to 1 at 0 (squared, so it bites late). Taste is the multiplier their sliders and traits already give that act's tags or interaction (the kind like kind words, the cruel like slights). Because it's added to every scoring option and the pick stays noisy among the best few, each person's mix shifts toward what suits them without locking in.
@@ -790,9 +813,9 @@ Also: deep talk scores more (proposal 2 → 4 each), and reserved contestants' i
 
 ### Fear tuned down
 
-- "Trapped here" eases from −5 to −2 over a contestant's first seven days aboard.
-- The fear cap drops from −20 to about −12 (the other sources keep −20).
-- Tuned against the 11 targets with harness numbers before and after.
+- "Trapped here" eases from −5 to −2 over a contestant's first seven days aboard (built: refreshed hourly, `thoughts.yaml` trapped).
+- The fear cap drops from −20 to about −12. *Held back for now (john, Oct 22): fear keeps −20 until the later steps. The build supports per-source caps (`thoughts.yaml` caps), left empty.*
+- Tuned against the 11 targets with harness numbers before and after. As built (traits and the easing, fear cap still −20), average fear at night went from about −12.8 to −10.9 and average mood from 38 to 41. Less fear means fewer breaks (2.9 a day to 2.4) and fewer break points, so the meter drain went from 0.95 to 0.9 an hour; deaths are 2.39 a week and the average stay 2.79 weeks, both mid-range.
 
 ### People as mood, grudges and friction
 
@@ -850,7 +873,7 @@ The enjoyment thought lasts 3 hours and stacks to three drinks. Drinks can be ca
 
 ## The meter and scoring
 
-**The meter** runs 0–100. Newcomers start at 60. It drains 0.95 per hour (tuned from 1), day and night. Awards refill it, capped at 100. At zero a contestant is on notice; if they're still at zero at the ceremony, they're spaced, unless they hold an immunity, which is spent instead.
+**The meter** runs 0–100. Newcomers start at 60. It drains 0.9 per hour (tuned from 1, then 0.95), day and night. Awards refill it, capped at 100. At zero a contestant is on notice; if they're still at zero at the ceremony, they're spaced, unless they hold an immunity, which is spent instead.
 
 **Lifetime points** collect every award, uncapped, for the leaderboard and hall of fame. Murder awards are hidden until the killer dies.
 
@@ -1008,7 +1031,7 @@ A killer who accuses an innocent and wins walks free; the engine keeps the truth
 
 The core is a TypeScript library with no I/O, no clock and no global randomness. Everything tunable lives in YAML data files, hot-reloaded by the harness and debug view.
 
-**Data files:** schedule, rooms (including temperatures), objects, species, clothing, generator, needs, personality, actions, social (interactions, the ledger, attraction, fights, knocking), romance, thoughts, breaks, booze, scoring, ranks, rules, wheel, events, trials.
+**Data files:** schedule, rooms (including temperatures), objects, species, clothing, generator, traits, needs, personality, actions, social (interactions, the ledger, attraction, fights, knocking), romance, thoughts, breaks, booze, scoring, ranks, rules, wheel, events, trials.
 
 **Core API (sketch):**
 

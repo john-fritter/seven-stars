@@ -1,6 +1,7 @@
 // Rolling contestants and casting them. DESIGN.md Part two, Contestants, species and the generator.
 import { AXES, NEEDS, type GameData } from '../data/schema.js';
 import { between, chance, normal, pick, shuffle, weightedIndex, type Rng } from './rng.js';
+import { rollTraits } from './traits.js';
 import type { Contestant, Needs, Personality } from './types.js';
 
 const clamp10 = (x: number) => Math.round(Math.min(10, Math.max(0, x)) * 10) / 10;
@@ -14,7 +15,6 @@ function rollPersonality(data: GameData, rng: Rng): Personality {
 
 export function rollContestant(data: GameData, rng: Rng, id: string, t: number, takenNames: Set<string>): Contestant {
   const g = data.generator;
-  const quirkIds = Object.keys(g.quirks);
   const speciesIds = Object.keys(data.species.species);
   const species = speciesIds[weightedIndex(rng, speciesIds.map((s) => data.species.species[s]!.weight))]!;
   const sp = data.species.species[species]!;
@@ -35,7 +35,7 @@ export function rollContestant(data: GameData, rng: Rng, id: string, t: number, 
     needs[n] = Math.round(between(rng, lo, hi));
   }
 
-  return {
+  const c: Contestant = {
     id,
     name,
     pronouns,
@@ -52,7 +52,7 @@ export function rollContestant(data: GameData, rng: Rng, id: string, t: number, 
     favoriteRecreation: shuffle(rng, [...g.recreation]).slice(0, g.favoriteRecreations).sort(),
     drinking: stat('drinking'),
     modesty: stat('modesty'),
-    quirk: quirkIds[weightedIndex(rng, quirkIds.map((q) => g.quirks[q]!.weight))]!,
+    traits: [],
 
     arrivedAt: t,
     rank: null,
@@ -79,6 +79,13 @@ export function rollContestant(data: GameData, rng: Rng, id: string, t: number, 
     inventory: [],
     breakdown: null,
   };
+  c.traits = rollTraits(data, rng, c);
+  // Prude and Exhibitionist: modesty acts as theirs, whatever they rolled.
+  for (const id of c.traits) {
+    const m = data.traits.traits[id]!.modesty;
+    if (m !== undefined) c.modesty = m;
+  }
+  return c;
 }
 
 function distance(a: Personality, b: Personality): number {

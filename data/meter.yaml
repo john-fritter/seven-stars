@@ -3,7 +3,8 @@
 # contestant is on notice; still at zero at the ceremony, they're spaced (rules.yaml spacing).
 start: 60          # proposal (DECISIONS Open): newcomers start here
 max: 100
-drainPerHour: 0.95 # proposal (DECISIONS Open). Dread tuning (Oct 22): 1 → 0.95, since calmer contestants earn fewer break points
+drainPerHour: 0.9  # proposal (DECISIONS Open). Dread tuning (Oct 22): 1 → 0.95, since calmer contestants earn fewer break points.
+                   # Traits and fear tuning (Oct 22): 0.95 → 0.9, the same again: less fear, fewer breaks
 
 # "The show is going to kill me": while the meter is under `below`, a thought from `from` (just
 # under) to `to` (at zero), refreshed every hour. DESIGN.md Thoughts table.

@@ -53,7 +53,7 @@ together: { affection: 2 }
 pull: { taste: 0.15, social: 0.1, self: 0.25, lowMood: 50, selfVolatileK: -1, soberAt: 100 }
 
 # Carrying drinks to give away (DESIGN.md: drinks can be carried and gifted). Proposal: after a
-# drink at the bar, a chance to take one along, × 1 + kindK × (kind − 5) ÷ 5, × hoarders.
-carry: { chance: 0.1, kindK: 0.5, quirks: { hoards: 3 }, max: 2 }
+# drink at the bar, a chance to take one along, × 1 + kindK × (kind − 5) ÷ 5, × traits (Hoards ×3).
+carry: { chance: 0.1, kindK: 0.5, max: 2 }
 # A gift: affection +5, or +15 when it's better than what they'd get themselves.
 gift: { affection: 5, better: 15, thought: gifted }
