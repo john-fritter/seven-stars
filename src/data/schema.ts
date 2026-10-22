@@ -158,7 +158,14 @@ export const personalitySchema = z.object({
   k: num,
   needDrain: z.partialRecord(needEnum, axisEnum),
   tags: z.record(z.string(), z.array(z.object({ axis: axisEnum, k: num.optional() }))),
-  mood: z.object({ base: num, lowBelow: num, multipliers: z.record(z.string(), num) }),
+  mood: z.object({
+    base: num,
+    lowBelow: num,
+    multipliers: z.record(z.string(), num),
+    // People as mood: a good mood makes kind acts likelier, a bad one slights (interaction weights).
+    highAbove: num.default(101),
+    interactions: z.object({ low: z.record(z.string(), num).default({}), high: z.record(z.string(), num).default({}) }).default({ low: {}, high: {} }),
+  }),
 });
 
 export const actionsSchema = z.object({
@@ -359,6 +366,9 @@ export const socialSchema = z.object({
     fadePerDay: z.object({ affection: unit, trust: unit, fear: unit }),
     loyalK: num,
     loverFade: num.nonnegative(),
+    // People as mood (step 3): dislike fades at this share of the usual rate, × 1 + calmK × (calm − 5) ÷ 5.
+    dislikeFade: num.min(0).default(1),
+    dislikeCalmK: num.default(0),
     friendAt: num,
     rivalAt: num,
     crushAt: num,
@@ -374,6 +384,16 @@ export const socialSchema = z.object({
     approach: unit,
   }),
   companyPull: z.object({ affection: num, attraction: num, fear: num, private: num.default(0) }),
+  // People as mood (DESIGN.md Part two, Personality, traits and mood: People as mood, grudges and friction).
+  people: z.object({
+    friend: z.object({ thought: z.string(), at: num }),
+    partner: z.object({ thought: z.string(), labels: z.array(z.enum(LABELS)) }),
+    enemy: z.object({ thought: z.string(), at: num }),
+    worry: z.object({ thought: z.string(), at: num }),
+    missing: z.object({ thought: z.string(), labels: z.array(z.enum(LABELS)), hours: num.positive() }),
+    envy: z.object({ thought: z.string(), at: num }),
+    friction: z.object({ axes: z.array(axisEnum).min(1), pivot: num.positive(), rate: num.nonnegative() }),
+  }),
   knock: z.object({
     actions: z.array(z.string()),
     base: num,

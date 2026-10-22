@@ -11,6 +11,7 @@ import { infraction } from './show.js';
 import { feel, meet, rel, relation, warm } from './ledger.js';
 import { addNeed, axisFactor } from './needs.js';
 import { between, chance, next, weightedIndex } from './rng.js';
+import { friction } from './people.js';
 import { think } from './thoughts.js';
 import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
@@ -47,6 +48,7 @@ export function socialRound(ctx: Ctx): void {
     }
   }
   traitRound(ctx);
+  friction(ctx);
   for (const c of cast) {
     if (!available(ctx, c)) continue;
     const others = cast.filter((o) => o !== c && (o.room === c.room || throughGlass(ctx, c, o)) && available(ctx, o));
@@ -112,7 +114,7 @@ export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: I
   if (n.inventory && c.inventory.length === 0) return 0;
   if (!moveAllowed(ctx, c, o, def)) return 0;
   const [lo, hi] = ctx.data.social.factorRange;
-  let w = def.weight * moveMult(ctx, c, def.id) * (traitFx(ctx.data, c).interactions[def.id] ?? 1);
+  let w = def.weight * moveMult(ctx, c, def.id) * (traitFx(ctx.data, c).interactions[def.id] ?? 1) * moodInteraction(ctx, c, def.id);
   // Some traits change what others do around them (a Peacemaker in the room makes insults rarer).
   for (const x of ctx.w.contestants) {
     if (x !== c && x.room === c.room && !x.asleep) w *= traitFx(ctx.data, x).nearby[def.id] ?? 1;
@@ -144,6 +146,14 @@ export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: I
     w *= clamp(f, lo, hi);
   }
   return w;
+}
+
+/** Mood changes how they treat people, both ways: kinder in a good mood, pettier in a bad one. */
+export function moodInteraction(ctx: Ctx, c: Contestant, id: string): number {
+  const m = ctx.data.personality.mood;
+  if (c.mood < m.lowBelow) return m.interactions.low[id] ?? 1;
+  if (c.mood > m.highAbove) return m.interactions.high[id] ?? 1;
+  return 1;
 }
 
 export function interact(ctx: Ctx, c: Contestant, o: Contestant, def: InteractionDef): void {

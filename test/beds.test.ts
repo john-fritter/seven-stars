@@ -169,7 +169,7 @@ describe('privacy', () => {
     const { w: w2, ctx: ctx2, cast: cast2 } = ready(at(10));
     const [x, y] = cast2 as [Contestant, Contestant];
     alone(w2, x, y);
-    for (const c of [x, y]) Object.assign(c, { room: 'restroom', asleep: false, activity: null });
+    for (const c of [x, y]) Object.assign(c, { room: 'restroom', asleep: false, activity: null, thoughts: [] });
     x.modesty = 10;
     begin(ctx2, x, { action: 'toilet', object: 'restroom:stall_toilet:1', room: 'restroom', minutes: 3 });
     endActivity(ctx2, x, 'done');
@@ -211,7 +211,8 @@ describe('night owls', () => {
   it('keep a later night and sleep through the wake chime', () => {
     const w = createWorld(data, 5);
     step(w, 1440 + at(6, 59));
-    const owl = w.contestants.find((c) => c.asleep && c.activity?.object === c.bed && !c.guest)!;
+    // Not anyone on a Wheel suite night, who's moved along at the chime.
+    const owl = w.contestants.find((c) => c.asleep && c.activity?.object === c.bed && !c.guest && !w.show.bedSwap?.includes(c.id))!;
     const lark = w.contestants.find((c) => c.asleep && c !== owl);
     owl.traits = ['night_owl'];
     owl.needs.rest = 60;

@@ -132,6 +132,7 @@ function crossCheck(d: GameData, dir: string): void {
   // Thoughts, breaks, booze and romance
   const th = d.thoughts;
   thought(th.trapped.thought, 'thoughts.yaml: trapped.thought');
+  for (const k of ['friend', 'partner', 'enemy', 'worry', 'missing', 'envy'] as const) thought(d.social.people[k].thought, `social.yaml: people.${k}.thought`);
   th.needs.forEach((n, i) => thought(n.thought, `thoughts.yaml: needs.${i}.thought`));
   thought(th.temperature.cold, 'thoughts.yaml: temperature.cold');
   thought(th.temperature.hot, 'thoughts.yaml: temperature.hot');

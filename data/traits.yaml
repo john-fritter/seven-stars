@@ -95,10 +95,11 @@ traits:
   worrier:
     label: Worrier
     group: temper
-    rule: "Fear × 1.5"     # worry about friends × 2 arrives with that thought (step 3)
+    rule: "Fear × 1.5; worry about friends × 2"
     weight: 1
     lean: { by: brave, k: -0.8 }
     sources: { fear: 1.5 }
+    thoughts: { friend_doomed: 2 }
   sunny:
     label: Sunny
     group: temper
@@ -148,11 +149,12 @@ traits:
   clingy:
     label: Clingy
     group: social
-    rule: "Strong pull toward a partner's room"   # "missing them" × 2 arrives with that thought (step 3)
+    rule: "Strong pull toward a partner's room; \"missing them\" × 2"
     weight: 1
     lean: { by: loyal }
     excludes: [loner]
     partnerPull: 3
+    thoughts: { missing_them: 2 }
   loner:
     label: Loner
     group: social

@@ -311,3 +311,15 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Meter drain 0.9 → 1.15 an hour. The pull compresses the bottom of the meter, so the average meter at night fell from 58 to 47.5, mood from 41 to 38 and fear rose from −10.9 to −11.2; breaks went from 2.4 to 3.0 a day. The lower fear cap john held back would offset some of this.
 - [ ] Each earlier lovin' counts as 3.5 monogamy toward calling it dating (was 1.5), to keep hookups within a couple above 0.5 (it had fallen to 0.48).
 - [ ] Still open: Stage fright is still the hardest trait (1.84 contestant-weeks per death against 2.77), mostly because it rolls on reserved contestants; it's now a little better off than other reserved contestants (1.58).
+
+**Proposed while building people as mood (Oct 22, step 3, first part).** Details the design left open, all in `data/social.yaml` (people, ledger), `data/thoughts.yaml` and `data/personality.yaml` (mood), written up in DESIGN.md Part two, People as mood, grudges and friction (How the build does it). A 200-seed, 30-day run hits all 11 targets (deaths 2.37 a week, stay 2.81 weeks, breaks 2.74 a day, fights 3.93 a week, 0.54 brawls per hookup, hookups 2.77 a week, hookups within a couple 0.58). Rivals 2.6% → 7.7% of directed pairs; gloats at a death 0.2 → 0.7 a week.
+
+- [ ] Company thoughts: "hanging out with" a friend (+30) +6 × outgoing, "with" a partner +6 × loyal, "stuck with" someone at −30 or worse −6 (more for the volatile). One of each at most, while awake.
+- [ ] Worry: −2 × loyal (source grief) for a friend under the doom line; Worrier × 2.
+- [ ] Missing them: −4 × loyal (source rejection) after 24 hours without sharing a room with a partner; Clingy × 2.
+- [ ] Envy: −3 × vain toward the most disliked (−15 or worse) contestant ranked above them.
+- [ ] Grudges: dislike fades at 0.5 × the liking rate, × 1 + 0.5 × (calm − 5) ÷ 5.
+- [ ] Friction on honest, calm, kind and playful: 0.09 × (2.5 − average distance) affection each way every social round, while both are awake in the same room.
+- [ ] Mood both ways: under 40, slights, insults and glass mocking × 1.5; over 60, kind words, gifts and passing food × 1.5.
+- [ ] Worry, missing and envy pause while asleep, like company.
+- [ ] Still open: envy never wins out as the biggest grievance, so envy breaks still don't happen. Joys and pains and the murder nudge are the next step.

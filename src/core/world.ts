@@ -7,6 +7,7 @@ import { socialRound } from './social.js';
 import { soberMinute } from './booze.js';
 import { maybeBreak } from './breaks.js';
 import { conditions, expireThoughts, trappedHere } from './thoughts.js';
+import { company, worries } from './people.js';
 import { createRng } from './rng.js';
 import { drainMeter, fearTheMeter } from './scoring.js';
 import { runSchedule } from './schedule.js';
@@ -76,9 +77,11 @@ function tick(ctx: Ctx): void {
       followComfort(ctx, c, 10); // comfort moves slowly; every ten minutes is plenty
       expireThoughts(ctx, c);
       conditions(ctx, c);
+      company(ctx, c);
       if (hour) {
         fearTheMeter(ctx, c);
         trappedHere(ctx, c);
+        worries(ctx, c);
         maybeBreak(ctx, c);
         sleepwalk(ctx, c);
       }

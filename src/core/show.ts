@@ -164,13 +164,22 @@ export function mourn(ctx: Ctx, id: string, feelings: Body['feelings']): void {
   const sp = ctx.data.rules.spacing;
   const l = ctx.data.social.ledger;
   const died = ctx.data.thoughts.thoughts[sp.died]!.value;
+  const n = { grief: 0, gloat: 0, relief: 0, shaken: 0 };
   for (const o of ctx.w.contestants) {
     if (o.id === id) continue;
     const aff = feelings[o.id]?.affection ?? 0;
-    if (aff >= l.friendAt) think(ctx, o, sp.friend, id);
-    else if (aff <= sp.dislikedAt && axis(ctx, o, 'kind') < sp.kindForgives) think(ctx, o, aff <= l.rivalAt ? sp.rival : sp.disliked, id);
-    else think(ctx, o, sp.died, id, Math.min(0, died + sp.diedPerAffection * Math.max(aff, l.rivalAt)));
+    if (aff >= l.friendAt) {
+      think(ctx, o, sp.friend, id);
+      n.grief++;
+    } else if (aff <= sp.dislikedAt && axis(ctx, o, 'kind') < sp.kindForgives) {
+      think(ctx, o, aff <= l.rivalAt ? sp.rival : sp.disliked, id);
+      n[aff <= l.rivalAt ? 'gloat' : 'relief']++;
+    } else {
+      think(ctx, o, sp.died, id, Math.min(0, died + sp.diedPerAffection * Math.max(aff, l.rivalAt)));
+      n.shaken++;
+    }
   }
+  log(ctx, 'mourned', [id], undefined, n);
 }
 
 /** Takes a contestant out of the world: their objects, their guests, and others' feelings about them. */
