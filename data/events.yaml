@@ -9,6 +9,10 @@ rotation: [cage_match, dance_off, button]
 cage_match:
   room: cage
   watchFun: 20          # proposal: fun for everyone watching
+  # Proposal (season logs, Oct 23: 34% of cage matches were reruns, one pair five times in a
+  # season). Picking the pair, each cage match two people have already fought this season counts
+  # as this much mutual affection: a real feud still comes back, a mild one makes way.
+  rematch: 80
 
 # Two to four dancers (picked at random when the Wheel didn't book it). Score:
 #   playful × playful + stamina × stamina + beauty × beauty + crowd × the watchers' average

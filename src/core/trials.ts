@@ -7,7 +7,7 @@
 import { TRIAL } from './actions.js';
 import { axis } from './booze.js';
 import { dayOf, log, timeOfDay, type Ctx } from './context.js';
-import { feel } from './ledger.js';
+import { feel, relation } from './ledger.js';
 import { shuffle } from './rng.js';
 import { mourn, rollCall, space } from './show.js';
 import { think } from './thoughts.js';
@@ -37,7 +37,33 @@ export function found(ctx: Ctx, body: Body, finder: Contestant | null): void {
     if (finder) think(ctx, finder, ctx.data.trials.foundThought, body.id);
   }
   mourn(ctx, body.id, body.feelings);
+  const killer = ctx.w.contestants.find((c) => c.id === body.killer);
+  if (killer) believe(ctx, killer, body.witnesses, body, 'witnessed');
   accuse(ctx, body);
+}
+
+/**
+ * They now believe `who` is a killer (trials.yaml memory): affection and fear once, more for the
+ * victim's friends, down to the floor at least, a thought, and a dislike that won't fade past the
+ * floor (ledger.ts).
+ */
+export function believe(ctx: Ctx, who: Contestant, ids: string[], body: Pick<Body, 'id' | 'name' | 'feelings'>, how: string): void {
+  const m = ctx.data.trials.memory;
+  const friendAt = ctx.data.social.ledger.friendAt;
+  const believers: Contestant[] = [];
+  for (const id of ids) {
+    const b = ctx.w.contestants.find((c) => c.id === id);
+    if (!b || b === who || b.ledger[who.id]?.killer) continue;
+    feel(ctx, b, who, 'affection', m.affection, `killed ${body.name}`);
+    feel(ctx, b, who, 'fear', m.fear, `killed ${body.name}`);
+    if ((body.feelings[b.id]?.affection ?? 0) >= friendAt) feel(ctx, b, who, 'affection', m.friend, `killed my friend ${body.name}`);
+    const r = relation(ctx, b, who);
+    if (r.affection > m.floor) feel(ctx, b, who, 'affection', m.floor - r.affection, `killed ${body.name}`); // a rival, at least
+    r.killer = body.name;
+    think(ctx, b, m.thought, who.id);
+    believers.push(b);
+  }
+  if (believers.length) log(ctx, 'killer_known', [who.id, ...believers.map((b) => b.id)], undefined, { victim: body.id, name: body.name, how });
 }
 
 /**
@@ -74,7 +100,7 @@ function accuse(ctx: Ctx, body: Body): void {
   const { accuser, accused } = best;
   // Held at the next morning's trial hour.
   const day = dayOf(ctx.w.t) + (timeOfDay(ctx.w.t) < ctx.data.schedule.trials.at ? 0 : 1);
-  const trial: Trial = { day, victim: body.id, name: body.name, killer: body.killer, accuser: accuser.id, accused: accused.id, witnesses: body.witnesses };
+  const trial: Trial = { day, victim: body.id, name: body.name, killer: body.killer, accuser: accuser.id, accused: accused.id, witnesses: body.witnesses, feelings: body.feelings };
   ctx.w.show.trials.push(trial);
   log(ctx, 'accusation', [accuser.id, accused.id], accuser.room, { victim: body.id, name: body.name, suspicion: Math.round(best.suspicion), day, right: accused.id === body.killer });
   think(ctx, accused, tr.accused.thought, accuser.id);
@@ -155,5 +181,12 @@ function hold(ctx: Ctx, trial: Trial, present: Contestant[]): void {
     right: loser.id === trial.killer,
   });
   think(ctx, winner, ctx.data.trials.survivedThought);
-  space(ctx, loser, 'trial', room);
+  const spaced = space(ctx, loser, 'trial', room);
+  // An accused who walks out alive, cleared or saved by an immunity, is a killer to everyone who
+  // wanted them spaced.
+  const survivor = spaced ? winner : loser;
+  if (survivor === accused) {
+    const against = Object.keys(votes).filter((id) => votes[id] === accused.id);
+    believe(ctx, accused, [accuser.id, ...against], { id: trial.victim, name: trial.name, feelings: trial.feelings }, spaced ? 'cleared' : 'immunity');
+  }
 }

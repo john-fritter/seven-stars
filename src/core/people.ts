@@ -6,13 +6,15 @@ import type { Contestant, Relation } from './types.js';
 
 /**
  * Every ten minutes: the best-liked friend and the partner in the room lift mood, the most
- * disliked person drags it down. Each is one thought about that person, gone when they leave.
+ * disliked person drags it down, and so does someone they believe is a killer. Each is one thought
+ * about that person, gone when they leave.
  */
 export function company(ctx: Ctx, c: Contestant): void {
   const p = ctx.data.social.people;
   let friend: Contestant | null = null;
   let partner: Contestant | null = null;
   let enemy: Contestant | null = null;
+  let killer: Contestant | null = null;
   if (!c.asleep) {
     let best = p.friend.at;
     let worst = p.enemy.at;
@@ -23,12 +25,14 @@ export function company(ctx: Ctx, c: Contestant): void {
       if (p.partner.labels.includes(r.label)) partner ??= o;
       else if (r.affection >= best) [friend, best] = [o, r.affection];
       if (r.affection <= worst) [enemy, worst] = [o, r.affection];
+      if (r.killer) killer ??= o;
     }
   }
   const at = (id: string, o: Contestant | null) => condition(ctx, c, id, o ? ctx.data.thoughts.thoughts[id]!.value : null, o?.id ?? null);
   at(p.friend.thought, friend);
   at(p.partner.thought, partner);
   at(p.enemy.thought, enemy);
+  at(ctx.data.trials.memory.near, killer);
 }
 
 /**

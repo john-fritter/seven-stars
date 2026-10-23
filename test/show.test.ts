@@ -208,9 +208,14 @@ describe('infractions in play', () => {
     const { ctx, cast } = aboard();
     const a = cast[0]!;
     Object.assign(a.personality, { honest: 5, brave: 5 });
+    a.meter = 100;
     expect(sneakCost(ctx, a)).toBeCloseTo(data.rules.sneak.cost);
     Object.assign(a.personality, { honest: 10, brave: 0 });
+    a.meter = data.rules.sneak.peril.below;
     expect(sneakCost(ctx, a)).toBeCloseTo(data.rules.sneak.cost * 1.5 * 1.5);
+    // Near the bottom of the meter a fine could finish them: the risk weighs more.
+    a.meter = data.rules.sneak.peril.below / 2;
+    expect(sneakCost(ctx, a)).toBeCloseTo(data.rules.sneak.cost * 1.5 * 1.5 * (1 + data.rules.sneak.peril.k / 2));
   });
 
   it('are logged the moment someone walks in above their rank, once per room', () => {

@@ -96,10 +96,12 @@ function distance(a: Personality, b: Personality): number {
 
 /**
  * Casting for one empty slot: roll several candidates and keep the one whose personality is
- * furthest from the current cast's average, which favors friction and variety.
+ * furthest from the current cast's average, which favors friction and variety. Names already
+ * used this season (`used`) aren't reused until the list runs out.
  */
-export function cast(data: GameData, rng: Rng, cast: Contestant[], id: string, t: number): Contestant {
-  const taken = new Set(cast.map((c) => c.name));
+export function cast(data: GameData, rng: Rng, cast: Contestant[], id: string, t: number, used: readonly string[] = []): Contestant {
+  let taken = new Set([...used, ...cast.map((c) => c.name)]);
+  if (data.generator.names.every((n) => taken.has(n))) taken = new Set(cast.map((c) => c.name));
   const candidates = Array.from({ length: data.generator.candidatesPerSlot }, () => rollContestant(data, rng, id, t, taken));
   if (cast.length === 0) return candidates[0]!;
   const avg = {} as Personality;

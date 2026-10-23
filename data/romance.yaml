@@ -36,6 +36,11 @@ proposition:
   # awake who sees it gets `witnessThought` (scaled by their modesty). All proposal.
   bed: { walkCost: 0.05, crowd: 0.3 }
   here: { chance: 0.1, noBed: 0.5, modestyK: -1, braveK: 0.5, witnessThought: saw_lovin }
+  # Proposal (season logs, Oct 23: half of first hookups came before any kiss, so romances started
+  # at the end). A pair needs this many kisses between them before lovin', however it comes up:
+  # a proposition, or turning to each other in bed. In bed before that, the ask is a goodnight
+  # kiss instead (the kiss's own odds decide it).
+  kissesFirst: 1
   thought: lovin                  # both, "mood +10 for a day"
   bond: 10                        # affection, both ways
   disturbed: disturbed            # anyone asleep in the room, when it starts
@@ -57,6 +62,9 @@ bedtime: { chance: 0.9, asleep: 0.5, doze: 20, morning: 0.5 }
 # from `lead` minutes before lights dim through the night: the target answers as to sharing a bed
 # (needs.yaml sleep.share), and on a yes both go to bed together, in the bed lovin' would pick.
 invite: { lead: 120 }
+# Proposal (season logs, Oct 23: every skipped-ceremony fine was a couple who went off to bed in the
+# middle of it). Nobody propositions or invites anyone while either of them is at one of these.
+notDuring: [ceremony, event, trial]
 
 exclusive:
   # Odds = the target's attraction ÷ 10 × (0.5 + monogamy ÷ 10) × (1 + loyalK × (loyal − 5) ÷ 5).

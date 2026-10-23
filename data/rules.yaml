@@ -31,9 +31,12 @@ waiver: { minPoints: 10, chance: 0.3 }
 
 # Proposal: an above-rank entry is logged once per room per contestant between ceremonies.
 # Sneaking in is a choice: actions in rooms above their rank are scored as usual, minus
-#   cost × (1 + honestK × (honest − 5) ÷ 5) × (1 + braveK × (brave − 5) ÷ 5),
-# so honest and timid people rarely risk it.
-sneak: { cost: 1.5, honestK: 0.5, braveK: -0.5 }
+#   cost × (1 + honestK × (honest − 5) ÷ 5) × (1 + braveK × (brave − 5) ÷ 5)
+#        × (1 + peril.k × max(0, 1 − meter ÷ peril.below)),
+# so honest and timid people rarely risk it, and nobody near the bottom of the meter risks a fine
+# for a hot shower. Season logs (Oct 23): cost was 1.5 with no peril, and 70% of deaths came the
+# night of a fine for sneaking in, mostly for a shower or the toilet in the suite or good room.
+sneak: { cost: 1.5, honestK: 0.5, braveK: -0.5, peril: { below: 40, k: 3 } }
 
 # Proposal: who fights outside the cage gets the infraction: both fighters.
 fighting: both

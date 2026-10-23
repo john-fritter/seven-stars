@@ -234,7 +234,7 @@ describe('bedtime', () => {
     alone(w, a, b);
     meet(ctx, a, b);
     for (const [x, y] of [[a, b], [b, a]] as const) {
-      Object.assign(rel(x, y)!, { attraction: 10, affection: 100, label: 'dating' });
+      Object.assign(rel(x, y)!, { attraction: 10, affection: 100, label: 'dating', kisses: 1 });
       endActivity(ctx, x, 'interrupted');
       Object.assign(x, { room: 'suite', intox: 60, traits: ['hoards'], personality: { ...x.personality, kind: 10, loyal: 5 } });
     }

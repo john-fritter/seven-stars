@@ -134,6 +134,7 @@ export interface Trial {
   accuser: string;
   accused: string;
   witnesses: string[];
+  feelings: Body['feelings']; // everyone's feelings for the victim when they died
 }
 
 /** The show's bookkeeping: the judge's boredom, repeat pairs, infractions awaiting sentence, and the
@@ -154,6 +155,8 @@ export interface ShowState {
   trials: Trial[];
   trialOn: number | null; // the day trials were last called, so the gathering runs its course
   seen: Record<string, Record<string, number>>; // room -> contestant -> when they last left it
+  names: string[]; // every name cast this season, so nobody arrives with a dead contestant's name
+  cage: Record<string, number>; // "a|b" -> cage matches that pair has fought this season
 }
 
 /** One reason in the ledger. Repeats of the same reason merge into the latest entry. */
@@ -180,6 +183,7 @@ export interface Relation {
   flirts: number; // flirts that landed between them, either way
   kisses: number; // kisses that landed between them, either way
   lovin: number; // times they've had lovin'
+  killer?: string; // the name of someone they believe the other one murdered (trials.ts believe)
 }
 
 export interface Thought {

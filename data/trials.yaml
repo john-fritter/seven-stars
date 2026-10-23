@@ -29,3 +29,14 @@ fearNudge: 0.5          # proposal
 # wrong person, mostly eyewitnesses whom the room happened to like less than the killer.
 testimony: { base: 20, trust: 0.5 }
 survivedThought: survived_trial
+
+# Proposal (season logs, Oct 23: after a killer walked free nobody treated them differently).
+# Someone comes to believe a contestant is a killer when they witness the murder, or at a trial
+# where that contestant survives (cleared, or saved by an immunity): the accuser and every voter
+# who voted to space them. Believing it is a belief, so an innocent who survived an accusation
+# can be shunned too. Each believer takes it once: affection and fear toward them, `friend` more
+# affection if the victim was their friend, affection down to `floor` at least however much they
+# liked them before, and `thought`. Their dislike never fades past `floor`
+# (a rival, social.yaml ledger rivalAt), so it feeds the cage, envy, attack breaks and the next
+# trial's votes. Every ten minutes in a room with someone they believe is a killer: `near`.
+memory: { affection: -30, fear: 20, friend: -30, floor: -30, thought: knows_killer, near: near_killer }

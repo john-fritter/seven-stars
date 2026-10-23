@@ -2,12 +2,17 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DataError, loadGameData } from '../data/load.js';
-import { runJob } from './pool.js';
+import { applyOverrides, runJob } from './pool.js';
 import { report, type Metric, type Report } from './stats.js';
+import { seasonLog, storyReport } from './stories.js';
 
 const USAGE = `Usage:
   sim run   --days 30 --seeds 200 [--data ./data] [--out results/run.json] [--threads N]
   sim sweep --param meter.start --from 40 --to 80 --step 10 --days 30 --seeds 100 [--data ./data]
+  sim stories --days 30 --seeds 24 [--data ./data]     story sampling: how a viewer would see the seasons
+  sim season --seed 24 --days 30 [--data ./data]       one season, day by day, with names
+
+run and stories take --set file.path=value[,file.path=value] to try values without editing the data.
 
 --param names a number in the data: the file, then the path inside it (e.g. needs.needs.hunger.drainPerHour).`;
 
@@ -163,13 +168,19 @@ async function main(): Promise<void> {
   const dataDir = opts.data ?? './data';
   loadGameData(dataDir); // fail fast, with a clear message, before starting workers
   const days = num(opts, 'days', 30);
-  const seeds = seedList(num(opts, 'seeds', 200));
+  const seeds = seedList(num(opts, 'seeds', cmd === 'stories' ? 24 : 200));
   const threads = opts.threads ? num(opts, 'threads') : undefined;
+  const overrides: Record<string, number> = {};
+  for (const kv of (opts.set ?? '').split(',').filter(Boolean)) {
+    const [k, v] = kv.split('=');
+    if (!k || v === undefined || !Number.isFinite(Number(v))) throw new Error(`--set wants file.path=number, got "${kv}"`);
+    overrides[k] = Number(v);
+  }
 
   if (cmd === 'run') {
     const t0 = performance.now();
-    const stats = await runJob({ dataDir, overrides: {}, seeds, days }, threads);
-    const data = loadGameData(dataDir);
+    const stats = await runJob({ dataDir, overrides, seeds, days }, threads);
+    const data = applyOverrides(loadGameData(dataDir), overrides);
     const r = report(data, stats);
     printReport(r, performance.now() - t0);
     const out = opts.out ?? `results/run-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
@@ -194,6 +205,13 @@ async function main(): Promise<void> {
     }
     const header = [param, 'hits', ...data.targets.targets.map((t) => t.id)];
     console.log(`\n${table([header, ...rows])}\n\n"!" marks a missed target.`);
+  } else if (cmd === 'stories') {
+    const t0 = performance.now();
+    const seasons = await runJob({ dataDir, overrides, seeds, days, stories: true }, threads);
+    console.log(storyReport(seasons).join('\n'));
+    console.log(`\n(${((performance.now() - t0) / 1000).toFixed(1)}s)`);
+  } else if (cmd === 'season') {
+    console.log(seasonLog(loadGameData(dataDir), num(opts, 'seed'), days).join('\n'));
   } else {
     console.log(USAGE);
     process.exitCode = cmd ? 1 : 0;

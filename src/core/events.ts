@@ -58,16 +58,23 @@ function watch(ctx: Ctx, here: Contestant[], taking: Contestant[], fun: number):
   for (const c of here) if (!taking.includes(c) && !c.asleep) addNeed(c, 'fun', fun);
 }
 
-/** The booked pair, whoever of them turned up; or the two who like each other least. */
-function cagePair(ctx: Ctx, here: Contestant[]): Contestant[] {
+const pairKey = (a: Contestant, b: Contestant) => (a.id < b.id ? `${a.id}|${b.id}` : `${b.id}|${a.id}`);
+
+/**
+ * The booked pair, whoever of them turned up; or the two who like each other least, counting
+ * each cage match they've already fought this season as `rematch` more affection, so the cage
+ * doesn't rerun the same feud every few days.
+ */
+export function cagePair(ctx: Ctx, here: Contestant[]): Contestant[] {
   const ev = ctx.w.show.event!;
   if (ev.actors.length) return alive(ctx, ev.actors); // one of them may have died since the slot opened
+  const rematch = ctx.data.events.cage_match.rematch;
   let best: Contestant[] = [];
   let low = Infinity;
   for (const a of shuffle(ctx.w.rng, [...here])) {
     for (const b of here) {
       if (a.id >= b.id) continue;
-      const mutual = (a.ledger[b.id]?.affection ?? 0) + (b.ledger[a.id]?.affection ?? 0);
+      const mutual = (a.ledger[b.id]?.affection ?? 0) + (b.ledger[a.id]?.affection ?? 0) + rematch * (ctx.w.show.cage[pairKey(a, b)] ?? 0);
       if (mutual < low) [best, low] = [[a, b], mutual];
     }
   }
@@ -96,6 +103,8 @@ function cageMatch(ctx: Ctx, here: Contestant[]): void {
     return;
   }
   log(ctx, 'cage_match', [winner.id, loser.id], ev.room, { winner: winner.id, loser: loser.id, forfeit: !(showed(a) && showed(b)) });
+  const k = pairKey(a, b);
+  ctx.w.show.cage[k] = (ctx.w.show.cage[k] ?? 0) + 1;
   watch(ctx, here, [a, b], e.watchFun);
   // The Wheel's prize: a challenger who beats a higher rank takes their rank and room.
   if (ev.prize && winner.id === ev.actors[0] && winner.rank !== null && loser.rank !== null && winner.rank > loser.rank) swapRanks(ctx, winner, loser);

@@ -185,6 +185,9 @@ thoughts:
                    scale: [{ axis: kind, k: -0.8 }] }      # proposal
   saw_murder:    { label: "Saw {who} kill someone", value: -12, hours: 72, stack: 1, source: fear }  # proposal
   found_body:    { label: "Found {who}'s body", value: -10, hours: 72, stack: 1, source: fear }
+  # Proposals (trials.yaml memory): knowing a killer walks free, and sharing a room with them.
+  knows_killer:  { label: "{who} is a killer and still here", value: -8, hours: 72, stack: 1, source: fear }
+  near_killer:   { label: "In a room with {who}, a killer", value: -5, hours: 0.5, stack: 1, source: fear }
 
   # The Wheel, the daily event and trials (all proposals)
   spun_wheel:    { label: "Had to spin the Wheel", value: -5, hours: 24, stack: 1, source: fear }
