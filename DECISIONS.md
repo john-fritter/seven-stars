@@ -89,6 +89,7 @@ The record of what John has decided. DESIGN.md describes how things work; this f
 - **D-098 (Oct 18)** The public restroom is unisex. Rejected: gendered restrooms. A continuous gender axis needs a sorting rule, and the drama would map onto the real-world trans bathroom fight rather than the show's own cruelty.
 - **D-099 (Oct 18)** Temperature is in, including in slice one. Bedrooms have their own thermostats; the operator sets the rest, and the fishbowl is slightly too cold. Temperatures always stay in a range that harms no one. Species have slightly different comfort ranges, and clothing and its quality shift them.
 - **D-103 (Oct 18)** Clothes are a look, not inventory items. Each contestant has a signature outfit for life (so characters stay distinguishable), embellished by rank tier; rank 7 wears a paper jumpsuit. The show owns the clothes: robots deliver or repossess at the ceremony. Effects stay simple (warmth, a little beauty, a vanity thought). Rejected for now: owning, swapping and stealing clothes.
+- **D-114 (Oct 23)** The station gets a real floor plan with corridors, sight lines and distances, because the layout should decide who passes whom, who witnesses what, where people can slip off, and who's near the bar. It's designed and reviewed before it's built (DESIGN.md Part two, The floor plan: the next pass).
 
 ## Characters and romance
 
@@ -364,3 +365,16 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Meter drain 1.4 → 1.2 an hour: murders and trials now take about 0.8 a week.
 - [ ] Still open: 52% of drinks come before noon, peaking right after the wake chime, and nobody knows yet why people reach for one first thing; panics are still a quarter of all breaks.
 - [ ] Still open: about 30% of breaks are still extreme, and the three most-broken people in a season still have about 45% of its breaks; both come from the bottom ranks and the fishbowl sitting near mood 0.
+
+**Proposed for the floor plan (Oct 23, design only, nothing built).** Written up in DESIGN.md Part two, The floor plan: the next pass. The shape is john's call.
+
+- [ ] Shape: a ring corridor (the Promenade) round the common room, with the cafe, restroom and confessional inside it, the lounge and spa on the space side, the garden, airlock and suite to the west, the cage, medbay and rec room to the east, and the good room and dorm to the south. Alternatives: a spine corridor, or the hub made real.
+- [ ] Scale: about 60 × 50 tiles, a tile a metre, walking 25 tiles a minute, so trips stay 1 to 3 minutes.
+- [ ] Openings are doors, arches or glass. Arches: common ↔ cafe, lounge ↔ north Promenade, cage ↔ east Promenade. Glass: common ↔ fishbowl, lounge ↔ spa. Seeing goes through arches and glass and along a corridor segment, hearing through arches only.
+- [ ] Neighbours: the dorm shares walls with the rec room and the good room, and the suite is soundproofed. Noise through a wall costs sleepers half what it does in the room; lovin' through a wall is "heard them through the wall" and gossip.
+- [ ] Corridors are spaces: access all, apparent privacy 0.3, no objects. Walkers occupy each space they pass, and only pass through corridors, the common room and the cafe.
+- [ ] Passing in the corridor: a hello, a slight, a flirt or gossip without stopping.
+- [ ] Seen going in together: two people through the same closed door within two minutes, if anyone sees it, counts like a seen flirt.
+- [ ] The discreet way round: someone sneaking, or with a person they're cheating with, takes the route past the fewest watchers, each watcher costing walking minutes × deceptive ÷ 10.
+- [ ] The drifting dead: about 15 minutes after a spacing, everyone in the lounge gets "{who} drifted past the window" (fear −4, a day).
+- [ ] The morning drinking isn't the layout: tripling walking times leaves 50–52% of drinks before noon. The evening is: 41–58% of contestants nap between 17:00 and 21:00, because fun and social sit at 94–99 all day and a nap wins. To look at in its own thread.
