@@ -153,7 +153,8 @@ thoughts:
   not_exclusive: { label: "{who} won't commit", value: -10, hours: 24, stack: 1, source: rejection }   # "Hurt: −10"
   dumped:        { label: "Dumped by {who}", value: -20, hours: 72, stack: 1, source: rejection }      # hours: proposal
   betrayed:      { label: "Betrayed by {who}", value: -20, hours: 168, stack: 1, source: person, scale: [{ axis: loyal }] }
-  jealous:       { label: "Jealous of {who}", value: -5, hours: 24, stack: 2, source: person }         # proposal
+  jealous:       { label: "Jealous of {who}", value: -6, hours: 48, stack: 2, source: person }         # proposal; about the rival (Oct 23: was −5 for a day, about the partner)
+  pining:        { label: "Wants {who} back", value: -3, hours: 48, stack: 1, source: rejection }      # proposal (Oct 23)
   guilty:        { label: "Cheating on {who}", value: -5, hours: 24, stack: 1, source: guilt }         # proposal
 
   # Booze (booze.yaml)

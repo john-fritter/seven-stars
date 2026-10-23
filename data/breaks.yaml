@@ -9,6 +9,11 @@ chance: { minor: 0.04, major: 0.1, extreme: 0.2 }
 # Every break ends with catharsis.
 catharsis: catharsis
 
+# Proposal (Oct 23, breakdown fog): hours after a break ends before they can break again. Without it
+# the worst-off few broke every few hours (the three most-broken people in a season had half of
+# its breaks), and the station was a fog of sobbing and catatonia.
+spent: 24
+
 # The biggest grievance picks the break: the source whose active thoughts add up to the most
 # negative. Sources not listed never pick one. "—" in DESIGN.md falls back to the major break.
 sources:
@@ -37,8 +42,10 @@ weights: { envy: 5 }
 #   insults:  insult the target every this many minutes while they're in the room
 #   wreck:    the target's thought and affection toward the breaker
 #   attack:   a crime of passion (below)
+#   orElse:   what it becomes when it can't happen (proposal, Oct 23: an attack with nobody to attack
+#             smashes the set, terror with nobody to lash out at panics; it happens here, with no target)
 # A break that can't happen (no target, or they're in the fishbowl and it needs to go somewhere)
-# becomes `fallback` instead.
+# becomes its `orElse`, else `fallback`.
 fallback: mope
 kinds:
   mope:            { label: "mopes", room: here, minutes: 60 }
@@ -53,27 +60,38 @@ kinds:
   insult_spree:    { label: "goes on an insulting spree", room: target, target: about, minutes: 60, insults: 10 }
   wreck:           { label: "wrecks someone's things", room: target_bed, target: about, minutes: 15, infraction: damage,
                      wreck: { thought: wrecked, affection: -15 } }
-  attack:          { label: "goes for someone", room: target, target: about, minutes: 10, attack: true }
-  attack_rejecter: { label: "goes for whoever rejected them", room: target, target: about, minutes: 10, attack: true }
-  attack_top:      { label: "goes for the top of the ranking", room: target, target: top, minutes: 10, attack: true }
-  lash_out:        { label: "lashes out", room: target, target: feared, minutes: 10, attack: true }
+  attack:          { label: "goes for someone", room: target, target: about, minutes: 10, attack: true, orElse: tantrum }
+  attack_rejecter: { label: "goes for whoever rejected them", room: target, target: about, minutes: 10, attack: true, orElse: tantrum }
+  attack_top:      { label: "goes for the top of the ranking", room: target, target: top, minutes: 10, attack: true, orElse: tantrum }
+  lash_out:        { label: "lashes out", room: target, target: feared, minutes: 10, attack: true, orElse: panic }
   catatonic:       { label: "sits catatonic", room: here, minutes: 120 }
 
 # Crimes of passion. An extreme attack turns violent only if kindness is at most `kindAtMost` or
-# calm at most `calmAtMost` (drunk kindness counts); otherwise it collapses into `otherwise`.
-# The attack is a fight in which the attacker gets the first blow (proposal: + firstBlow to their
-# roll). The chance it kills: perStrength × the attacker's strength advantage, × the room's
-# weapon (a knife from the cafe, the hot tub). Proposal: they chase the target up to `follow`
+# calm at most `calmAtMost` (drunk kindness counts); otherwise it collapses (`collapse` by the
+# grievance, else `otherwise`). The attack is a fight in which the attacker gets the first blow
+# (proposal: + firstBlow to their roll). The chance it kills: base + perStrength × the attacker's
+# strength advantage, × the room's weapon (a knife from the cafe, the hot tub). Proposal: they chase the target up to `follow`
 # times if the target has moved on by the time they arrive.
 passion:
-  kindAtMost: 3
-  calmAtMost: 2
+  kindAtMost: 4           # proposal (Oct 23, john: a murder about every two weeks): was 3
+  calmAtMost: 4           # proposal (Oct 23): was 2
   # Proposal (the murder nudge, D-113): below the meter's doom line both cutoffs loosen by this
   # much (kind 4 or under, calm 3 or under), so the desperate are a little likelier to turn violent.
   desperate: 1
   otherwise: catatonic
+  # Proposal (Oct 23): a non-violent extreme break collapses by its grievance, so only fear and
+  # grief freeze someone catatonic. Rage at a person becomes a screaming spree at them; rejection
+  # and humiliation go to the bottle.
+  collapse: { person: insult_spree, rejection: drink_binge, humiliation: drink_binge, status: drink_binge }
   firstBlow: 3
+  # Proposal (Oct 23): a base chance, so a winning attacker who isn't stronger can still kill.
+  # Without it half the winners had no chance at all, and murders came once every ~180 days.
+  base: 0.6
   perStrength: 0.05
+  # Proposal (Oct 23, D-050: no more than one murder mystery at once): while a body lies unfound
+  # or a trial is pending, an attack can hurt but not kill. Without it, 17% of murders came while
+  # another was still unresolved.
+  oneAtATime: true
   weapons: { cafe: 4, spa: 3 }
   follow: 3
   witnessFear: 30         # proposal: witnesses' fear of a killer

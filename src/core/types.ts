@@ -71,6 +71,7 @@ export interface Contestant {
   hammeredSince: number | null;
   inventory: string[]; // carried drinks, by quality
   breakdown: Breakdown | null; // in the middle of a mental break
+  spentUntil: number; // no new break before this (breaks.yaml spent)
 }
 
 /** A mental break in progress. Its activity is the break kind; it ends with catharsis. */

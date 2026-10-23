@@ -167,10 +167,18 @@ function crossCheck(d: GameData, dir: string): void {
   for (const [src, row] of Object.entries(br.sources)) for (const [lvl, id] of Object.entries(row)) kind(id, `sources.${src}.${lvl}`);
   kind(br.fallback, 'fallback');
   kind(br.passion.otherwise, 'passion.otherwise');
+  for (const [src, id] of Object.entries(br.passion.collapse)) {
+    kind(id, `passion.collapse.${src}`);
+    if (br.kinds[id]?.attack) errors.push(`${dir}/breaks.yaml: passion.collapse.${src}: a collapse can't be an attack`);
+  }
   thought(br.catharsis, 'breaks.yaml: catharsis');
   thought(br.passion.witnessThought, 'breaks.yaml: passion.witnessThought');
   for (const [id, k] of Object.entries(br.kinds)) {
     if (k.infraction && !r.infractions[k.infraction]) errors.push(`${dir}/breaks.yaml: kinds.${id}.infraction: no rule "${k.infraction}" in rules.yaml`);
+    if (k.orElse) {
+      kind(k.orElse, `kinds.${id}.orElse`);
+      if (br.kinds[k.orElse] && (br.kinds[k.orElse]!.target || br.kinds[k.orElse]!.room !== 'here')) errors.push(`${dir}/breaks.yaml: kinds.${id}.orElse: has to happen "here", with no target`);
+    }
     if (k.wreck) thought(k.wreck.thought, `breaks.yaml: kinds.${id}.wreck.thought`);
     if (!['here', 'bed', 'target', 'target_bed', 'bar'].includes(k.room) && !rooms.has(k.room)) errors.push(`${dir}/breaks.yaml: kinds.${id}.room: no room "${k.room}"`);
     if ((k.room === 'target' || k.room === 'target_bed' || k.attack) && !k.target) errors.push(`${dir}/breaks.yaml: kinds.${id}.target: needed for this room or an attack`);
@@ -196,6 +204,7 @@ function crossCheck(d: GameData, dir: string): void {
   thought(ro.breakup.dumped, 'romance.yaml: breakup.dumped');
   thought(ro.betrayal.thought, 'romance.yaml: betrayal.thought');
   thought(ro.jealousy.thought, 'romance.yaml: jealousy.thought');
+  thought(ro.jealousy.pining.thought, 'romance.yaml: jealousy.pining.thought');
   thought(ro.guilty, 'romance.yaml: guilty');
   if (!d.social.interactions.some((x) => x.id === 'insult')) errors.push(`${dir}/social.yaml: interactions: an "insult" is needed (fights, sprees, confrontations)`);
 

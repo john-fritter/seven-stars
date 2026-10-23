@@ -40,7 +40,7 @@ export function breakLevel(ctx: Ctx, c: Contestant): Level | null {
 
 /** Every hour: anyone awake under a line may break. */
 export function maybeBreak(ctx: Ctx, c: Contestant): void {
-  if (c.asleep || c.breakdown || !c.activity || c.activity.action === 'fight' || c.activity.action === 'lovin' || onToilet(ctx, c)) return;
+  if (c.asleep || c.breakdown || ctx.w.t < c.spentUntil || !c.activity || c.activity.action === 'fight' || c.activity.action === 'lovin' || onToilet(ctx, c)) return;
   const level = breakLevel(ctx, c);
   if (!level || !chance(ctx.w.rng, ctx.data.breaks.chance[level])) return;
   const b = ctx.data.breaks;
@@ -116,16 +116,16 @@ export function startBreak(ctx: Ctx, c: Contestant, level: Level, source: string
     const violent = (by: number) => axis(ctx, c, 'kind') <= p.kindAtMost + by || c.personality.calm <= p.calmAtMost + by;
     nudged = !violent(0) && violent(loosen);
     if (!violent(loosen)) {
-      id = p.otherwise;
+      id = p.collapse[source] ?? p.otherwise;
       kind = b.kinds[id]!;
     }
   }
   let target = targetFor(ctx, c, kind, about);
   let room = roomFor(ctx, c, kind, target);
   // In the fishbowl, with nobody to take it out on, or a bender for someone who never drinks, it
-  // becomes the fallback.
+  // becomes its `orElse` (an attack with nobody to attack smashes the set), or else the fallback.
   if ((kind.target && !target) || room === null || (c.confined && room !== c.room) || (kind.drinks && traitFx(ctx.data, c).drink === 0)) {
-    id = b.fallback;
+    id = kind.orElse ?? b.fallback;
     kind = b.kinds[id]!;
     target = null;
     room = c.room;
@@ -197,18 +197,21 @@ export function endBreak(ctx: Ctx, c: Contestant): void {
   const bd = c.breakdown;
   if (!bd) return;
   c.breakdown = null;
+  c.spentUntil = ctx.w.t + ctx.data.breaks.spent * 60;
   think(ctx, c, ctx.data.breaks.catharsis);
   log(ctx, 'break_end', [c.id], c.room, { kind: bd.kind, minutes: ctx.w.t - bd.since });
 }
 
 /**
  * A crime of passion: a fight where the attacker strikes first. If the attacker wins, the chance it
- * kills is perStrength × their strength advantage × the room's weapon.
+ * kills is (base + perStrength × their strength advantage) × the room's weapon.
  */
 export function attack(ctx: Ctx, c: Contestant, target: Contestant): void {
   const p = ctx.data.breaks.passion;
   const room = c.room;
-  const killChance = p.perStrength * Math.max(0, c.strength - target.strength) * (p.weapons[room] ?? 1);
+  // One murder mystery at a time (D-050): while a body lies unfound or a trial is pending, nobody dies of it.
+  const open = p.oneAtATime && (ctx.w.show.bodies.length > 0 || ctx.w.show.trials.length > 0);
+  const killChance = open ? 0 : (p.base + p.perStrength * Math.max(0, c.strength - target.strength)) * (p.weapons[room] ?? 1);
   const fight = brawl(ctx, c, target, {
     firstBlow: p.firstBlow,
     lethal: (winner) => winner === c && chance(ctx.w.rng, killChance),

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { axis, drink, giftDrink, hangover, qualityFor, soberMinute, stageOf } from '../src/core/booze.js';
 import { createWorld, step } from '../src/core/index.js';
 import { fadeLedger, meet, rel } from '../src/core/ledger.js';
-import { askExclusive, evidence, exclusiveOdds, kiss, kissOdds, lovin, propositionOdds, secretFlingOdds } from '../src/core/romance.js';
+import { askExclusive, evidence, exclusiveOdds, kiss, kissOdds, lovin, piningMult, propositionOdds, secretFlingOdds } from '../src/core/romance.js';
 import { interactionWeight } from '../src/core/social.js';
 import type { Contestant, World } from '../src/core/types.js';
 import { ctxFor, data } from './helpers.js';
@@ -161,9 +161,29 @@ describe('romance', () => {
     const e = ctx.events.find((x) => x.type === 'betrayal')!;
     expect(e.actors).toEqual([a.id, b.id, c.id]);
     expect(Object.keys(e.data!.awards as object)).toHaveLength(3);
+    // The betrayed turn on the rival too.
+    expect(a.thoughts.some((x) => x.id === 'jealous' && x.about === c.id)).toBe(true);
+    expect(rel(a, c)!.affection).toBeLessThan(0);
+    // Jealousy only if they still care.
+    a.thoughts = [];
     rel(a, b)!.label = 'dating';
+    Object.assign(rel(a, b)!, { affection: 0, attraction: 8 });
+    evidence(ctx, a, b, c, 'kiss');
+    expect(ctx.events.some((x) => x.type === 'jealous')).toBe(false);
+    Object.assign(rel(a, b)!, { affection: 30, attraction: 8 });
+    a.monogamy = 10;
+    expect(piningMult(ctx, a, b)).toBe(1);
     evidence(ctx, a, b, c, 'kiss');
     expect(ctx.events.some((x) => x.type === 'jealous')).toBe(true);
+    // ...then resent the rival and pine for the partner, harder the more monogamous they are.
+    expect(a.thoughts.some((x) => x.id === 'pining' && x.about === b.id)).toBe(true);
+    expect(piningMult(ctx, a, b)).toBeCloseTo(5);
+    // Seeing it again soon after doesn't count again.
+    const seen = ctx.events.filter((x) => x.type === 'jealous').length;
+    evidence(ctx, a, b, c, 'kiss');
+    expect(ctx.events.filter((x) => x.type === 'jealous').length).toBe(seen);
+    a.monogamy = 0;
+    expect(piningMult(ctx, a, b)).toBe(1);
     rel(a, b)!.label = 'none';
     const n = ctx.events.length;
     evidence(ctx, a, b, c, 'kiss');

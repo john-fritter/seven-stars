@@ -490,12 +490,16 @@ const breakKind = z.object({
   insults: z.number().int().positive().optional(),
   wreck: z.object({ thought: z.string(), affection: num }).optional(),
   attack: z.boolean().default(false),
+  // What it becomes when it can't happen (no target, or somewhere they can't go), before `fallback`.
+  orElse: z.string().optional(),
 });
 
 export const breaksSchema = z.object({
   lines: z.object({ minorBase: num, minorPerVolatile: num, majorShare: unit, extremeShare: unit }),
   chance: z.object({ minor: unit, major: unit, extreme: unit }),
   catharsis: z.string(),
+  // Hours after a break ends before they can break again (proposal: the breaks were piling onto a few).
+  spent: num.nonnegative().default(0),
   sources: z.record(z.string(), z.object({ minor: z.string(), major: z.string(), extreme: z.string() })),
   // A source's bad thoughts count × this when picking the biggest grievance (mood is unchanged).
   weights: z.record(z.string(), num.positive()).default({}),
@@ -507,7 +511,12 @@ export const breaksSchema = z.object({
     // The murder nudge: below the meter's doom line both cutoffs loosen by this much.
     desperate: num.nonnegative().default(0),
     otherwise: z.string(),
+    // A non-violent collapse by grievance (a source not listed collapses into `otherwise`).
+    collapse: z.record(z.string(), z.string()).default({}),
     firstBlow: num,
+    base: unit.default(0),
+    // While a body lies unfound or a trial is pending, attacks don't kill.
+    oneAtATime: z.boolean().default(false),
     perStrength: num.nonnegative(),
     weapons: z.record(z.string(), num).default({}),
     follow: z.number().int().nonnegative(),
@@ -543,7 +552,18 @@ export const romanceSchema = z.object({
   breakup: z.object({ affectionBelow: num, dumped: z.string() }),
   attachedK: num,
   betrayal: z.object({ affection: num, thought: z.string(), confront: unit }),
-  jealousy: z.object({ affection: num, thought: z.string() }),
+  jealousy: z.object({
+    affection: num,
+    thought: z.string(),
+    // Only someone who still cares is jealous: affection and attraction for the partner at least this.
+    cares: z.object({ affection: num, attraction: num }),
+    // Hours before seeing the same rival again makes them jealous all over again.
+    again: num.nonnegative().default(0),
+    // The grudge against the rival: affection × 1 + kindK × (kind − 5) ÷ 5.
+    rival: z.object({ affection: num, kindK: num }),
+    // Pining: romance toward the partner × 1 + (boost − 1) × (1 + monogamyK × (monogamy − 5) ÷ 5) while it lasts.
+    pining: z.object({ thought: z.string(), boost: num.positive(), monogamyK: num }),
+  }),
   guilty: z.string(),
 });
 

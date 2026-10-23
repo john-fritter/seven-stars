@@ -4,7 +4,7 @@ import type { InteractionDef } from '../data/schema.js';
 import { actionDef, bedmateFeeling, begin, endActivity, FIGHT } from './actions.js';
 import { axis, giftDrink, moveMult, stageMult, stageOf } from './booze.js';
 import { log, type Ctx } from './context.js';
-import { askExclusive, attachedMult, breakUp, evidence, kiss, invite, moveAllowed, proposition } from './romance.js';
+import { askExclusive, attachedMult, breakUp, evidence, kiss, invite, moveAllowed, piningMult, proposition } from './romance.js';
 import { boldness, chanceBoost, interactionBoost } from './ratings.js';
 import { witnessesOf } from './scoring.js';
 import { infraction } from './show.js';
@@ -57,7 +57,7 @@ export function socialRound(ctx: Ctx): void {
     const p = ctx.data.social.partner;
     const weights = others.map((o) => {
       const r = relation(ctx, c, o);
-      return Math.max(p.min, 1 + (r.affection / 100) * p.affection + (r.attraction / 10) * p.attraction);
+      return Math.max(p.min, 1 + (r.affection / 100) * p.affection + (r.attraction / 10) * p.attraction) * piningMult(ctx, c, o);
     });
     const o = others[weightedIndex(ctx.w.rng, weights)]!;
     const defs = interactionsFor(ctx, c, o);
@@ -119,7 +119,7 @@ export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: I
   for (const x of ctx.w.contestants) {
     if (x !== c && x.room === c.room && !x.asleep) w *= traitFx(ctx.data, x).nearby[def.id] ?? 1;
   }
-  if (def.move && def.move !== 'gift' && def.move !== 'breakup') w *= attachedMult(ctx, c, o);
+  if (def.move && def.move !== 'gift' && def.move !== 'breakup') w *= attachedMult(ctx, c, o) * piningMult(ctx, c, o);
   w *= interactionBoost(ctx, c, o, def); // what it would pay, as the meter falls
   for (const s of def.scale) {
     const k = s.k ?? 1;

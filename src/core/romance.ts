@@ -291,23 +291,52 @@ function aftermath(ctx: Ctx, b: Contestant, c: Contestant, what: string): void {
   }
 }
 
-/** A sees B with C. A's label for B decides: betrayal if A believed they were exclusive, else jealousy. */
+/**
+ * A sees B with C. A's label for B decides: betrayal if A believed they were exclusive, else
+ * jealousy, if A still cares about B. Either way A turns on the rival, C; a jealous A also pines
+ * for B and goes after them harder.
+ */
 export function evidence(ctx: Ctx, a: Contestant, b: Contestant, c: Contestant, what: string): void {
   const ro = ctx.data.romance;
+  const j = ro.jealousy;
   const label = labelOf(a, b);
   if (label === 'exclusive') {
     feel(ctx, a, b, 'affection', ro.betrayal.affection, 'betrayal');
     think(ctx, a, ro.betrayal.thought, b.id);
     log(ctx, 'betrayal', [a.id, b.id, c.id], a.room, { what });
+    resent(ctx, a, c);
     confront(ctx, a, b, traitFx(ctx.data, a).confront ?? ro.betrayal.confront);
   } else if (JEALOUS.includes(label)) {
-    feel(ctx, a, b, 'affection', ro.jealousy.affection, 'jealousy');
-    think(ctx, a, ro.jealousy.thought, b.id);
+    const r = rel(a, b)!;
+    if (r.affection < j.cares.affection || r.attraction < j.cares.attraction) return;
+    // Seeing it again soon after doesn't start it over.
+    const hours = ctx.data.thoughts.thoughts[j.thought]!.hours;
+    if (a.thoughts.some((x) => x.id === j.thought && x.about === c.id && x.until - hours * 60 > ctx.w.t - j.again * 60)) return;
+    feel(ctx, a, b, 'affection', j.affection, 'jealousy');
+    resent(ctx, a, c);
+    think(ctx, a, j.pining.thought, b.id);
     log(ctx, 'jealous', [a.id, b.id, c.id], a.room, { what, label });
     // Only the Jealous confront over mere jealousy.
     const always = traitFx(ctx.data, a).confront;
     if (always) confront(ctx, a, b, always);
   }
+}
+
+/** A turns on the rival: a grudge (the jealous thought, about them) that hits harder the less kind A is. */
+function resent(ctx: Ctx, a: Contestant, rival: Contestant): void {
+  const j = ctx.data.romance.jealousy;
+  think(ctx, a, j.thought, rival.id);
+  feel(ctx, a, rival, 'affection', j.rival.affection * Math.max(0, axisFactor(j.rival.kindK, axis(ctx, a, 'kind'))), 'rival');
+}
+
+/**
+ * How much harder A goes after B while pining for them (romance.yaml jealousy.pining): × boost,
+ * scaled by monogamy, so the monogamous fight to win them back and the rest mostly resent.
+ */
+export function piningMult(ctx: Ctx, a: Contestant, b: Contestant): number {
+  const p = ctx.data.romance.jealousy.pining;
+  if (!a.thoughts.some((x) => x.id === p.thought && x.about === b.id)) return 1;
+  return Math.max(1, 1 + (p.boost - 1) * axisFactor(p.monogamyK, a.monogamy));
 }
 
 /** Having it out: an insult to their face, if they're both here and awake. */

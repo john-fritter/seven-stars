@@ -116,20 +116,26 @@ describe('breaks', () => {
     }
   });
 
-  it('collapse into a catatonic sulk unless the breaker is cruel or volatile, and pay by level', () => {
+  it('collapse by grievance unless the breaker is cruel or volatile, and pay by level', () => {
     const { w, ctx, cast } = aboard();
     const [a, b] = cast as [Contestant, Contestant];
     alone(w, a, b);
     Object.assign(a, { room: 'cafe', personality: flat(5) });
     Object.assign(b, { room: 'cafe', asleep: false });
     w.show.today = {};
-    startBreak(ctx, a, 'extreme', 'person', 'attack', b.id);
+    // Terror freezes them; rage at a person becomes a screaming spree.
+    startBreak(ctx, a, 'extreme', 'fear', 'lash_out', b.id);
     expect(a.breakdown?.kind).toBe('catatonic');
     const e = ctx.events.find((x) => x.type === 'break')!;
     expect(e.data!.awards).toEqual({ [a.id]: 15 * 1.15 }); // b watched
     step(w, 121);
     expect(a.breakdown).toBeNull();
     expect(a.thoughts.some((x) => x.id === 'catharsis')).toBe(true);
+    alone(w, a, b);
+    Object.assign(a, { room: 'cafe', asleep: false });
+    Object.assign(b, { room: 'cafe', asleep: false });
+    startBreak(ctx, a, 'extreme', 'person', 'attack', b.id);
+    expect(a.breakdown?.kind).toBe('insult_spree');
 
     a.personality.kind = 2;
     alone(w, a, b);
@@ -181,9 +187,10 @@ describe('breaks', () => {
     expect(revealed.data!.lifetime).toBeCloseTo(before + 100);
   });
 
-  it('never kills without a strength advantage', () => {
+  it('with no base chance, never kills without a strength advantage', () => {
     const lethal = structuredClone(data);
     lethal.breaks.passion.firstBlow = 100;
+    lethal.breaks.passion.base = 0;
     const { w, ctx, cast } = aboard(31, lethal);
     const [a, b] = cast as [Contestant, Contestant];
     alone(w, a, b);
@@ -193,5 +200,30 @@ describe('breaks', () => {
     attack(ctx, a, b);
     expect(w.contestants.includes(b)).toBe(true);
     expect(b.health).toBeGreaterThanOrEqual(10);
+  });
+
+  it('can kill on the base chance alone, even when weaker', () => {
+    const lethal = structuredClone(data);
+    lethal.breaks.passion.firstBlow = 100;
+    lethal.breaks.passion.base = 1;
+    const { w, ctx, cast } = aboard(31, lethal);
+    const [a, b] = cast as [Contestant, Contestant];
+    alone(w, a, b);
+    Object.assign(a, { room: 'cafe', strength: 4 });
+    Object.assign(b, { room: 'cafe', strength: 6, asleep: false });
+    meet(ctx, a, b);
+    attack(ctx, a, b);
+    expect(w.contestants.includes(b)).toBe(false);
+  });
+
+  it("can't break again until they've had a rest", () => {
+    const { w, ctx, cast } = aboard();
+    const [a, b] = cast as [Contestant, Contestant];
+    alone(w, a, b);
+    Object.assign(a, { room: 'cafe', personality: flat(5) });
+    startBreak(ctx, a, 'minor', 'fear', 'panic', null);
+    step(w, 31);
+    expect(a.breakdown).toBeNull();
+    expect(a.spentUntil).toBe(w.t - 1 + data.breaks.spent * 60);
   });
 });

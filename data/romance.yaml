@@ -91,7 +91,20 @@ betrayal:
   thought: betrayed
   confront: 0.5                   # proposal: chance A confronts B on the spot with an insult
 jealousy:
-  affection: -10                  # proposal
-  thought: jealous
+  affection: -5                   # proposal (Oct 23: was −10; the grudge now goes to the rival)
+  thought: jealous                # about the rival, for jealousy and betrayal alike
+  # Proposals (Oct 23, john: jealousy should both resent the rival and try to win them back).
+  # Only someone who still cares is jealous: 40% of jealousy was over exes and 40% over someone
+  # they'd only flirted with, and it fired 1.6 times per kiss.
+  cares: { affection: 15, attraction: 5 }
+  # Hours before seeing them with the same rival again counts again (the season logs had the same
+  # jealousy three times in half an hour).
+  again: 12
+  # The grudge: affection toward the rival × 1 + kindK × (kind − 5) ÷ 5 (kind 0: −30, kind 10: −10).
+  rival: { affection: -20, kindK: -0.5 }
+  # Pining for the partner while the thought lasts: who they seek out and every romance move toward
+  # the partner × 1 + (boost − 1) × (1 + monogamyK × (monogamy − 5) ÷ 5), so monogamy 10 is × 5 and
+  # monogamy 0 × 1.
+  pining: { thought: pining, boost: 3, monogamyK: 1 }
 # B feels guilty about A when B believes they're exclusive with A and kisses or beds someone else.
 guilty: guilty
