@@ -9,6 +9,8 @@ CONCEPT.md, then DECISIONS.md, then DESIGN.md. CLAUDE.md has the build rules.
 npm install
 npm run sim -- run --days 30 --seeds 200          # summary against the success targets, full JSON in results/
 npm run sim -- sweep --param actions.mealPull --from 1 --to 5 --step 1 --days 30 --seeds 50
+npm run sim -- stories --days 30 --seeds 24       # story sampling: deaths, the ceremony, romance, cage reruns, murders
+npm run sim -- season --seed 24 --days 30         # one season, day by day, with names
 npm test
 npm run typecheck
 ```

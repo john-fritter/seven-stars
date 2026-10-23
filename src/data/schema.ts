@@ -180,6 +180,7 @@ export const actionsSchema = z.object({
   mealPull: num,
   nightSleepPull: num,
   idle: z.object({ minutes: z.number().int().positive(), score: num }),
+  encore: unit,
 });
 
 const bell = z.object({ mean: num, sd: num.nonnegative() });
@@ -272,7 +273,7 @@ export const rulesSchema = z.object({
   ),
   sentences: z.array(sentenceSchema).min(1),
   waiver: z.object({ minPoints: num, chance: unit }),
-  sneak: z.object({ cost: num, honestK: num, braveK: num }),
+  sneak: z.object({ cost: num, honestK: num, braveK: num, peril: z.object({ below: num.positive(), k: num.nonnegative() }) }),
   fighting: z.enum(['both', 'swinger']),
   sentencedThought: z.string(),
   fishbowl: z.object({
@@ -533,7 +534,9 @@ export const romanceSchema = z.object({
     // Where: a bed by default; sometimes right here, which is a show for anyone watching.
     bed: z.object({ walkCost: num, crowd: num }),
     here: z.object({ chance: unit, noBed: unit, modestyK: num, braveK: num, witnessThought: z.string() }),
+    kissesFirst: z.number().int().nonnegative(),
   }),
+  notDuring: z.array(z.string()),
   bedtime: z.object({ chance: unit, asleep: unit, doze: num.nonnegative(), morning: unit }),
   invite: z.object({ lead: num.nonnegative() }),
   exclusive: z.object({ loyalK: num, thought: z.string(), refused: z.string() }),
@@ -577,7 +580,7 @@ export type Format = (typeof FORMATS)[number];
 
 export const eventsSchema = z.object({
   rotation: z.array(z.enum(FORMATS)).min(2),
-  cage_match: z.object({ room: z.string(), watchFun: num, prizeThoughts: z.boolean().default(true) }),
+  cage_match: z.object({ room: z.string(), watchFun: num, rematch: num.nonnegative(), prizeThoughts: z.boolean().default(true) }),
   dance_off: z.object({
     room: z.string(),
     dancers: z.tuple([z.number().int().min(2), z.number().int().min(2)]),
@@ -613,6 +616,7 @@ export const trialsSchema = z.object({
   fearNudge: num,
   testimony: z.object({ base: num, trust: num }),
   survivedThought: z.string(),
+  memory: z.object({ affection: num, fear: num, friend: num, floor: num, thought: z.string(), near: z.string() }),
 });
 
 const leanBy = z.union([axisEnum, z.enum(['modesty', 'drinking', 'monogamy'])]);

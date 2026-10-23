@@ -145,8 +145,9 @@ function guestsOut(ctx: Ctx): void {
 function arrivals(ctx: Ctx): void {
   const w = ctx.w;
   while (w.contestants.length < CAST_SIZE) {
-    const c = cast(ctx.data, w.rng, w.contestants, `c${w.nextId++}`, w.t);
+    const c = cast(ctx.data, w.rng, w.contestants, `c${w.nextId++}`, w.t, w.show.names);
     w.contestants.push(c);
+    w.show.names.push(c.name);
     log(ctx, 'arrive', [c.id], c.room, { name: c.name, species: c.species, pronouns: c.pronouns, traits: c.traits });
     trappedHere(ctx, c);
     for (const id of traitFx(ctx.data, c).arrival) think(ctx, c, id);

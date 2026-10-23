@@ -64,15 +64,20 @@ export function feel(ctx: Ctx, a: Contestant, b: Contestant, dim: Dim, amount: n
  * Once a day, feelings fade a little toward neutral. Loyal people's affection fades slower, and
  * so does affection for someone they believe they're dating or exclusive with. Grudges stick:
  * dislike fades slower, slower still for the volatile, and at the rate their traits say (never
- * for a Grudge-holder, twice as fast for the Forgiving).
+ * for a Grudge-holder, twice as fast for the Forgiving). Dislike of a believed killer stops at the
+ * floor (trials.yaml memory).
  */
 export function fadeLedger(ctx: Ctx, c: Contestant): void {
   const l = ctx.data.social.ledger;
   const aff = l.fadePerDay.affection * axisFactor(l.loyalK, c.personality.loyal);
   const grudge = traitFx(ctx.data, c).dislikeFade * l.dislikeFade * axisFactor(l.dislikeCalmK, c.personality.calm);
+  const floor = ctx.data.trials.memory.floor;
   for (const r of Object.values(c.ledger)) {
     const rate = aff * (r.label === 'dating' || r.label === 'exclusive' ? l.loverFade : 1) * (r.affection < 0 ? grudge : 1);
+    const before = r.affection;
     r.affection *= 1 - Math.min(1, rate);
+    // Someone they believe is a killer stays a rival (trials.yaml memory).
+    if (r.killer && before <= floor) r.affection = Math.min(r.affection, floor);
     r.trust *= 1 - l.fadePerDay.trust;
     r.fear *= 1 - l.fadePerDay.fear;
   }

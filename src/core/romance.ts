@@ -39,13 +39,15 @@ export function moveAllowed(ctx: Ctx, c: Contestant, o: Contestant, def: Interac
   const ro = ctx.data.romance;
   switch (def.move) {
     case 'proposition': {
-      // Somewhere they believe is private, or their own bedroom.
+      // Somewhere they believe is private, or their own bedroom, with a kiss or two behind them,
+      // and not in the middle of the ceremony.
       const room = ctx.st.room.get(c.room)!;
+      if (busy(ctx, c) || busy(ctx, o) || (rel(c, o)?.kisses ?? 0) < ro.proposition.kissesFirst) return false;
       return room.privacy >= ro.proposition.privacy || (room.access === 'occupants' && canEnter(ctx, c, room.id));
     }
     case 'invite':
-      // Getting on for bedtime, with a bed for two to go to.
-      return isNightFor(ctx, c, ctx.w.t + ro.invite.lead) && bedFor(ctx, c, o) !== null;
+      // Getting on for bedtime, with a bed for two to go to, once the ceremony is over.
+      return !busy(ctx, c) && !busy(ctx, o) && isNightFor(ctx, c, ctx.w.t + ro.invite.lead) && bedFor(ctx, c, o) !== null;
     case 'breakup': {
       const r = rel(c, o)!;
       return r.affection <= ro.breakup.affectionBelow || c.thoughts.some((x) => x.id === ro.betrayal.thought && x.about === o.id);
@@ -53,6 +55,11 @@ export function moveAllowed(ctx: Ctx, c: Contestant, o: Contestant, def: Interac
     default:
       return true;
   }
+}
+
+/** At something nobody slips away from to go to bed (romance.yaml notDuring): the ceremony, the daily event, a trial. */
+function busy(ctx: Ctx, c: Contestant): boolean {
+  return !!c.activity && ctx.data.romance.notDuring.includes(c.activity.action);
 }
 
 /** Odds a kiss lands: their attraction back ÷ 10 × (1 + their affection ÷ 100). */
@@ -192,12 +199,19 @@ function bedmate(ctx: Ctx, c: Contestant, bed: string): Contestant | undefined {
   return ctx.w.contestants.find((o) => o !== c && o.activity?.object === bed && o.activity.phase === 'do' && o.activity.action !== LOVIN);
 }
 
-/** In a bed together: someone who wants them (the proposition's bars) asks with odds `ask`. */
+/**
+ * In a bed together: someone who wants them (the proposition's bars) asks with odds `ask`. A pair
+ * who haven't kissed yet (romance.yaml proposition.kissesFirst) get a goodnight kiss attempt instead.
+ */
 function inBed(ctx: Ctx, c: Contestant, mate: Contestant, bed: string, ask: number): void {
   const p = ctx.data.romance.proposition;
   const r = rel(c, mate);
   if (!r || r.attraction < p.attraction || r.affection < p.affection) return;
   if (!chance(ctx.w.rng, ask * moveMult(ctx, c, 'proposition'))) return;
+  if (r.kisses < p.kissesFirst) {
+    kiss(ctx, c, mate);
+    return;
+  }
   const odds = propositionOdds(ctx, mate, c);
   if (!chance(ctx.w.rng, odds)) {
     think(ctx, c, p.turnedDown, mate.id);

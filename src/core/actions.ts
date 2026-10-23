@@ -14,7 +14,7 @@ import { addNeed, needUrgency } from './needs.js';
 import { between, chance, pick, weightedIndex } from './rng.js';
 import { bedtime, labelOf, lovinArrive, morning } from './romance.js';
 import { walkMinutes, type ObjectInstance } from './station.js';
-import { actionPull, desperateEase } from './ratings.js';
+import { actionPull, desperateEase, ownRepeats } from './ratings.js';
 import { caughtIn, infraction, sneakCost } from './show.js';
 import { askToShare, companyPull, expectedKnockOdds, guestOf, knock, occupants } from './social.js';
 import { discomfortAt, preferredSetting, setThermostat, situationComfort } from './temperature.js';
@@ -116,8 +116,10 @@ function scoreAction(ctx: Ctx, c: Contestant, def: ActionDef, room: string, othe
 
   const enough = def.kind === 'drink' ? soberFactor(ctx, c) * traitFx(ctx.data, c).drink : 1;
   const after = def.nightTags.length && isNightFor(ctx, c, ctx.w.t) ? tagMult(ctx.data, c, def.nightTags) : 1; // the hot tub after hours
+  // A performance gets old for the performer: the stage gets passed around.
+  const encore = def.logs ? ctx.data.actions.encore ** ownRepeats(ctx, c, def.logs) : 1;
   // Playing for the cameras: whatever scores pulls harder as the meter falls (ratings.ts).
-  return (needs + pulls - costs) * personalityOf(ctx.data, c, def) * after * desperateEase(ctx, c, def) * moodMult(ctx, c, def.tags) * enough + actionPull(ctx, c, def);
+  return (needs + pulls - costs) * personalityOf(ctx.data, c, def) * after * desperateEase(ctx, c, def) * moodMult(ctx, c, def.tags) * enough * encore + actionPull(ctx, c, def);
 }
 
 function mealScore(ctx: Ctx, c: Contestant, meal: MealDef): number {
@@ -377,7 +379,7 @@ function arrive(ctx: Ctx, c: Contestant): void {
   }
   a.phase = 'do';
   // The cameras see everything: walking in above your rank is logged the moment it happens.
-  if (!canEnter(ctx, c, a.room) && !caughtIn(ctx, c, a.room)) infraction(ctx, c, 'above_rank', a.room);
+  if (!canEnter(ctx, c, a.room) && !caughtIn(ctx, c, a.room)) infraction(ctx, c, 'above_rank', a.room, 0, { doing: a.action });
   if (a.minutes !== null) a.endAt = ctx.w.t + a.minutes;
   if (a.action === MEAL) c.eaten[ctx.data.schedule.meals.find((m) => m.id === a.meal)!.group] = dayOf(ctx.w.t);
   const def = actionDef(ctx, a);

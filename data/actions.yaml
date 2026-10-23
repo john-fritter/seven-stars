@@ -9,6 +9,10 @@ recreationTaste:              # proposal: fun gains × this
   other: 0.8
 mealPull: 3                   # proposal: the pull of a scheduled meal on top of hunger
 nightSleepPull: 3             # proposal: the pull of a bed between lights-dim and the wake chime, × bed quality
+# Proposal (season logs, Oct 23: one singer did a quarter of a season's karaoke, 173 songs in
+# one month). A performance (an action that logs a scoring event) scores × encore for each time
+# they've already done it today, so the stage gets passed around.
+encore: 0.6
 idle:                         # proposal: the fallback when nothing scores
   minutes: 15
   score: 0.05

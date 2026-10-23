@@ -406,6 +406,8 @@ function describe(e: SimEvent): string | null {
       return d.announced ? `The announcer regrets to inform you that ${d.name} is dead (${roomName(e.room)}). The robots collect.` : `${a[0]} finds ${d.name}'s body in the ${roomName(e.room)}!`;
     case 'accusation':
       return `J'ACCUSE: ${a[0]} accuses ${a[1]} of murdering ${d.name}. Trial ${d.day === Math.floor(e.t / 1440) + 1 ? 'this' : 'tomorrow'} morning.${d.right ? '' : ' (They didn\'t do it.)'}`;
+    case 'killer_known':
+      return `${a.slice(1).join(', ')} won't forget: ${a[0]} killed ${d.name}.`;
     case 'no_accusation':
       return `Nobody dares accuse anyone of killing ${d.name}.`;
     case 'trial_called':

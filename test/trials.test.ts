@@ -106,7 +106,7 @@ describe('trials', () => {
     introduce(ctx, cast);
     const [accuser, accused, ...voters] = cast as [Contestant, Contestant, ...Contestant[]];
     for (const c of cast) Object.assign(c, { room: 'common', asleep: false, confined: null, breakdown: null, activity: { action: TRIAL, object: null, room: 'common', phase: 'do', startedAt: w.t, arriveAt: w.t, minutes: null, endAt: w.t + 30 } });
-    const trial: Trial = { day: dayOf(w.t), victim: 'gone', name: 'Gone', killer: accused.id, accuser: accuser.id, accused: accused.id, witnesses: [] };
+    const trial: Trial = { day: dayOf(w.t), victim: 'gone', name: 'Gone', killer: accused.id, accuser: accuser.id, accused: accused.id, witnesses: [], feelings: {} };
     w.show.trials = [trial];
     return { w, ctx, cast, accuser, accused, voters, trial };
   }

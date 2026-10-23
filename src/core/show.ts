@@ -15,9 +15,9 @@ import { found } from './trials.js';
 import type { Body, Contestant } from './types.js';
 
 /** Logs an infraction and holds it for the ceremony. `scored` is what the act itself earned them. */
-export function infraction(ctx: Ctx, c: Contestant, rule: string, room: string, scored = 0): void {
+export function infraction(ctx: Ctx, c: Contestant, rule: string, room: string, scored = 0, detail: Record<string, unknown> = {}): void {
   ctx.w.show.pending.push({ who: c.id, rule, t: ctx.w.t, room, scored });
-  log(ctx, 'infraction', [c.id], room, { rule });
+  log(ctx, 'infraction', [c.id], room, { rule, ...detail });
   // Sneaking in is a rush for the brave; sneaking and stealing weigh on the honest.
   const mo = ctx.data.thoughts.moments;
   if (mo.risky.infractions.includes(rule)) think(ctx, c, mo.risky.thought);
@@ -31,12 +31,14 @@ export function caughtIn(ctx: Ctx, c: Contestant, room: string): boolean {
 
 /**
  * The scoring cost of sneaking into a room above your rank:
- * cost × (1 + honestK × (honest − 5) ÷ 5) × (1 + braveK × (brave − 5) ÷ 5).
+ * cost × (1 + honestK × (honest − 5) ÷ 5) × (1 + braveK × (brave − 5) ÷ 5)
+ *      × (1 + peril.k × max(0, 1 − meter ÷ peril.below)), since a fine could finish them.
  */
 export function sneakCost(ctx: Ctx, c: Contestant): number {
   const s = ctx.data.rules.sneak;
   const f = (k: number, axis: number) => Math.max(0, 1 + (k * (axis - 5)) / 5);
-  return s.cost * f(s.honestK, c.personality.honest) * f(s.braveK, c.personality.brave);
+  const peril = 1 + s.peril.k * Math.max(0, 1 - c.meter / s.peril.below);
+  return s.cost * f(s.honestK, c.personality.honest) * f(s.braveK, c.personality.brave) * peril;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -52,7 +54,7 @@ export function rollCall(ctx: Ctx, action = CEREMONY, room = ctx.data.schedule.c
     // Proposal: someone in the middle of a breakdown is excused.
     const ok = c.confined !== null || c.breakdown !== null || c.activity?.action === action || (c.room === room && !c.asleep);
     if (ok) here.push(c);
-    else infraction(ctx, c, rule, c.room);
+    else infraction(ctx, c, rule, c.room, 0, { asleep: c.asleep, doing: c.activity?.action ?? null });
   }
   return here;
 }
