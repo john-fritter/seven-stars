@@ -14,11 +14,14 @@ export interface StorySeed {
   skipped: Record<string, number>; // skipped-ceremony infractions by what they were doing
   sentenceKinds: Record<string, number>; // sentences by their infractions
   deathCauses: Record<string, number>;
+  breakKinds: Record<string, number>;
   topSinger: number; // the season's busiest karaoke singer, their performances
   karaoke: number;
 }
 
 const HOSTILE = new Set(['insult', 'slight', 'glass_mock']);
+const ROMANCE = new Set(['flirt', 'kiss', 'kiss_rebuff', 'lovin', 'proposition', 'turned_down', 'invite', 'exclusive', 'exclusive_refused']);
+const JEALOUS_WINDOW = 2 * MINUTES_PER_DAY;
 const pairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
 function add(m: Record<string, number>, k: string, v = 1): void {
@@ -27,7 +30,7 @@ function add(m: Record<string, number>, k: string, v = 1): void {
 
 /** Runs one season and counts what a viewer would notice. */
 export function storySeed(data: GameData, seed: number, days: number): StorySeed {
-  const s: StorySeed = { seed, days, n: {}, sneaks: {}, skipped: {}, sentenceKinds: {}, deathCauses: {}, topSinger: 0, karaoke: 0 };
+  const s: StorySeed = { seed, days, n: {}, sneaks: {}, skipped: {}, sentenceKinds: {}, deathCauses: {}, breakKinds: {}, topSinger: 0, karaoke: 0 };
   const n = s.n;
   const world = createWorld(data, seed);
   const kissed = new Set<string>();
@@ -39,12 +42,33 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
   const killers = new Map<string, number>(); // living killers -> when the murder happened
   const known = new Set<string>(); // killers someone believes did it
   let booked = false;
+  // Jealousy (and betrayal) in the last two days: did the jealous one turn on the rival, or go after the partner?
+  const jealousy: { a: string; b: string; c: string; t: number; rival: boolean; back: boolean; won: boolean }[] = [];
+  const breakers = new Map<string, number>();
   for (let d = 0; d < days; d++) {
     const events: SimEvent[] = step(world, MINUTES_PER_DAY);
     const today = new Set<string>();
     for (const e of events) {
       const data = e.data ?? {};
       const [a, b] = e.actors;
+      while (jealousy.length && jealousy[0]!.t < e.t - JEALOUS_WINDOW) jealousy.shift();
+      for (const j of jealousy) {
+        if (!j.won && (e.type === 'kiss' || e.type === 'lovin') && ((a === j.a && b === j.b) || (a === j.b && b === j.a))) {
+          j.won = true;
+          add(n, 'jealousWon');
+        }
+        if (a !== j.a) continue;
+        const at = b === j.c ? 'rival' : b === j.b ? 'partner' : null;
+        if (at === 'rival' && !j.rival && (HOSTILE.has(e.type) || e.type === 'fight' || e.type === 'cage_match' || e.type === 'break')) {
+          j.rival = true;
+          add(n, 'jealousRival');
+          if (e.type === 'fight' || e.type === 'cage_match' || (e.type === 'break' && data.level === 'extreme')) add(n, 'jealousRivalViolent');
+        }
+        if (at === 'partner' && !j.back && ROMANCE.has(e.type)) {
+          j.back = true;
+          add(n, 'jealousBack');
+        }
+      }
       switch (e.type) {
         case 'arrive': {
           const name = data.name as string;
@@ -103,6 +127,7 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
         }
         case 'jealous':
           add(n, 'jealous');
+          jealousy.push({ a: a!, b: b!, c: e.actors[2]!, t: e.t, rival: false, back: false, won: false });
           break;
         case 'betrayal':
           add(n, 'betrayals');
@@ -135,6 +160,8 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
           break;
         case 'break':
           add(n, 'breaks');
+          add(s.breakKinds, String(data.kind));
+          breakers.set(a!, (breakers.get(a!) ?? 0) + 1);
           if (data.level === 'extreme') add(n, 'extremeBreaks');
           if (data.kind === 'catatonic') add(n, 'catatonic');
           if (b && known.has(b)) add(n, 'killerTargeted');
@@ -156,6 +183,31 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
         case 'immunity_spent':
           if (data.cause === 'trial') add(n, 'trialImmunities');
           break;
+        case 'blab':
+          add(n, 'blabs');
+          if (data.venting) add(n, 'blabsVenting');
+          if (data.juicy) add(n, 'blabsJuicy');
+          break;
+        case 'confession':
+          add(n, 'confessions');
+          break;
+        case 'scene':
+          add(n, 'scenes');
+          add(n, 'sceneHeard', (data.heard as string[]).length);
+          break;
+        case 'puke':
+          add(n, 'pukes');
+          break;
+        case 'passed_out':
+          add(n, 'passedOut');
+          break;
+        case 'hammered':
+          add(n, 'hammered');
+          break;
+        case 'drink':
+          add(n, 'drinks');
+          if (e.t % MINUTES_PER_DAY < 12 * 60) add(n, 'drinksMorning');
+          break;
         case 'karaoke':
           singers.set(a!, (singers.get(a!) ?? 0) + 1);
           s.karaoke++;
@@ -172,6 +224,8 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
   }
   for (const id of killers.keys()) add(n, 'killerDays', (world.t - killers.get(id)!) / MINUTES_PER_DAY);
   for (const v of names.values()) if (v > 1) add(n, 'repeatNames', v - 1);
+  const most = [...breakers.values()].sort((x, y) => y - x);
+  add(n, 'breaksTop3', most.slice(0, 3).reduce((x, y) => x + y, 0));
   s.topSinger = Math.max(0, ...singers.values());
   return s;
 }
@@ -224,6 +278,9 @@ export function storyReport(seeds: StorySeed[]): string[] {
   line(`  first hookups: ${fh}; ${n('firstHookupsUnkissed')} (${pct(n('firstHookupsUnkissed'), fh)}) before any kiss, ${n('firstHookupsUnflirted')} (${pct(n('firstHookupsUnflirted'), fh)}) before any flirt`);
   line(`  hookups ${per(n('hookups') * 7, days)} a week, first kisses ${per(n('firstKisses') * 7, days)} a week`);
   line(`  jealousy ${per(n('jealous'), n('kisses'))} per kiss; caught cheating ${per(n('betrayals') * 7, days)} a week`);
+  const je = n('jealous');
+  line(`  within two days of jealousy: ${pct(n('jealousRival'), je)} turned on the rival (${pct(n('jealousRivalViolent'), je)} with fists or an extreme break),`);
+  line(`    ${pct(n('jealousBack'), je)} went after the partner, ${pct(n('jealousWon'), je)} got a kiss or more from them`);
   line();
   line('Fights');
   const cm = n('cageMatches');
@@ -232,6 +289,13 @@ export function storyReport(seeds: StorySeed[]): string[] {
   line();
   line('Breakdowns');
   line(`  ${per(n('breaks'), days)} a day, ${pct(n('extremeBreaks'), n('breaks'))} extreme, ${per(n('catatonic'), days)} catatonic spells a day`);
+  line(`  the three most-broken people in a season had ${pct(n('breaksTop3'), n('breaks'))} of its breaks`);
+  top(merge(seeds, (s) => s.breakKinds), n('breaks'), 8);
+  line();
+  line('Booze and gossip');
+  line(`  ${per(n('drinks'), days, 1)} drinks a day, ${pct(n('drinksMorning'), n('drinks'))} before noon; ${per(n('hammered'), days)} hammered a day, ${per(n('pukes') * 7, days)} pukes and ${per(n('passedOut') * 7, days)} pass-outs a week`);
+  line(`  ${per(n('blabs') * 7, days, 1)} secrets spilled a week (${pct(n('blabsJuicy'), n('blabs'))} to someone involved, ${pct(n('blabsVenting'), n('blabs'))} while venting), ${per(n('confessions') * 7, days)} drunken confessions a week`);
+  line(`  ${per(n('scenes') * 7, days)} scenes a week that aired someone's secret, heard by ${per(n('sceneHeard'), n('scenes'), 1)} people each`);
   line();
   line('Murders');
   const mu = n('murders');
@@ -296,6 +360,24 @@ export function seasonLog(data: GameData, seed: number, days: number): string[] 
           break;
         case 'betrayal':
           s = `${nm(a)} catches ${nm(b)} with ${nm(c)} (${x.what})${at}`;
+          break;
+        case 'jealous':
+          s = `${nm(a)} is jealous: ${nm(b)} with ${nm(c)} (${x.what})${at}`;
+          break;
+        case 'blab':
+          s = `${nm(a)} tells ${nm(b)} about ${nm(c)} and ${nm(e.actors[3])}${x.venting ? ' (venting)' : ` (${x.stage})`}${at}`;
+          break;
+        case 'confession':
+          s = `${nm(a)} confesses to ${nm(b)}: they were with ${nm(c)} (${x.stage})${at}`;
+          break;
+        case 'scene':
+          s = `${nm(a)} makes a scene about ${nm(b)} and ${nm(c)}${(x.heard as string[]).length ? ` in front of ${(x.heard as string[]).map(nm).join(', ')}` : ''}${at}`;
+          break;
+        case 'puke':
+          s = `${nm(a)} throws up${at}`;
+          break;
+        case 'passed_out':
+          s = `${nm(a)} passes out${at}`;
           break;
         case 'fight':
           s = `${nm(x.winner as string)} beats ${nm(x.loser as string)} in a brawl${at}`;

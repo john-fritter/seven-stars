@@ -23,14 +23,21 @@ bladderPerDrink: 15                # "+15 per drink"
 #   moves: interaction weights by id (flirting ×1.5 tipsy, ×2 drunk; insults ×3 drunk), and `here`:
 #          boldness about lovin' right where they are (romance.yaml here; proposal)
 #   fight: an insult's chance of a fight (the larger of the two people's)
-#   axes: personality points subtracted while in this stage ("honesty and kindness act 2 lower")
+#   axes: personality points added while in this stage (proposal, Oct 23, john: being drunk is a
+#         volatility thing, not honesty or kindness; was honest −2, kind −2)
+#   goggles: attraction points added whenever they judge someone (gates and odds), and
+#   agree: × their odds of saying yes to a kiss or a proposition (proposal, Oct 23, john: drunk
+#          hookups come from drink making people more impulsive and agreeable)
+#   lips: per chat (romance.yaml gossip), the chance they blurt something they know, and
+#   confess: the chance they tearfully confess their own cheating to the one they're cheating on
+#          (proposals, Oct 23, john: loose lips and drunken confessions)
 #   walk: walking time (hammered stumbling; proposal ×1.5)
 stages:
-  - { id: hammered, at: 80, interaction: 1.5, social: 1.5, fight: 3, walk: 1.5,
-      moves: { flirt: 2, kiss: 2, proposition: 2, insult: 3, here: 3 }, axes: { honest: -2, kind: -2 } }
-  - { id: drunk, at: 50, interaction: 1.5, social: 1.5, fight: 2,
-      moves: { flirt: 2, kiss: 2, proposition: 2, insult: 3, here: 2 }, axes: { honest: -2, kind: -2 } }
-  - { id: tipsy, at: 25, interaction: 1.5, social: 1.5,
+  - { id: hammered, at: 80, interaction: 1.5, social: 1.5, fight: 3, walk: 1.5, goggles: 2, agree: 2, lips: 0.6, confess: 0.8,
+      moves: { flirt: 2, kiss: 2, proposition: 2, insult: 3, here: 3 }, axes: { calm: -3 } }
+  - { id: drunk, at: 50, interaction: 1.5, social: 1.5, fight: 2, goggles: 1, agree: 1.5, lips: 0.4, confess: 0.5,
+      moves: { flirt: 2, kiss: 2, proposition: 2, insult: 3, here: 2 }, axes: { calm: -2 } }
+  - { id: tipsy, at: 25, interaction: 1.5, social: 1.5, agree: 1.2, lips: 0.15, confess: 0.15,
       moves: { flirt: 1.5, kiss: 1.5, proposition: 1.5 } }
 
 # Sobering up from hammered: this chance of a memory gap. They keep how they feel but lose the
@@ -49,11 +56,23 @@ together: { affection: 2 }
 #   taste × drinking ÷ 10
 #   social × (outgoing + playful) ÷ 20, when anyone else is in the room
 #   self × (lowMood − mood) ÷ lowMood when mood is under lowMood, × 1 + selfVolatileK × (calm − 5) ÷ 5
-# The drink's whole score fades as they get drunk: × (1 − intoxication ÷ soberAt), never below 0.
-pull: { taste: 0.15, social: 0.1, self: 0.25, lowMood: 50, selfVolatileK: -1, soberAt: 100 }
+# Self-control (proposal, Oct 23; john: day drinking is fine on a cruise ship, but nobody hammered
+# and passed out at noon): the drink's whole score fades as they get drunk, × (1 − intoxication ÷
+# limit), never below 0, where limit = base + perDrinking × drinking + miserable × (lowMood − mood)
+# ÷ lowMood. Most people stop around tipsy; heavy drinkers (drinking 9+) and the miserable get
+# hammered. Was a flat 100 for everyone.
+pull: { taste: 0.15, social: 0.1, self: 0.25, lowMood: 50, selfVolatileK: -1,
+        limit: { base: 35, perDrinking: 5, miserable: 30 } }
 
 # Carrying drinks to give away (DESIGN.md: drinks can be carried and gifted). Proposal: after a
 # drink at the bar, a chance to take one along, × 1 + kindK × (kind − 5) ÷ 5, × traits (Hoards ×3).
 carry: { chance: 0.1, kindK: 0.5, max: 2 }
 # A gift: affection +5, or +15 when it's better than what they'd get themselves.
 gift: { affection: 5, better: 15, thought: gifted }
+
+# Proposals (Oct 23, john: hammered effects). Every hour while hammered: the chance they throw up
+# (hygiene, their thought if anyone saw, and the witnesses'), else the chance they pass out where
+# they are for a while. The ceremony's summons doesn't rouse them: passed out anywhere but the
+# common room at 21:00 is a skipped ceremony.
+puke: { perHour: 0.25, hygiene: -40, thought: puked, witnessThought: saw_puke }
+passOut: { perHour: 0.3, minutes: [60, 180], thought: passed_out }

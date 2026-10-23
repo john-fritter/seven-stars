@@ -33,6 +33,7 @@ export const FIGHT = 'fight';
 export const AT_DOOR = 'at_door'; // turned away after knocking
 export const LOVIN = 'lovin'; // lumps under the covers (romance.ts)
 export const SLEEPWALK = 'sleepwalk'; // a sleepwalker's wander (traits.yaml)
+export const PASSED_OUT = 'passed_out'; // out cold where they fell (booze.yaml passOut)
 
 const defCache = new WeakMap<Activity, ActionDef | undefined>();
 

@@ -38,7 +38,7 @@ describe('romance starts with a kiss', () => {
     alone(w, a, b);
     meet(ctx, a, b);
     for (const [x, y] of [[a, b], [b, a]] as const) {
-      Object.assign(rel(x, y)!, { attraction: 10, affection: 100 });
+      Object.assign(rel(x, y)!, { attraction: 10, affection: 100, kisses: 0 });
       endActivity(ctx, x, 'interrupted');
       Object.assign(x, { room: 'suite', intox: 60, traits: ['hoards'], personality: { ...x.personality, kind: 10, loyal: 5 } });
     }

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { axis, drink, giftDrink, hangover, qualityFor, soberMinute, stageOf } from '../src/core/booze.js';
+import { axis, drink, giftDrink, hammeredHour, hangover, qualityFor, soberMinute, soberFactor, stageOf } from '../src/core/booze.js';
 import { createWorld, step } from '../src/core/index.js';
 import { fadeLedger, meet, rel } from '../src/core/ledger.js';
-import { askExclusive, evidence, exclusiveOdds, kiss, kissOdds, lovin, propositionOdds, secretFlingOdds } from '../src/core/romance.js';
+import { askExclusive, evidence, exclusiveOdds, kiss, kissOdds, looseLips, lovin, piningMult, propositionOdds, remember, secretFlingOdds } from '../src/core/romance.js';
 import { interactionWeight } from '../src/core/social.js';
 import type { Contestant, World } from '../src/core/types.js';
 import { ctxFor, data } from './helpers.js';
@@ -24,6 +24,58 @@ function alone(w: World, ...keep: Contestant[]) {
 const flat = (x: number) => ({ outgoing: x, kind: x, honest: x, calm: x, loyal: x, brave: x, vain: x, playful: x });
 
 describe('booze', () => {
+  it('stops most people around tipsy; heavy drinkers and the miserable keep going', () => {
+    const { ctx, cast } = aboard();
+    const c = cast[0]!;
+    Object.assign(c, { drinking: 5, mood: 60, intox: 60 });
+    expect(soberFactor(ctx, c)).toBe(0); // limit 35 + 5 × 5 = 60
+    Object.assign(c, { drinking: 10 });
+    expect(soberFactor(ctx, c)).toBeCloseTo(1 - 60 / 85);
+    Object.assign(c, { drinking: 5, mood: 0 });
+    expect(soberFactor(ctx, c)).toBeCloseTo(1 - 60 / 90);
+  });
+
+  it('loosens lips: the drunk spill what they know, and confess their own cheating', () => {
+    const { w, ctx, cast } = aboard();
+    const [a, b, c, d] = cast as [Contestant, Contestant, Contestant, Contestant];
+    alone(w, a, b);
+    for (const x of [a, b]) Object.assign(x, { room: 'lounge', asleep: false });
+    meet(ctx, a, b);
+    meet(ctx, b, c);
+    Object.assign(rel(b, c)!, { label: 'exclusive' });
+    remember(ctx, a, c, d, 'kiss');
+    a.intox = 100; // hammered
+    let told = false;
+    for (let i = 0; i < 50 && !told; i++) {
+      looseLips(ctx, a, b, 'chitchat');
+      told = ctx.events.some((e) => e.type === 'blab');
+    }
+    expect(told).toBe(true);
+    expect(ctx.events.some((e) => e.type === 'betrayal' && e.actors[0] === b.id && e.actors[1] === c.id)).toBe(true);
+    // Nobody tells them twice.
+    const n = ctx.events.filter((e) => e.type === 'blab').length;
+    for (let i = 0; i < 20; i++) looseLips(ctx, a, b, 'chitchat');
+    expect(ctx.events.filter((e) => e.type === 'blab').length).toBe(n);
+    // A confession: a cheats on b with d, and tells b.
+    remember(ctx, a, a, d, 'kiss');
+    a.thoughts.push({ id: data.romance.guilty, about: b.id, value: -5, until: w.t + 600 });
+    for (let i = 0; i < 50 && !ctx.events.some((e) => e.type === 'confession'); i++) looseLips(ctx, a, b, 'chitchat');
+    expect(ctx.events.find((e) => e.type === 'confession')?.actors).toEqual([a.id, b.id, d.id]);
+  });
+
+  it('makes the hammered throw up or pass out', () => {
+    const { w, ctx, cast } = aboard();
+    const c = cast[0]!;
+    alone(w, c);
+    Object.assign(c, { asleep: false, breakdown: null });
+    for (let i = 0; i < 50 && !ctx.events.some((e) => e.type === 'passed_out'); i++) {
+      c.intox = 100;
+      hammeredHour(ctx, c);
+    }
+    expect(ctx.events.some((e) => e.type === 'passed_out')).toBe(true);
+    expect(c.activity?.action).toBe('passed_out');
+  });
+
   it('pours your rank or the place\'s best, whichever is worse', () => {
     const { ctx, cast } = aboard();
     const c = cast[0]!;
@@ -35,7 +87,7 @@ describe('booze', () => {
     expect(qualityFor(ctx, c, 'fancy')).toBe('cheap');
   });
 
-  it('adds 25 ÷ size per drink, with stages, drunk honesty, and a fall of 8 an hour', () => {
+  it('adds 25 ÷ size per drink, with stages, drunk volatility, and a fall of 8 an hour', () => {
     const { ctx, cast } = aboard();
     const c = cast[0]!;
     Object.assign(c, { species: 'feline', intox: 0, personality: flat(5) }); // size 0.8
@@ -44,8 +96,8 @@ describe('booze', () => {
     expect(stageOf(ctx, c)?.id).toBe('tipsy');
     drink(ctx, c, 'cheap', c.room);
     expect(stageOf(ctx, c)?.id).toBe('drunk');
-    expect(axis(ctx, c, 'honest')).toBe(3);
-    expect(axis(ctx, c, 'calm')).toBe(5);
+    expect(axis(ctx, c, 'honest')).toBe(5);
+    expect(axis(ctx, c, 'calm')).toBe(3);
     for (let i = 0; i < 60; i++) soberMinute(ctx, c);
     expect(c.intox).toBeCloseTo(62.5 - 8);
   });
@@ -56,6 +108,7 @@ describe('booze', () => {
     Object.assign(c, { species: 'human', intox: 0, drinks: 0, thoughts: [], personality: flat(5) });
     for (let i = 0; i < 4; i++) drink(ctx, c, 'rotgut', c.room);
     expect(ctx.events.filter((e) => e.type === 'hammered')).toHaveLength(1);
+    c.intox = 0; // the morning after
     hangover(ctx, c);
     expect(c.thoughts.find((x) => x.id === 'hangover')?.value).toBeCloseTo(-10); // 4 × 3.5, capped
     expect(c.drinks).toBe(0);
@@ -161,9 +214,29 @@ describe('romance', () => {
     const e = ctx.events.find((x) => x.type === 'betrayal')!;
     expect(e.actors).toEqual([a.id, b.id, c.id]);
     expect(Object.keys(e.data!.awards as object)).toHaveLength(3);
+    // The betrayed turn on the rival too.
+    expect(a.thoughts.some((x) => x.id === 'jealous' && x.about === c.id)).toBe(true);
+    expect(rel(a, c)!.affection).toBeLessThan(0);
+    // Jealousy only if they still care.
+    a.thoughts = [];
     rel(a, b)!.label = 'dating';
+    Object.assign(rel(a, b)!, { affection: 0, attraction: 8 });
+    evidence(ctx, a, b, c, 'kiss');
+    expect(ctx.events.some((x) => x.type === 'jealous')).toBe(false);
+    Object.assign(rel(a, b)!, { affection: 30, attraction: 8 });
+    a.monogamy = 10;
+    expect(piningMult(ctx, a, b)).toBe(1);
     evidence(ctx, a, b, c, 'kiss');
     expect(ctx.events.some((x) => x.type === 'jealous')).toBe(true);
+    // ...then resent the rival and pine for the partner, harder the more monogamous they are.
+    expect(a.thoughts.some((x) => x.id === 'pining' && x.about === b.id)).toBe(true);
+    expect(piningMult(ctx, a, b)).toBeCloseTo(5);
+    // Seeing it again soon after doesn't count again.
+    const seen = ctx.events.filter((x) => x.type === 'jealous').length;
+    evidence(ctx, a, b, c, 'kiss');
+    expect(ctx.events.filter((x) => x.type === 'jealous').length).toBe(seen);
+    a.monogamy = 0;
+    expect(piningMult(ctx, a, b)).toBe(1);
     rel(a, b)!.label = 'none';
     const n = ctx.events.length;
     evidence(ctx, a, b, c, 'kiss');

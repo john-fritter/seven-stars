@@ -84,7 +84,7 @@ describe('the murder nudge', () => {
     const p = data.breaks.passion;
     a.personality = { ...flat(5), kind: p.kindAtMost + p.desperate, calm: 9 };
     startBreak(ctx, a, 'extreme', 'person', 'attack', b.id);
-    expect(a.breakdown!.kind).toBe(p.otherwise);
+    expect(a.breakdown!.kind).toBe(p.collapse.person ?? p.otherwise);
     a.breakdown = null;
     a.activity = null;
     a.meter = data.meter.doomed.below - 1;
@@ -97,7 +97,7 @@ describe('the murder nudge', () => {
     a.activity = null;
     a.personality.kind = p.kindAtMost + p.desperate + 1;
     startBreak(ctx, a, 'extreme', 'person', 'attack', b.id);
-    expect(a.breakdown!.kind).toBe(p.otherwise);
+    expect(data.breaks.kinds[a.breakdown!.kind]!.attack).toBe(false); // the earlier attack may have killed b: then it's moping
   });
 });
 

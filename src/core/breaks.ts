@@ -5,14 +5,15 @@
 // they go where it takes them, do it, and come out of it with catharsis. At the extreme, the
 // volatile or cruel attack someone, and an attack can kill.
 import type { Level } from '../data/schema.js';
-import { begin, endActivity, onToilet } from './actions.js';
+import { begin, endActivity, onToilet, PASSED_OUT } from './actions.js';
 import { axis, drink, qualityFor } from './booze.js';
 import { accessRank, canEnter, log, type Ctx } from './context.js';
 import { feel } from './ledger.js';
 import { addNeed } from './needs.js';
-import { chance } from './rng.js';
+import { chance, pick } from './rng.js';
 import { infraction, kill } from './show.js';
 import { brawl, interact } from './social.js';
+import { airIt, pourOut } from './romance.js';
 import { grievance, think } from './thoughts.js';
 import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
@@ -31,7 +32,7 @@ export function breakLines(ctx: Ctx, calm: number, shift = 0): Record<Level, num
 
 /** The deepest line their mood is under, if any. */
 export function breakLevel(ctx: Ctx, c: Contestant): Level | null {
-  const lines = breakLines(ctx, c.personality.calm, traitFx(ctx.data, c).breakLine);
+  const lines = breakLines(ctx, axis(ctx, c, 'calm'), traitFx(ctx.data, c).breakLine);
   if (c.mood < lines.extreme) return 'extreme';
   if (c.mood < lines.major) return 'major';
   if (c.mood < lines.minor) return 'minor';
@@ -40,7 +41,7 @@ export function breakLevel(ctx: Ctx, c: Contestant): Level | null {
 
 /** Every hour: anyone awake under a line may break. */
 export function maybeBreak(ctx: Ctx, c: Contestant): void {
-  if (c.asleep || c.breakdown || !c.activity || c.activity.action === 'fight' || c.activity.action === 'lovin' || onToilet(ctx, c)) return;
+  if (c.asleep || c.breakdown || !c.activity || c.activity.action === PASSED_OUT || c.activity.action === 'fight' || c.activity.action === 'lovin' || onToilet(ctx, c)) return;
   const level = breakLevel(ctx, c);
   if (!level || !chance(ctx.w.rng, ctx.data.breaks.chance[level])) return;
   const b = ctx.data.breaks;
@@ -69,6 +70,16 @@ function targetFor(ctx: Ctx, c: Contestant, kind: Kind, about: string | null): C
         if (f >= fear) [best, fear] = [o, f];
       }
       return best ?? others.find((o) => o.id === about) ?? null;
+    }
+    case 'friend': {
+      // Whoever they like best, if they like anyone that much.
+      let best: Contestant | null = null;
+      let aff = ctx.data.social.ledger.friendAt;
+      for (const o of others) {
+        const f = c.ledger[o.id]?.affection ?? -Infinity;
+        if (f >= aff && !o.asleep && !o.confined) [best, aff] = [o, f];
+      }
+      return best;
     }
   }
 }
@@ -113,18 +124,25 @@ export function startBreak(ctx: Ctx, c: Contestant, level: Level, source: string
   if (kind.attack) {
     const p = b.passion;
     const loosen = c.meter < ctx.data.meter.doomed.below ? p.desperate : 0;
-    const violent = (by: number) => axis(ctx, c, 'kind') <= p.kindAtMost + by || c.personality.calm <= p.calmAtMost + by;
+    const violent = (by: number) => axis(ctx, c, 'kind') <= p.kindAtMost + by || axis(ctx, c, 'calm') <= p.calmAtMost + by;
     nudged = !violent(0) && violent(loosen);
     if (!violent(loosen)) {
-      id = p.otherwise;
+      id = p.collapse[source] ?? p.otherwise;
       kind = b.kinds[id]!;
     }
   }
   let target = targetFor(ctx, c, kind, about);
   let room = roomFor(ctx, c, kind, target);
   // In the fishbowl, with nobody to take it out on, or a bender for someone who never drinks, it
-  // becomes the fallback.
-  if ((kind.target && !target) || room === null || (c.confined && room !== c.room) || (kind.drinks && traitFx(ctx.data, c).drink === 0)) {
+  // becomes its `orElse` (an attack with nobody to attack smashes the set), or else the fallback.
+  const cant = (k: Kind, t: Contestant | null, r: string | null) => (k.target && !t) || r === null || (c.confined && r !== c.room) || (k.drinks && traitFx(ctx.data, c).drink === 0);
+  if (cant(kind, target, room) && kind.orElse) {
+    id = kind.orElse;
+    kind = b.kinds[id]!;
+    target = targetFor(ctx, c, kind, about);
+    room = roomFor(ctx, c, kind, target);
+  }
+  if (cant(kind, target, room)) {
     id = b.fallback;
     kind = b.kinds[id]!;
     target = null;
@@ -136,7 +154,7 @@ export function startBreak(ctx: Ctx, c: Contestant, level: Level, source: string
   // Watching someone fall apart hurts the kind.
   const saw = ctx.data.thoughts.moments.breakdown.thought;
   for (const o of ctx.w.contestants) if (o !== c && o.room === c.room && !o.asleep) think(ctx, o, saw, c.id);
-  begin(ctx, c, { action: id, object: null, room, minutes: kind.minutes });
+  begin(ctx, c, { action: id, object: null, room: room ?? c.room, minutes: kind.minutes });
 }
 
 /** Arriving where the break was headed. */
@@ -149,7 +167,13 @@ export function breakArrive(ctx: Ctx, c: Contestant): void {
     think(ctx, target, kind.wreck.thought, c.id);
     feel(ctx, target, c, 'affection', kind.wreck.affection, 'wrecked my things');
   }
-  bd.next = kind.insults || kind.drinks ? ctx.w.t : Number.MAX_SAFE_INTEGER; // never: nothing recurring
+  if (kind.airs && target) airIt(ctx, c, target);
+  if (kind.vent && target && target.room === c.room && !target.asleep) {
+    const talk = ctx.data.social.interactions.find((d) => d.id === 'deep_talk');
+    if (talk) interact(ctx, c, target, talk);
+    pourOut(ctx, c, target);
+  }
+  bd.next = kind.insults || kind.drinks || kind.rant ? ctx.w.t : Number.MAX_SAFE_INTEGER; // never: nothing recurring
   if (kind.attack && target) {
     if (target.room === c.room) attack(ctx, c, target);
     else if (bd.follows < ctx.data.breaks.passion.follow) chase(ctx, c, target);
@@ -184,6 +208,14 @@ export function breakMinute(ctx: Ctx, c: Contestant): void {
     bd.next = ctx.w.t + kind.insults;
     return;
   }
+  if (kind.rant) {
+    // A rant: a slight at whoever's here.
+    const here = ctx.w.contestants.filter((o) => o !== c && o.room === c.room && !o.asleep);
+    const slight = ctx.data.social.interactions.find((d) => d.id === 'slight');
+    if (here.length && slight) interact(ctx, c, pick(ctx.w.rng, here), slight);
+    bd.next = ctx.w.t + kind.rant;
+    return;
+  }
   if (kind.drinks) {
     // A bender pours whatever's here, at their rank.
     const def = ctx.st.objectsInRoom.get(c.room)!.flatMap((o) => o.actions).find((d) => d.kind === 'drink');
@@ -203,12 +235,14 @@ export function endBreak(ctx: Ctx, c: Contestant): void {
 
 /**
  * A crime of passion: a fight where the attacker strikes first. If the attacker wins, the chance it
- * kills is perStrength × their strength advantage × the room's weapon.
+ * kills is (base + perStrength × their strength advantage) × the room's weapon.
  */
 export function attack(ctx: Ctx, c: Contestant, target: Contestant): void {
   const p = ctx.data.breaks.passion;
   const room = c.room;
-  const killChance = p.perStrength * Math.max(0, c.strength - target.strength) * (p.weapons[room] ?? 1);
+  // One murder mystery at a time (D-050): while a body lies unfound or a trial is pending, nobody dies of it.
+  const open = p.oneAtATime && (ctx.w.show.bodies.length > 0 || ctx.w.show.trials.length > 0);
+  const killChance = open ? 0 : (p.base + p.perStrength * Math.max(0, c.strength - target.strength)) * (p.weapons[room] ?? 1);
   const fight = brawl(ctx, c, target, {
     firstBlow: p.firstBlow,
     lethal: (winner) => winner === c && chance(ctx.w.rng, killChance),

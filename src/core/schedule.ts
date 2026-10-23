@@ -1,6 +1,6 @@
 // The daily schedule: arrivals, the wake chime, trials, meals, the daily event, lights-dim and the
 // ceremony. DESIGN.md Part two, Clock and daily schedule.
-import { actionDef, CEREMONY, endActivity, EVENT, onToilet, openMeals, TRIAL, type Plan } from './actions.js';
+import { actionDef, CEREMONY, endActivity, EVENT, onToilet, openMeals, PASSED_OUT, TRIAL, type Plan } from './actions.js';
 import { canEnter, dayOf, isNightFor, log, nightShift, timeOfDay, type Ctx } from './context.js';
 import { eventToday, openEvent, resolveEvent, revealButton } from './events.js';
 import { announceBodies, findBodies, holdTrials, trialsToday } from './trials.js';
@@ -98,7 +98,7 @@ function summon(ctx: Ctx, action: string, wakeAbove: number): void {
   if (action === TRIAL) ctx.w.show.trialOn = dayOf(ctx.w.t);
   for (const c of ctx.w.contestants) if (c.asleep && !c.confined && c.needs.rest > wakeAbove) endActivity(ctx, c, 'woke');
   // Unless they're in the middle of a breakdown, or on the toilet.
-  for (const c of ctx.w.contestants) if (!c.asleep && !c.confined && !c.breakdown && c.activity?.action !== action && !onToilet(ctx, c)) endActivity(ctx, c, 'interrupted');
+  for (const c of ctx.w.contestants) if (!c.asleep && !c.confined && !c.breakdown && c.activity?.action !== action && c.activity?.action !== PASSED_OUT && !onToilet(ctx, c)) endActivity(ctx, c, 'interrupted');
 }
 
 /** The suite night is over at the wake chime. Anyone still in a bed or room that isn't theirs any more is moved along. */

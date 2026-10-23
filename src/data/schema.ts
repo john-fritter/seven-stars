@@ -459,6 +459,14 @@ const stageSchema = z.object({
   walk: num.default(1),
   moves: z.record(z.string(), num).default({}),
   axes: z.partialRecord(axisEnum, num).default({}),
+  // Beer goggles: attraction points added whenever they judge someone (gates and odds).
+  goggles: num.default(0),
+  // Their odds of saying yes to a kiss or a proposition, ×.
+  agree: num.default(1),
+  // Loose lips: per chat (romance.yaml gossip.interactions), the chance they blurt something they
+  // know; and the chance they confess their own cheating to the one they're cheating on.
+  lips: unit.default(0),
+  confess: unit.default(0),
 });
 
 export const boozeSchema = z.object({
@@ -471,9 +479,22 @@ export const boozeSchema = z.object({
   blackout: unit,
   hangover: z.object({ thought: z.string(), min: num, from: num, to: num }),
   together: z.object({ affection: num }),
-  pull: z.object({ taste: num, social: num, self: num, lowMood: num.positive(), selfVolatileK: num, soberAt: num.positive() }),
+  pull: z.object({
+    taste: num,
+    social: num,
+    self: num,
+    lowMood: num.positive(),
+    selfVolatileK: num,
+    // Self-control: a drink scores × (1 − intoxication ÷ limit), never below 0, where
+    // limit = base + perDrinking × drinking + miserable × (lowMood − mood) ÷ lowMood.
+    limit: z.object({ base: num.positive(), perDrinking: num.nonnegative(), miserable: num.nonnegative() }),
+  }),
   carry: z.object({ chance: unit, kindK: num, max: z.number().int().nonnegative() }),
   gift: z.object({ affection: num, better: num, thought: z.string() }),
+  // Hammered, every hour: the chance they throw up (hygiene, their thought if anyone saw, the
+  // witnesses' thought) and the chance they pass out where they are.
+  puke: z.object({ perHour: unit, hygiene: num, thought: z.string(), witnessThought: z.string() }),
+  passOut: z.object({ perHour: unit, minutes: z.tuple([z.number().int().positive(), z.number().int().positive()]), thought: z.string() }),
 });
 
 export const LEVELS = ['minor', 'major', 'extreme'] as const;
@@ -482,7 +503,7 @@ export type Level = (typeof LEVELS)[number];
 const breakKind = z.object({
   label: z.string(),
   room: z.string(),
-  target: z.enum(['about', 'top', 'feared']).optional(),
+  target: z.enum(['about', 'top', 'feared', 'friend']).optional(),
   minutes: z.number().int().positive(),
   gains: needMap.default({}),
   drinks: z.number().int().nonnegative().default(0),
@@ -490,6 +511,14 @@ const breakKind = z.object({
   insults: z.number().int().positive().optional(),
   wreck: z.object({ thought: z.string(), affection: num }).optional(),
   attack: z.boolean().default(false),
+  // On arrival, tells the whole room what the target did (the latest romance they know of).
+  airs: z.boolean().default(false),
+  // On arrival, pours it all out to the target: a deep talk, and whatever they know spills.
+  vent: z.boolean().default(false),
+  // Every this many minutes, a slight at whoever's here.
+  rant: z.number().int().positive().optional(),
+  // What it becomes when it can't happen (no target, or somewhere they can't go), before `fallback`.
+  orElse: z.string().optional(),
 });
 
 export const breaksSchema = z.object({
@@ -507,7 +536,12 @@ export const breaksSchema = z.object({
     // The murder nudge: below the meter's doom line both cutoffs loosen by this much.
     desperate: num.nonnegative().default(0),
     otherwise: z.string(),
+    // A non-violent collapse by grievance (a source not listed collapses into `otherwise`).
+    collapse: z.record(z.string(), z.string()).default({}),
     firstBlow: num,
+    base: unit.default(0),
+    // While a body lies unfound or a trial is pending, attacks don't kill.
+    oneAtATime: z.boolean().default(false),
     perStrength: num.nonnegative(),
     weapons: z.record(z.string(), num).default({}),
     follow: z.number().int().nonnegative(),
@@ -543,8 +577,21 @@ export const romanceSchema = z.object({
   breakup: z.object({ affectionBelow: num, dumped: z.string() }),
   attachedK: num,
   betrayal: z.object({ affection: num, thought: z.string(), confront: unit }),
-  jealousy: z.object({ affection: num, thought: z.string() }),
+  jealousy: z.object({
+    affection: num,
+    thought: z.string(),
+    // Only someone who still cares is jealous: affection and attraction for the partner at least this.
+    cares: z.object({ affection: num, attraction: num }),
+    // Hours before seeing the same rival again makes them jealous all over again.
+    again: num.nonnegative().default(0),
+    // The grudge against the rival: affection × 1 + kindK × (kind − 5) ÷ 5.
+    rival: z.object({ affection: num, kindK: num }),
+    // Pining: romance toward the partner × 1 + (boost − 1) × (1 + monogamyK × (monogamy − 5) ÷ 5) while it lasts.
+    pining: z.object({ thought: z.string(), boost: num.positive(), monogamyK: num }),
+  }),
   guilty: z.string(),
+  // What people know about who's been with whom: the last `remember` things, for `hours`.
+  gossip: z.object({ remember: z.number().int().positive(), hours: num.positive(), interactions: z.array(z.string()), sober: unit.default(0) }),
 });
 
 export const wheelSchema = z.object({

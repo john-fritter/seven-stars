@@ -152,8 +152,9 @@ thoughts:
   exclusive:     { label: "Exclusive with {who}", value: 5, hours: 48, stack: 1, source: romance }     # proposal
   not_exclusive: { label: "{who} won't commit", value: -10, hours: 24, stack: 1, source: rejection }   # "Hurt: −10"
   dumped:        { label: "Dumped by {who}", value: -20, hours: 72, stack: 1, source: rejection }      # hours: proposal
-  betrayed:      { label: "Betrayed by {who}", value: -20, hours: 168, stack: 1, source: person, scale: [{ axis: loyal }] }
-  jealous:       { label: "Jealous of {who}", value: -5, hours: 24, stack: 2, source: person }         # proposal
+  betrayed:      { label: "Betrayed by {who}", value: -20, hours: 168, stack: 1, source: heartbreak, scale: [{ axis: loyal }] }  # Oct 23: source person → heartbreak
+  jealous:       { label: "Jealous of {who}", value: -6, hours: 48, stack: 2, source: heartbreak }     # proposal; about the rival (Oct 23: was −5 for a day, about the partner; source person → heartbreak)
+  pining:        { label: "Wants {who} back", value: -3, hours: 48, stack: 1, source: rejection }      # proposal (Oct 23)
   guilty:        { label: "Cheating on {who}", value: -5, hours: 24, stack: 1, source: guilt }         # proposal
 
   # Booze (booze.yaml)
@@ -162,9 +163,12 @@ thoughts:
   drink_cheap:   { label: "A cheap drink", value: 2, hours: 3, stack: 3, source: booze }
   drink_rotgut:  { label: "Rotgut", value: 1, hours: 3, stack: 3, source: booze }
   hangover:      { label: "Hungover", value: -3, hours: 8, stack: 1, source: discomfort }   # value set by booze.yaml hangover
+  puked:         { label: "Threw up in front of everyone", value: -8, hours: 24, stack: 1, source: humiliation }   # proposal (Oct 23)
+  saw_puke:      { label: "Watched {who} throw up", value: -2, hours: 6, stack: 1, source: discomfort }          # proposal (Oct 23)
+  passed_out:    { label: "Passed out in front of everyone", value: -6, hours: 24, stack: 1, source: humiliation } # proposal (Oct 23)
 
   # Breaks (breaks.yaml)
-  catharsis:     { label: "Catharsis", value: 15, hours: 24, stack: 1, source: catharsis }
+  catharsis:     { label: "Catharsis", value: 25, hours: 36, stack: 1, source: catharsis }  # Oct 23 (john: catharsis, not a cooldown): was +15 for a day
 
   # The show
   doomed:        { label: "The show is going to kill me", value: -4, hours: 1.5, stack: 1, source: fear }  # value set by meter.yaml doomed

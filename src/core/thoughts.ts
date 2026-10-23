@@ -2,6 +2,7 @@
 // Thoughts, mood and breaks. Conditions (low needs, the temperature) are thoughts refreshed
 // while they last; breaks (breaks.ts) read the sources to pick what kind of break.
 import type { Ctx } from './context.js';
+import { axis } from './booze.js';
 import { axisFactor } from './needs.js';
 import { derived } from './derived.js';
 import { clothingWarmth, discomfortAt } from './temperature.js';
@@ -15,7 +16,7 @@ import type { Axis, Contestant } from './types.js';
 export function thoughtValue(ctx: Ctx, c: Contestant, id: string, base?: number): number {
   const th = ctx.data.thoughts;
   const def = th.thoughts[id]!;
-  let v = (base ?? def.species[c.species] ?? def.value) * axisFactor(th.volatileK, c.personality.calm) * (th.species[c.species]?.[def.source] ?? 1);
+  let v = (base ?? def.species[c.species] ?? def.value) * axisFactor(th.volatileK, axis(ctx, c, 'calm')) * (th.species[c.species]?.[def.source] ?? 1);
   const of = (a: Axis | 'modesty') => (a === 'modesty' ? c.modesty : c.personality[a]);
   for (const s of def.scale) v *= axisFactor(s.k, of(s.axis));
   for (const s of th.sources[def.source] ?? []) v *= axisFactor(s.k, of(s.axis));
