@@ -215,15 +215,4 @@ describe('breaks', () => {
     attack(ctx, a, b);
     expect(w.contestants.includes(b)).toBe(false);
   });
-
-  it("can't break again until they've had a rest", () => {
-    const { w, ctx, cast } = aboard();
-    const [a, b] = cast as [Contestant, Contestant];
-    alone(w, a, b);
-    Object.assign(a, { room: 'cafe', personality: flat(5) });
-    startBreak(ctx, a, 'minor', 'fear', 'panic', null);
-    step(w, 31);
-    expect(a.breakdown).toBeNull();
-    expect(a.spentUntil).toBe(w.t - 1 + data.breaks.spent * 60);
-  });
 });

@@ -5,7 +5,8 @@ import type { ActionDef, Axis } from '../data/schema.js';
 import { accessRank, effectsToday, log, type Ctx } from './context.js';
 import { feel } from './ledger.js';
 import { addNeed, axisFactor } from './needs.js';
-import { chance } from './rng.js';
+import { between, chance } from './rng.js';
+import { begin, endActivity, onToilet, PASSED_OUT } from './actions.js';
 import { think } from './thoughts.js';
 import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
@@ -22,7 +23,7 @@ export function stageOf(ctx: Ctx, c: Contestant): Stage | undefined {
   return best;
 }
 
-/** A personality axis as it acts right now: drunk people are less honest and less kind. */
+/** A personality axis as it acts right now: drunk people are more volatile (less calm). */
 export function axis(ctx: Ctx, c: Contestant, a: Axis): number {
   const shift = stageOf(ctx, c)?.axes[a] ?? 0;
   return clamp(c.personality[a] + shift, 0, 10);
@@ -63,9 +64,28 @@ export function drinkPull(ctx: Ctx, c: Contestant, company: boolean): number {
   return taste + social + self;
 }
 
-/** Drinks appeal less the drunker they are: × (1 − intoxication ÷ soberAt), never below 0. */
+/**
+ * Self-control: drinks appeal less the drunker they are, × (1 − intoxication ÷ their limit), never
+ * below 0. Most people stop around tipsy; heavy drinkers and the miserable keep going.
+ */
 export function soberFactor(ctx: Ctx, c: Contestant): number {
-  return Math.max(0, 1 - c.intox / ctx.data.booze.pull.soberAt);
+  return Math.max(0, 1 - c.intox / drinkLimit(ctx, c));
+}
+
+export function drinkLimit(ctx: Ctx, c: Contestant): number {
+  const p = ctx.data.booze.pull;
+  const misery = c.mood < p.lowMood ? (p.lowMood - c.mood) / p.lowMood : 0;
+  return p.limit.base + p.limit.perDrinking * c.drinking + p.limit.miserable * misery;
+}
+
+/** Attraction as they judge it right now: beer goggles add a little when drunk. */
+export function attractionNow(ctx: Ctx, c: Contestant, attraction: number): number {
+  return attraction + (stageOf(ctx, c)?.goggles ?? 0);
+}
+
+/** How much readier they are to say yes when drunk. */
+export function agreeMult(ctx: Ctx, c: Contestant): number {
+  return stageOf(ctx, c)?.agree ?? 1;
 }
 
 /** The fun a drink action gives, from the quality poured. */
@@ -161,4 +181,27 @@ export function giftDrink(ctx: Ctx, c: Contestant, o: Contestant): void {
   addNeed(o, 'fun', b.qualities[best]!.fun);
   log(ctx, 'gift', [c.id, o.id], c.room, { quality: best, better });
   drink(ctx, o, best, o.room, c.id);
+}
+
+/**
+ * Every hour while hammered: they may throw up (hygiene, and the humiliation if anyone saw) or pass
+ * out where they are, which the ceremony's summons doesn't rouse them from.
+ */
+export function hammeredHour(ctx: Ctx, c: Contestant): void {
+  if (stageOf(ctx, c)?.id !== 'hammered' || c.asleep || c.breakdown || c.activity?.action === PASSED_OUT || onToilet(ctx, c)) return;
+  const b = ctx.data.booze;
+  const saw = ctx.w.contestants.filter((o) => o !== c && o.room === c.room && !o.asleep);
+  if (chance(ctx.w.rng, b.puke.perHour)) {
+    addNeed(c, 'hygiene', b.puke.hygiene);
+    log(ctx, 'puke', [c.id], c.room);
+    if (saw.length) think(ctx, c, b.puke.thought);
+    for (const o of saw) think(ctx, o, b.puke.witnessThought, c.id);
+    return;
+  }
+  if (chance(ctx.w.rng, b.passOut.perHour)) {
+    endActivity(ctx, c, 'interrupted');
+    log(ctx, 'passed_out', [c.id], c.room);
+    if (saw.length) think(ctx, c, b.passOut.thought);
+    begin(ctx, c, { action: PASSED_OUT, object: null, room: c.room, minutes: Math.round(between(ctx.w.rng, b.passOut.minutes[0], b.passOut.minutes[1])) });
+  }
 }

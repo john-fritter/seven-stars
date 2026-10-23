@@ -9,28 +9,31 @@ chance: { minor: 0.04, major: 0.1, extreme: 0.2 }
 # Every break ends with catharsis.
 catharsis: catharsis
 
-# Proposal (Oct 23, breakdown fog): hours after a break ends before they can break again. Without it
-# the worst-off few broke every few hours (the three most-broken people in a season had half of
-# its breaks), and the station was a fog of sobbing and catatonia.
-spent: 24
-
 # The biggest grievance picks the break: the source whose active thoughts add up to the most
 # negative. Sources not listed never pick one. "—" in DESIGN.md falls back to the major break.
 sources:
   hunger:      { minor: binge, major: steal_food, extreme: steal_food }
   envy:        { minor: binge, major: steal_food, extreme: steal_food }
-  discomfort:  { minor: sulk, major: tantrum, extreme: tantrum }
+  discomfort:  { minor: rant, major: tantrum, extreme: tantrum }
   status:      { minor: cry, major: drink_binge, extreme: attack_top }
   humiliation: { minor: cry, major: drink_binge, extreme: attack_top }
-  rejection:   { minor: hide, major: drink_binge, extreme: attack_rejecter }
+  rejection:   { minor: vent, major: drink_binge, extreme: attack_rejecter }
   person:      { minor: insult_spree, major: wreck, extreme: attack }
-  fear:        { minor: hide, major: panic, extreme: lash_out }
-  grief:       { minor: hide, major: panic, extreme: lash_out }
+  fear:        { minor: vent, major: panic, extreme: lash_out }
+  grief:       { minor: vent, major: panic, extreme: lash_out }
+  # Proposal (Oct 23, john: the jealous person yells and cries in front of everyone): betrayal and
+  # jealousy are their own source, and it breaks into a scene, aimed at whoever the worst of it is
+  # about (the cheating partner or the rival).
+  heartbreak:  { minor: scene, major: blowup, extreme: attack }
 
 # Proposal (joys and pains step): a source's bad thoughts count × this when picking the biggest
 # grievance; mood is unchanged. Envy is a few points of mood but it burns, and at × 1 it never
 # outweighed fear or people, so its binge and theft breaks never happened.
 weights: { envy: 5 }
+
+# Proposals (Oct 23, john: fewer breaks that just withdraw): the minor fear, grief and rejection
+# break is venting to their best friend instead of hiding in a stall (they hide only with no friend
+# to find), and minor discomfort is ranting at the room instead of sulking in bed.
 
 # What each break does (all proposal apart from the names in DESIGN.md).
 #   room:     here | bed (their own bed's room) | target (wherever the target is) | target_bed
@@ -41,9 +44,14 @@ weights: { envy: 5 }
 #   infraction: a rule broken on arrival (theft, damage)
 #   insults:  insult the target every this many minutes while they're in the room
 #   wreck:    the target's thought and affection toward the breaker
+#   airs:     on arrival, the whole room hears what the target did (the latest romance the breaker
+#             knows about them), which counts as evidence (romance.yaml gossip)
+#   vent:     on arrival, a deep talk with the target, and the latest thing they know spills
+#   rant:     a slight at whoever's here every this many minutes
+#   target:   ... | friend (whoever they like best, affection 30+)
 #   attack:   a crime of passion (below)
 #   orElse:   what it becomes when it can't happen (proposal, Oct 23: an attack with nobody to attack
-#             smashes the set, terror with nobody to lash out at panics; it happens here, with no target)
+#             smashes the set, terror with nobody to lash out at panics; venting with no friend hides)
 # A break that can't happen (no target, or they're in the fishbowl and it needs to go somewhere)
 # becomes its `orElse`, else `fallback`.
 fallback: mope
@@ -56,6 +64,10 @@ kinds:
   cry:             { label: "sobs in the confessional", room: confessional, minutes: 30 }
   drink_binge:     { label: "goes on a bender", room: bar, minutes: 60, drinks: 4 }
   hide:            { label: "hides in a restroom stall", room: restroom, minutes: 60 }
+  vent:            { label: "pours it all out to a friend", room: target, target: friend, minutes: 30, vent: true, orElse: hide }
+  rant:            { label: "rants at everyone in earshot", room: here, minutes: 30, rant: 10 }
+  scene:           { label: "makes a scene, yelling and crying", room: target, target: about, minutes: 15, airs: true, insults: 15 }
+  blowup:          { label: "has a screaming, sobbing blowup in front of everyone", room: target, target: about, minutes: 30, airs: true, insults: 6 }
   panic:           { label: "panics", room: here, minutes: 30 }
   insult_spree:    { label: "goes on an insulting spree", room: target, target: about, minutes: 60, insults: 10 }
   wreck:           { label: "wrecks someone's things", room: target_bed, target: about, minutes: 15, infraction: damage,
@@ -82,7 +94,7 @@ passion:
   # Proposal (Oct 23): a non-violent extreme break collapses by its grievance, so only fear and
   # grief freeze someone catatonic. Rage at a person becomes a screaming spree at them; rejection
   # and humiliation go to the bottle.
-  collapse: { person: insult_spree, rejection: drink_binge, humiliation: drink_binge, status: drink_binge }
+  collapse: { person: insult_spree, heartbreak: blowup, rejection: drink_binge, humiliation: drink_binge, status: drink_binge }
   firstBlow: 3
   # Proposal (Oct 23): a base chance, so a winning attacker who isn't stronger can still kill.
   # Without it half the winners had no chance at all, and murders came once every ~180 days.

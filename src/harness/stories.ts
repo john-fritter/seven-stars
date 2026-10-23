@@ -14,6 +14,7 @@ export interface StorySeed {
   skipped: Record<string, number>; // skipped-ceremony infractions by what they were doing
   sentenceKinds: Record<string, number>; // sentences by their infractions
   deathCauses: Record<string, number>;
+  breakKinds: Record<string, number>;
   topSinger: number; // the season's busiest karaoke singer, their performances
   karaoke: number;
 }
@@ -29,7 +30,7 @@ function add(m: Record<string, number>, k: string, v = 1): void {
 
 /** Runs one season and counts what a viewer would notice. */
 export function storySeed(data: GameData, seed: number, days: number): StorySeed {
-  const s: StorySeed = { seed, days, n: {}, sneaks: {}, skipped: {}, sentenceKinds: {}, deathCauses: {}, topSinger: 0, karaoke: 0 };
+  const s: StorySeed = { seed, days, n: {}, sneaks: {}, skipped: {}, sentenceKinds: {}, deathCauses: {}, breakKinds: {}, topSinger: 0, karaoke: 0 };
   const n = s.n;
   const world = createWorld(data, seed);
   const kissed = new Set<string>();
@@ -159,6 +160,7 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
           break;
         case 'break':
           add(n, 'breaks');
+          add(s.breakKinds, String(data.kind));
           breakers.set(a!, (breakers.get(a!) ?? 0) + 1);
           if (data.level === 'extreme') add(n, 'extremeBreaks');
           if (data.kind === 'catatonic') add(n, 'catatonic');
@@ -180,6 +182,31 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
           break;
         case 'immunity_spent':
           if (data.cause === 'trial') add(n, 'trialImmunities');
+          break;
+        case 'blab':
+          add(n, 'blabs');
+          if (data.venting) add(n, 'blabsVenting');
+          if (data.juicy) add(n, 'blabsJuicy');
+          break;
+        case 'confession':
+          add(n, 'confessions');
+          break;
+        case 'scene':
+          add(n, 'scenes');
+          add(n, 'sceneHeard', (data.heard as string[]).length);
+          break;
+        case 'puke':
+          add(n, 'pukes');
+          break;
+        case 'passed_out':
+          add(n, 'passedOut');
+          break;
+        case 'hammered':
+          add(n, 'hammered');
+          break;
+        case 'drink':
+          add(n, 'drinks');
+          if (e.t % MINUTES_PER_DAY < 12 * 60) add(n, 'drinksMorning');
           break;
         case 'karaoke':
           singers.set(a!, (singers.get(a!) ?? 0) + 1);
@@ -263,6 +290,12 @@ export function storyReport(seeds: StorySeed[]): string[] {
   line('Breakdowns');
   line(`  ${per(n('breaks'), days)} a day, ${pct(n('extremeBreaks'), n('breaks'))} extreme, ${per(n('catatonic'), days)} catatonic spells a day`);
   line(`  the three most-broken people in a season had ${pct(n('breaksTop3'), n('breaks'))} of its breaks`);
+  top(merge(seeds, (s) => s.breakKinds), n('breaks'), 8);
+  line();
+  line('Booze and gossip');
+  line(`  ${per(n('drinks'), days, 1)} drinks a day, ${pct(n('drinksMorning'), n('drinks'))} before noon; ${per(n('hammered'), days)} hammered a day, ${per(n('pukes') * 7, days)} pukes and ${per(n('passedOut') * 7, days)} pass-outs a week`);
+  line(`  ${per(n('blabs') * 7, days, 1)} secrets spilled a week (${pct(n('blabsJuicy'), n('blabs'))} to someone involved, ${pct(n('blabsVenting'), n('blabs'))} while venting), ${per(n('confessions') * 7, days)} drunken confessions a week`);
+  line(`  ${per(n('scenes') * 7, days)} scenes a week that aired someone's secret, heard by ${per(n('sceneHeard'), n('scenes'), 1)} people each`);
   line();
   line('Murders');
   const mu = n('murders');
@@ -330,6 +363,21 @@ export function seasonLog(data: GameData, seed: number, days: number): string[] 
           break;
         case 'jealous':
           s = `${nm(a)} is jealous: ${nm(b)} with ${nm(c)} (${x.what})${at}`;
+          break;
+        case 'blab':
+          s = `${nm(a)} tells ${nm(b)} about ${nm(c)} and ${nm(e.actors[3])}${x.venting ? ' (venting)' : ` (${x.stage})`}${at}`;
+          break;
+        case 'confession':
+          s = `${nm(a)} confesses to ${nm(b)}: they were with ${nm(c)} (${x.stage})${at}`;
+          break;
+        case 'scene':
+          s = `${nm(a)} makes a scene about ${nm(b)} and ${nm(c)}${(x.heard as string[]).length ? ` in front of ${(x.heard as string[]).map(nm).join(', ')}` : ''}${at}`;
+          break;
+        case 'puke':
+          s = `${nm(a)} throws up${at}`;
+          break;
+        case 'passed_out':
+          s = `${nm(a)} passes out${at}`;
           break;
         case 'fight':
           s = `${nm(x.winner as string)} beats ${nm(x.loser as string)} in a brawl${at}`;

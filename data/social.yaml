@@ -12,7 +12,7 @@ base: 0.5
 absorbed:
   kinds: [sleep, toilet]
   tags: [exposed]                  # proposal: not mid-shower
-  actions: [fight, at_door, lovin, sleepwalk]   # sleepwalk: traits.yaml
+  actions: [fight, at_door, lovin, sleepwalk, passed_out]   # sleepwalk: traits.yaml; passed_out: booze.yaml
 
 # Proposal: who they turn to, × (1 + affection ÷ 100 × affection + attraction ÷ 10 × attraction),
 # never below `min`.

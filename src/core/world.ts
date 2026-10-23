@@ -6,6 +6,7 @@ import { drainNeeds } from './needs.js';
 import { socialRound } from './social.js';
 import { soberMinute } from './booze.js';
 import { maybeBreak } from './breaks.js';
+import { hammeredHour } from './booze.js';
 import { conditions, expireThoughts, trappedHere } from './thoughts.js';
 import { company, worries } from './people.js';
 import { createRng } from './rng.js';
@@ -83,6 +84,7 @@ function tick(ctx: Ctx): void {
         trappedHere(ctx, c);
         worries(ctx, c);
         maybeBreak(ctx, c);
+        hammeredHour(ctx, c);
         sleepwalk(ctx, c);
       }
       c.health = Math.min(100, c.health + ctx.data.social.health.recoverPerHour / 6);

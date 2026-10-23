@@ -29,6 +29,13 @@ awards:
   breakup:     { each: 8 }
   break:       { by: level, cases: { minor: { actor: 5 }, major: { actor: 10 }, extreme: { actor: 15 } } }
   hammered:    { actor: 4 }               # hammered antics, once per time they get hammered
+  # Proposals (Oct 23): loose lips, confessions and scenes (romance.yaml gossip), puking and
+  # passing out (booze.yaml). A scene's break pays as a break; this is the airing on top.
+  blab:        { actor: 3, target: 1 }
+  confession:  { each: 10 }
+  scene:       { actor: 6 }
+  puke:        { actor: 4 }
+  passed_out:  { actor: 3 }
   karaoke:     { actor: 3 }               # a finished karaoke performance
   infraction:  { actor: 4, witnessed: false }
   sentence:    { actor: 6, witnessed: false }

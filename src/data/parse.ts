@@ -177,7 +177,7 @@ function crossCheck(d: GameData, dir: string): void {
     if (k.infraction && !r.infractions[k.infraction]) errors.push(`${dir}/breaks.yaml: kinds.${id}.infraction: no rule "${k.infraction}" in rules.yaml`);
     if (k.orElse) {
       kind(k.orElse, `kinds.${id}.orElse`);
-      if (br.kinds[k.orElse] && (br.kinds[k.orElse]!.target || br.kinds[k.orElse]!.room !== 'here')) errors.push(`${dir}/breaks.yaml: kinds.${id}.orElse: has to happen "here", with no target`);
+      if (br.kinds[k.orElse]?.attack) errors.push(`${dir}/breaks.yaml: kinds.${id}.orElse: can't be an attack`);
     }
     if (k.wreck) thought(k.wreck.thought, `breaks.yaml: kinds.${id}.wreck.thought`);
     if (!['here', 'bed', 'target', 'target_bed', 'bar'].includes(k.room) && !rooms.has(k.room)) errors.push(`${dir}/breaks.yaml: kinds.${id}.room: no room "${k.room}"`);
@@ -206,6 +206,10 @@ function crossCheck(d: GameData, dir: string): void {
   thought(ro.jealousy.thought, 'romance.yaml: jealousy.thought');
   thought(ro.jealousy.pining.thought, 'romance.yaml: jealousy.pining.thought');
   thought(ro.guilty, 'romance.yaml: guilty');
+  thought(d.booze.puke.thought, 'booze.yaml: puke.thought');
+  thought(d.booze.puke.witnessThought, 'booze.yaml: puke.witnessThought');
+  thought(d.booze.passOut.thought, 'booze.yaml: passOut.thought');
+  for (const id of ro.gossip.interactions) if (!d.social.interactions.some((x) => x.id === id)) errors.push(`${dir}/romance.yaml: gossip.interactions: no interaction "${id}" in social.yaml`);
   if (!d.social.interactions.some((x) => x.id === 'insult')) errors.push(`${dir}/social.yaml: interactions: an "insult" is needed (fights, sprees, confrontations)`);
 
   // The Wheel, the daily event and trials

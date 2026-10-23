@@ -48,7 +48,7 @@ proposition:
   # at least datingAt, otherwise to fling. Mismatched expectations happen without anyone lying.
   # Each earlier lovin' with the same person counts as datingPerLovin more monogamy, so a fling
   # that keeps happening turns into dating (proposal, relationship tuning).
-  datingAt: 5
+  datingAt: 4                     # Oct 23: was 5; gossip and murders end couples sooner, so a few more people read a kiss or a hookup as dating
   datingPerLovin: 3.5             # personality step 2: was 1.5. Desperate contestants spread their lovin' around, so a repeat fling now reads as dating for almost anyone
 
 # Bedtime (john, Oct 21: couples share beds and hook up mostly in bed at night). Getting into a
@@ -108,3 +108,10 @@ jealousy:
   pining: { thought: pining, boost: 3, monogamyK: 1 }
 # B feels guilty about A when B believes they're exclusive with A and kisses or beds someone else.
 guilty: guilty
+
+# Proposal (Oct 23, john: more day-to-day intrigue): what people know about who's been with whom.
+# Everyone remembers the last `remember` kisses and hookups they saw, did or heard about, for
+# `hours`. Drink loosens lips on these chats (booze.yaml stages lips and confess): hearing it counts
+# as seeing it, so jealousy and betrayal spread by gossip. Scenes and venting spill it too.
+# Sober, a chat spills something with odds sober × (1 + playful/10 − honest/10): gossips gossip.
+gossip: { remember: 6, hours: 168, interactions: [chitchat, deep_talk, glass_talk], sober: 0.05 }

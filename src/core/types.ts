@@ -71,7 +71,15 @@ export interface Contestant {
   hammeredSince: number | null;
   inventory: string[]; // carried drinks, by quality
   breakdown: Breakdown | null; // in the middle of a mental break
-  spentUntil: number; // no new break before this (breaks.yaml spent)
+  seen: Sighting[]; // romance they know about (saw, did, or heard), for gossip and confessions
+}
+
+/** Something they know: `who` kissed or bedded `with`. */
+export interface Sighting {
+  who: string;
+  with: string;
+  what: string;
+  t: number;
 }
 
 /** A mental break in progress. Its activity is the break kind; it ends with catharsis. */

@@ -7,11 +7,11 @@
 // Lovin' is always consensual and always offscreen: two people choose it, and the log says so.
 import type { InteractionDef, Label } from '../data/schema.js';
 import { begin, endActivity, LOVIN } from './actions.js';
-import { axis, moveMult } from './booze.js';
+import { agreeMult, attractionNow, axis, moveMult, stageOf } from './booze.js';
 import { canEnter, isNightFor, log, type Ctx } from './context.js';
 import { feel, rel, relation } from './ledger.js';
 import { axisFactor } from './needs.js';
-import { between, chance } from './rng.js';
+import { between, chance, pick } from './rng.js';
 import { walkMinutes, type ObjectInstance } from './station.js';
 import { interact, shareOdds } from './social.js';
 import { think } from './thoughts.js';
@@ -66,7 +66,7 @@ function busy(ctx: Ctx, c: Contestant): boolean {
 export function kissOdds(ctx: Ctx, target: Contestant, kisser: Contestant): number {
   const r = rel(target, kisser);
   if (!r) return 0;
-  return clamp((r.attraction / 10) * (1 + r.affection / 100) * ctx.data.romance.kiss.successScale, 0, 1);
+  return clamp((attractionNow(ctx, target, r.attraction) / 10) * (1 + r.affection / 100) * ctx.data.romance.kiss.successScale * agreeMult(ctx, target), 0, 1);
 }
 
 export function kiss(ctx: Ctx, c: Contestant, o: Contestant): void {
@@ -95,8 +95,9 @@ export function kiss(ctx: Ctx, c: Contestant, o: Contestant): void {
 export function propositionOdds(ctx: Ctx, target: Contestant, asker: Contestant): number {
   const p = ctx.data.romance.proposition;
   const r = rel(target, asker);
-  if (!r || r.attraction < p.attraction || r.affection < p.affection) return 0;
-  return clamp((r.attraction / 10) * p.successScale * attachedMult(ctx, target, asker), 0, 1);
+  const attraction = r ? attractionNow(ctx, target, r.attraction) : 0;
+  if (!r || attraction < p.attraction || r.affection < p.affection) return 0;
+  return clamp((attraction / 10) * p.successScale * attachedMult(ctx, target, asker) * agreeMult(ctx, target), 0, 1);
 }
 
 export function proposition(ctx: Ctx, c: Contestant, o: Contestant): void {
@@ -284,11 +285,99 @@ function aftermath(ctx: Ctx, b: Contestant, c: Contestant, what: string): void {
   for (const [x, partner] of [[b, c], [c, b]] as const) {
     for (const [id, r] of Object.entries(x.ledger)) if (id !== partner.id && r.label === 'exclusive') think(ctx, x, ro.guilty, id);
   }
+  remember(ctx, b, b, c, what);
+  remember(ctx, c, b, c, what);
   for (const a of ctx.w.contestants) {
     if (a === b || a === c || a.room !== b.room || a.asleep) continue;
+    remember(ctx, a, b, c, what);
     evidence(ctx, a, b, c, what);
     evidence(ctx, a, c, b, what);
   }
+}
+
+/** `x` now knows that `who` and `other` got together (romance.yaml gossip): the last few things, for a while. */
+export function remember(ctx: Ctx, x: Contestant, who: Contestant, other: Contestant, what: string): void {
+  const g = ctx.data.romance.gossip;
+  const t = ctx.w.t;
+  x.seen = x.seen.filter((s) => s.t > t - g.hours * 60 && !((s.who === who.id && s.with === other.id) || (s.who === other.id && s.with === who.id)));
+  x.seen.push({ who: who.id, with: other.id, what, t });
+  if (x.seen.length > g.remember) x.seen.shift();
+}
+
+/** Hearing it counts as seeing it: `x` learns about the pair, both ways round. */
+function tell(ctx: Ctx, x: Contestant, who: Contestant, other: Contestant, what: string): void {
+  remember(ctx, x, who, other, what);
+  evidence(ctx, x, who, other, what);
+  evidence(ctx, x, other, who, what);
+}
+
+/** Whether `x` already knows about this pair. */
+function knows(x: Contestant, a: string, b: string): boolean {
+  return x.seen.some((s) => (s.who === a && s.with === b) || (s.who === b && s.with === a));
+}
+
+/** The latest thing `c` knows about `target` and someone else, if they're still aboard. */
+export function latestAbout(ctx: Ctx, c: Contestant, target: Contestant): [Contestant, Contestant] | null {
+  for (let i = c.seen.length - 1; i >= 0; i--) {
+    const s = c.seen[i]!;
+    if (s.who !== target.id && s.with !== target.id) continue;
+    const other = ctx.w.contestants.find((o) => o.id === (s.who === target.id ? s.with : s.who));
+    if (other && other !== c) return [target, other];
+  }
+  return null;
+}
+
+/**
+ * Loose lips, after a chat (romance.yaml gossip.interactions): drink makes them confess their own
+ * cheating to the one they're cheating on, or blurt something they know about someone else,
+ * the juiciest first (about someone the listener is involved with). Sober, the playful and the
+ * dishonest gossip a little too.
+ */
+export function looseLips(ctx: Ctx, c: Contestant, o: Contestant, id: string): void {
+  const ro = ctx.data.romance;
+  if (!ro.gossip.interactions.includes(id)) return;
+  const st = stageOf(ctx, c) ?? { id: 'sober', lips: ro.gossip.sober * Math.max(0, 1 + c.personality.playful / 10 - c.personality.honest / 10), confess: 0 };
+  const alive = (x: string) => ctx.w.contestants.find((k) => k.id === x);
+  if (st.confess && c.thoughts.some((x) => x.id === ro.guilty && x.about === o.id) && chance(ctx.w.rng, st.confess)) {
+    const mine = [...c.seen].reverse().find((s) => (s.who === c.id || s.with === c.id) && s.who !== o.id && s.with !== o.id && !knows(o, s.who, s.with) && alive(s.who === c.id ? s.with : s.who));
+    if (mine) {
+      const other = alive(mine.who === c.id ? mine.with : mine.who)!;
+      c.thoughts = c.thoughts.filter((x) => !(x.id === ro.guilty && x.about === o.id));
+      log(ctx, 'confession', [c.id, o.id, other.id], c.room, { stage: st.id });
+      tell(ctx, o, c, other, 'confession');
+      return;
+    }
+  }
+  if (!st.lips || !chance(ctx.w.rng, st.lips)) return;
+  const known = c.seen.filter((s) => s.who !== c.id && s.with !== c.id && s.who !== o.id && s.with !== o.id && !knows(o, s.who, s.with) && alive(s.who) && alive(s.with));
+  if (!known.length) return;
+  const juicy = known.filter((s) => labelOf(o, alive(s.who)!) !== 'none' || labelOf(o, alive(s.with)!) !== 'none');
+  const s = pick(ctx.w.rng, juicy.length ? juicy : known);
+  const [who, other] = [alive(s.who)!, alive(s.with)!];
+  log(ctx, 'blab', [c.id, o.id, who.id, other.id], c.room, { stage: st.id, juicy: juicy.length > 0 });
+  tell(ctx, o, who, other, 'gossip');
+}
+
+/** A scene: everyone here hears what `target` did, from someone falling apart in front of them. */
+export function airIt(ctx: Ctx, c: Contestant, target: Contestant): void {
+  const known = latestAbout(ctx, c, target);
+  if (!known) return;
+  const [who, other] = known;
+  const heard = ctx.w.contestants.filter((x) => x !== c && x !== who && x !== other && x.room === c.room && !x.asleep);
+  log(ctx, 'scene', [c.id, who.id, other.id], c.room, { heard: heard.map((x) => x.id) });
+  for (const x of heard) tell(ctx, x, who, other, 'scene');
+}
+
+/** Pouring it all out to a friend: the latest thing they know about someone else spills too. */
+export function pourOut(ctx: Ctx, c: Contestant, friend: Contestant): void {
+  const known = c.seen.filter((s) => s.who !== c.id && s.with !== c.id && s.who !== friend.id && s.with !== friend.id && !knows(friend, s.who, s.with));
+  if (!known.length) return;
+  const s = known[known.length - 1]!;
+  const who = ctx.w.contestants.find((k) => k.id === s.who);
+  const other = ctx.w.contestants.find((k) => k.id === s.with);
+  if (!who || !other) return;
+  log(ctx, 'blab', [c.id, friend.id, who.id, other.id], c.room, { venting: true });
+  tell(ctx, friend, who, other, 'gossip');
 }
 
 /**

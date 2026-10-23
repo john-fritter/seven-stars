@@ -78,7 +78,7 @@ export function rollContestant(data: GameData, rng: Rng, id: string, t: number, 
     hammeredSince: null,
     inventory: [],
     breakdown: null,
-    spentUntil: 0,
+    seen: [],
   };
   c.traits = rollTraits(data, rng, c);
   // Prude and Exhibitionist: modesty acts as theirs, whatever they rolled.

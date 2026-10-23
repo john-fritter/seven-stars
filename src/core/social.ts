@@ -2,9 +2,9 @@
 // and romance, and Rank, privileges, rules and punishments (Getting let in).
 import type { InteractionDef } from '../data/schema.js';
 import { actionDef, bedmateFeeling, begin, endActivity, FIGHT } from './actions.js';
-import { axis, giftDrink, moveMult, stageMult, stageOf } from './booze.js';
+import { attractionNow, axis, giftDrink, moveMult, stageMult, stageOf } from './booze.js';
 import { log, type Ctx } from './context.js';
-import { askExclusive, attachedMult, breakUp, evidence, kiss, invite, moveAllowed, piningMult, proposition } from './romance.js';
+import { askExclusive, attachedMult, breakUp, evidence, kiss, invite, looseLips, moveAllowed, piningMult, proposition } from './romance.js';
 import { boldness, chanceBoost, interactionBoost } from './ratings.js';
 import { witnessesOf } from './scoring.js';
 import { infraction } from './show.js';
@@ -107,7 +107,7 @@ function interactionsFor(ctx: Ctx, c: Contestant, o: Contestant): InteractionDef
 export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: InteractionDef): number {
   const r = relation(ctx, c, o);
   const n = def.needs;
-  if (n.attraction !== undefined && r.attraction < n.attraction) return 0;
+  if (n.attraction !== undefined && attractionNow(ctx, c, r.attraction) < n.attraction) return 0;
   if (n.affection !== undefined && r.affection < n.affection) return 0;
   if (n.labels && !n.labels.includes(r.label)) return 0;
   if (n.flirted && r.flirts === 0) return 0;
@@ -129,7 +129,7 @@ export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: I
         f = 1 + (k * r.affection) / 100;
         break;
       case 'attraction':
-        f = r.attraction / 5;
+        f = attractionNow(ctx, c, r.attraction) / 5;
         break;
       case 'chemistry':
         f = 1 + k * r.chemistry;
@@ -192,6 +192,7 @@ export function interact(ctx: Ctx, c: Contestant, o: Contestant, def: Interactio
       return giftDrink(ctx, c, o);
   }
   const e = log(ctx, def.id, [c.id, o.id], c.room);
+  looseLips(ctx, c, o, def.id);
   if (def.witnessThought) for (const id of witnessesOf(ctx, e)) think(ctx, ctx.w.contestants.find((x) => x.id === id)!, def.witnessThought, c.id);
   // A Hothead can come out swinging over less than an insult.
   if ((def.fight || traitFx(ctx.data, o).fightOn.includes(def.id)) && chance(ctx.w.rng, fightChance(ctx, o, c)) && !brokenUp(ctx, c, o)) fight(ctx, c, o);
@@ -247,7 +248,7 @@ const round2 = (x: number) => Math.round(x * 100) / 100;
 export function fightChance(ctx: Ctx, insulted: Contestant, insulter?: Contestant): number {
   const f = ctx.data.social.fight;
   const drunk = Math.max(stageMult(ctx, insulted, 'fight'), insulter ? stageMult(ctx, insulter, 'fight') : 1);
-  return clamp(f.chance * axisFactor(f.calmK, insulted.personality.calm) * traitFx(ctx.data, insulted).fight * drunk, 0, 1);
+  return clamp(f.chance * axisFactor(f.calmK, axis(ctx, insulted, 'calm')) * traitFx(ctx.data, insulted).fight * drunk, 0, 1);
 }
 
 /** Fighting power without the die: strength and stamina. */
