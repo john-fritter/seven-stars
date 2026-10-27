@@ -64,8 +64,29 @@ export const roomsSchema = z.object({
       glass: z.string().optional(),
     }),
   ),
-  links: z.array(z.tuple([z.string(), z.string(), z.number().positive()])),
 });
+
+// The floor plan (plans.yaml). Rectangles are [x, y, width, height] in tiles; an opening is the
+// wall segment [x1, y1, x2, y2] it sits on.
+const rect = z.tuple([num, num, num.positive(), num.positive()]);
+const segment = z.tuple([num, num, num, num]);
+const planSchema = z.object({
+  size: z.tuple([num.positive(), num.positive()]),
+  through: z.array(z.string()).default([]),
+  windows: z.array(segment).default([]),
+  rooms: z.record(z.string(), rect),
+  corridors: z.array(z.object({ id: z.string(), name: z.string(), rect })).default([]),
+  openings: z.array(z.object({ a: z.string(), b: z.string(), kind: z.enum(['door', 'arch', 'glass', 'bend']), at: segment })),
+});
+export const plansSchema = z.object({
+  use: z.string(),
+  walkSpeed: num.positive(),
+  detour: num.min(1),
+  corridor: z.object({ privacy: num.min(0).max(1), temperature: num, comfort: num.min(0).max(100) }),
+  soundproof: z.array(z.string()).default([]),
+  plans: z.record(z.string(), planSchema),
+});
+export type PlanDef = z.output<typeof planSchema>;
 
 export const actionSchema = z.object({
   id: z.string(),
@@ -78,6 +99,7 @@ export const actionSchema = z.object({
   quality: num.optional(),
   recreation: z.string().optional(),
   company: z.boolean().default(false),
+  loud: z.boolean().default(false),
   private: z.boolean().default(false),
   assigned: z.boolean().default(false),
   cost: num.default(0),
@@ -111,7 +133,7 @@ export const needsSchema = z.object({
     // Sharing a bed: how a contestant feels about a bedmate, and the thoughts it leaves.
     share: z.object({ neutral: num, pull: num, partners: z.array(z.string()).default([]), reluctant: unit, refused: z.string(), labels: z.record(z.string(), num).default({}), good: z.string(), bad: z.string() }),
     // Noisy people (traits with `noise`) disturb sleepers in the same room.
-    noise: z.object({ restMult: num.min(0), wakeChance: unit, cost: num, thought: z.string(), affection: num }),
+    noise: z.object({ restMult: num.min(0), wakeChance: unit, cost: num, thought: z.string(), affection: num, throughWall: unit }),
   }),
   bladder: z.object({ criticalBelow: num, waitMinutes: z.number().int().positive() }),
   comfortFollowPerHour: num,
@@ -332,12 +354,14 @@ export const interactionSchema = z.object({
   fight: z.boolean().default(false),
   targetGains: needMap.default({}),
   glass: z.enum(['outside', 'either']).optional(),
+  passing: z.boolean().default(false),
 });
 
 export const socialSchema = z.object({
   every: z.number().int().positive(),
   base: num,
   absorbed: z.object({ kinds: z.array(z.string()), tags: z.array(z.string()), actions: z.array(z.string()) }),
+  passing: unit,
   partner: z.object({ affection: num, attraction: num, min: num.positive() }),
   factorRange: range,
   interactions: z.array(interactionSchema).min(1),
@@ -563,6 +587,7 @@ export const romanceSchema = z.object({
     thought: z.string(),
     bond: num,
     disturbed: z.string(),
+    heard: z.string(),
     datingAt: num,
     datingPerLovin: num.nonnegative(),
     // Where: a bed by default; sometimes right here, which is a show for anyone watching.
@@ -725,6 +750,7 @@ export const traitsSchema = z.object({
 export const fileSchemas = {
   schedule: scheduleSchema,
   rooms: roomsSchema,
+  plans: plansSchema,
   objects: objectsSchema,
   needs: needsSchema,
   species: speciesSchema,

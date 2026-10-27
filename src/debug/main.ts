@@ -1,7 +1,7 @@
 // The crude debug view: rooms as boxes, contestants as dots with tiny need bars, an event
 // ticker and speed controls. It runs the core directly in the browser; all I/O lives here.
 /// <reference types="vite/client" />
-import { clockText, createWorld, setData, step, type Contestant, type SimEvent, type World } from '../core/index.js';
+import { along, clockText, createWorld, setData, station, step, type Contestant, type SimEvent, type World } from '../core/index.js';
 import { NEEDS, type GameData } from '../data/schema.js';
 import { readData } from './data.js';
 
@@ -25,6 +25,11 @@ let dirty = true;
 
 // ---------------------------------------------------------------------------------------------
 // Setup
+
+/** The floor plan to run on: ?plan= in the address, else plans.yaml's `use`. */
+function withPlan(d: GameData, plan: string | null): GameData {
+  return plan && plan !== d.plans.use && d.plans.plans[plan] ? { ...d, plans: { ...d.plans, use: plan } } : d;
+}
 
 function seedFromUrl(): number {
   const s = Number(new URLSearchParams(location.search).get('seed'));
@@ -62,12 +67,6 @@ function record(events: SimEvent[]): void {
 // ---------------------------------------------------------------------------------------------
 // The station
 
-function hubRoom(): string {
-  const links = new Map<string, number>();
-  for (const [a, b] of data.rooms.links) for (const r of [a, b]) links.set(r, (links.get(r) ?? 0) + 1);
-  return [...links].sort((x, y) => y[1] - x[1])[0]?.[0] ?? '';
-}
-
 function accessText(r: GameData['rooms']['rooms'][number]): string {
   if (r.access === 'ranks') return `ranks ${r.ranks![0]}–${r.ranks![1]}`;
   if (r.access === 'occupants') return 'residents';
@@ -92,7 +91,7 @@ function doingText(c: Contestant): string {
         : a.booze
           ? `${label(a.action)} (${a.booze})`
           : label(a.action);
-  if (a.phase === 'walk') return `→ ${data.rooms.rooms.find((r) => r.id === a.room)?.name ?? a.room}: ${what}`;
+  if (a.phase === 'walk') return `→ ${roomName(a.room)}: ${what}`;
   return what;
 }
 
@@ -110,17 +109,71 @@ function whoHtml(c: Contestant): string {
   </div>`;
 }
 
+const FILL: Record<string, string> = { all: '#2a2d3a', ranks: '#3a3324', occupants: '#2e2a44', robots: '#26282c', corridor: '#20222a' };
+
+/** Where a contestant's dot goes: along their path while walking, else a slot in their room. */
+function dotAt(c: Contestant, slot: number, count: number): [number, number] {
+  const st = station(data);
+  const a = c.activity;
+  if (a?.phase === 'walk' && a.from) {
+    const walk = Math.max(1, a.arriveAt - a.startedAt);
+    const p = along(st, a.from, a.room, (world.t - a.startedAt + 0.5) / walk);
+    if (p) return [p.at[0], p.at[1]];
+  }
+  const [x, y, w, h] = st.rect.get(c.room) ?? [0, 0, 1, 1];
+  const cols = Math.max(1, Math.min(count, Math.floor(w / 2.6)));
+  const rows = Math.ceil(count / cols);
+  const col = slot % cols;
+  const row = Math.floor(slot / cols);
+  return [x + (w * (col + 1)) / (cols + 1), y + h - 1.4 - (rows - 1 - row) * 2.4];
+}
+
+function renderPlan(): string {
+  const st = station(data);
+  const plan = st.plan;
+  const [W, H] = plan.size;
+  const parts: string[] = [];
+  for (const r of st.rooms) {
+    const [x, y, w, h] = st.rect.get(r.id)!;
+    const kind = st.corridor.has(r.id) ? 'corridor' : r.access;
+    parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${FILL[kind]}" stroke="#555" stroke-width="0.15"/>`);
+    if (!st.corridor.has(r.id) || w >= h * 4) { // vertical corridors are too narrow to label
+      const temp = world.rooms[r.id]?.temp;
+      parts.push(`<text x="${x + 0.5}" y="${y + 1.4}" class="rl">${esc(r.name)}${temp === undefined || st.corridor.has(r.id) ? '' : ` ${temp.toFixed(0)}°`}</text>`);
+      const acc = accessText(r);
+      if (acc) parts.push(`<text x="${x + 0.5}" y="${y + 2.6}" class="ra">${esc(acc)}</text>`);
+    }
+  }
+  for (const o of plan.openings) {
+    const [x1, y1, x2, y2] = o.at;
+    const cls = { door: 'op-door', arch: 'op-arch', glass: 'op-glass', bend: '' }[o.kind];
+    if (cls) parts.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${cls}"/>`);
+  }
+  for (const r of st.rooms) if (r.glass) {
+    const [x, y, w, h] = st.rect.get(r.id)!;
+    parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" class="op-glass"/>`);
+  }
+  for (const [x1, y1, x2, y2] of plan.windows) parts.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="op-window"/>`);
+  const byRoom = new Map<string, Contestant[]>();
+  for (const c of world.contestants) if (c.activity?.phase !== 'walk') byRoom.set(c.room, [...(byRoom.get(c.room) ?? []), c]);
+  for (const c of world.contestants) {
+    const list = byRoom.get(c.room) ?? [];
+    const [x, y] = dotAt(c, Math.max(0, list.indexOf(c)), Math.max(1, list.length));
+    const hue = (Number(c.id.slice(1)) * 137) % 360;
+    const cls = ['pd', c.id === selected ? 'sel' : '', c.asleep ? 'asleep' : '', c.breakdown ? 'broken' : ''].join(' ');
+    parts.push(`<g class="${cls}" data-id="${c.id}"><circle cx="${x}" cy="${y}" r="0.9" fill="hsl(${hue} 70% 60%)"/><text x="${x}" y="${y - 1.2}" class="pn">${esc(c.name)}</text></g>`);
+  }
+  return `<svg class="plan" viewBox="-1 -1 ${W + 2} ${H + 2}">${parts.join('')}</svg>`;
+}
+
 function renderStation(): void {
-  const hub = hubRoom();
-  const html = data.rooms.rooms.map((r) => {
+  const st = station(data);
+  const rooms = st.rooms.filter((r) => world.contestants.some((c) => c.room === r.id));
+  const cards = rooms.map((r) => {
     const here = world.contestants.filter((c) => c.room === r.id);
-    const temp = world.rooms[r.id]?.temp;
-    return `<div class="room${r.id === hub ? ' hub' : ''}">
-      <h3><span>${esc(r.name)}</span><small>${esc(accessText(r))} ${temp === undefined ? '' : `${temp.toFixed(0)}°F`}</small></h3>
-      <div class="dots">${here.map(whoHtml).join('')}</div>
-    </div>`;
+    return `<div class="room"><h3><span>${esc(r.name)}</span></h3><div class="dots">${here.map(whoHtml).join('')}</div></div>`;
   });
-  $('station').innerHTML = html.join('');
+  $('station').innerHTML = `${renderPlan()}<div class="cards">${cards.join('')}</div>`;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -233,7 +286,7 @@ function who(id: string): string {
 }
 
 function roomName(id: string | undefined): string {
-  return data.rooms.rooms.find((r) => r.id === id)?.name ?? id ?? '';
+  return (id && station(data).room.get(id)?.name) || id || '';
 }
 
 function describe(e: SimEvent): string | null {
@@ -470,11 +523,15 @@ function wire(): void {
   });
   $('step1').addEventListener('click', () => advance(1));
   $('step60').addEventListener('click', () => advance(60));
-  $('restart').addEventListener('click', () => {
+  const restart = () => {
     const seed = Math.max(1, Math.floor(Number(($('seed') as HTMLInputElement).value)) || 1);
-    history.replaceState(null, '', `?seed=${seed}`);
+    const plan = ($('plan') as HTMLSelectElement).value;
+    data = withPlan(data, plan);
+    history.replaceState(null, '', `?seed=${seed}&plan=${plan}`);
     start(seed);
-  });
+  };
+  $('restart').addEventListener('click', restart);
+  $('plan').addEventListener('change', restart);
   $('routine').addEventListener('change', () => (dirty = true));
   // mousedown, not click: the station redraws often and a click can straddle two redraws.
   $('station').addEventListener('mousedown', (ev) => {
@@ -503,7 +560,8 @@ function frame(now: number): void {
 }
 
 try {
-  data = readData();
+  data = withPlan(readData(), new URLSearchParams(location.search).get('plan'));
+  ($('plan') as HTMLSelectElement).innerHTML = Object.keys(data.plans.plans).map((p) => `<option${p === data.plans.use ? ' selected' : ''}>${p}</option>`).join('');
   wire();
   start(seedFromUrl());
   requestAnimationFrame(frame);
@@ -517,9 +575,12 @@ if (import.meta.hot) {
   import.meta.hot.accept('./data.ts', (mod) => {
     if (!mod || !world) return;
     try {
-      const next = (mod as unknown as typeof import('./data.js')).readData();
-      setData(world, next);
+      const next = withPlan((mod as unknown as typeof import('./data.js')).readData(), data.plans.use);
+      const replan = JSON.stringify(next.plans) !== JSON.stringify(data.plans);
       data = next;
+      // A different floor plan has different spaces: start the season again on it.
+      if (replan) start(world.seed);
+      else setData(world, next);
       $('error').hidden = true;
       dirty = true;
     } catch (e) {

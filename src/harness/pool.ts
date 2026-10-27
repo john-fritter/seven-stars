@@ -9,14 +9,14 @@ import { storySeed, type StorySeed } from './stories.js';
 
 export interface Job {
   dataDir: string;
-  overrides: Record<string, number>;
+  overrides: Record<string, number | string>;
   seeds: number[];
   days: number;
   stories?: boolean; // story sampling (stories.ts) instead of the harness stats
 }
 
-/** Sets values like "needs.needs.hunger.drainPerHour" (the first part is the file). */
-export function applyOverrides(data: GameData, overrides: Record<string, number>): GameData {
+/** Sets values like "needs.needs.hunger.drainPerHour" (the first part is the file). Strings replace strings ("plans.use"). */
+export function applyOverrides(data: GameData, overrides: Record<string, number | string>): GameData {
   if (!Object.keys(overrides).length) return data;
   const out = structuredClone(data) as unknown as Record<string, unknown>;
   for (const [path, value] of Object.entries(overrides)) {
@@ -27,7 +27,8 @@ export function applyOverrides(data: GameData, overrides: Record<string, number>
       o = o[p] as Record<string, unknown>;
     }
     const last = parts[parts.length - 1]!;
-    if (typeof o[last] !== 'number') throw new Error(`--param ${path}: not a number in the data`);
+    if (typeof o[last] !== typeof value) throw new Error(`--param ${path}: not a ${typeof value} in the data`);
+    if (path === 'plans.use' && !(data.plans.plans as Record<string, unknown>)[value as string]) throw new Error(`--plan: no plan "${String(value)}" in plans.yaml`);
     o[last] = value;
   }
   return out as unknown as GameData;

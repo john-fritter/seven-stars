@@ -56,6 +56,7 @@ describe('scoring', () => {
     for (const x of [a, b, c]) Object.assign(x, { room: 'cafe', meter: 50 });
     c.room = 'garden'; // not a witness
     w.show.today = {};
+    w.show.mine = {};
     w.show.pairs = {};
     const first = log(ctx, 'deep_talk', [a.id, b.id], 'cafe').data!.awards as Record<string, number>;
     const second = log(ctx, 'deep_talk', [b.id, a.id], 'cafe').data!.awards as Record<string, number>;
@@ -139,7 +140,7 @@ describe('sentences', () => {
     expect(a.needs.hygiene).toBeGreaterThan(0); // doused
     const events = step(w, until - w.t + 1);
     expect(a.confined).toBeNull();
-    expect(a.room).toBe('common');
+    expect(a.activity?.from ?? a.room).toBe('common'); // let out into the common room (and maybe off already)
     expect(events.find((e) => e.type === 'fishbowl_night')?.actors).toEqual([a.id]);
   });
 });

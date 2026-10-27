@@ -13,6 +13,7 @@ const USAGE = `Usage:
   sim season --seed 24 --days 30 [--data ./data]       one season, day by day, with names
 
 run and stories take --set file.path=value[,file.path=value] to try values without editing the data.
+Every command takes --plan ring|spine|hub to run on another floor plan (plans.yaml).
 
 --param names a number in the data: the file, then the path inside it (e.g. needs.needs.hunger.drainPerHour).`;
 
@@ -170,7 +171,8 @@ async function main(): Promise<void> {
   const days = num(opts, 'days', 30);
   const seeds = seedList(num(opts, 'seeds', cmd === 'stories' ? 24 : 200));
   const threads = opts.threads ? num(opts, 'threads') : undefined;
-  const overrides: Record<string, number> = {};
+  const overrides: Record<string, number | string> = {};
+  if (opts.plan) overrides['plans.use'] = opts.plan;
   for (const kv of (opts.set ?? '').split(',').filter(Boolean)) {
     const [k, v] = kv.split('=');
     if (!k || v === undefined || !Number.isFinite(Number(v))) throw new Error(`--set wants file.path=number, got "${kv}"`);
@@ -198,7 +200,7 @@ async function main(): Promise<void> {
     const rows: string[][] = [];
     for (let v = from; v <= to + stepBy / 1e6; v += stepBy) {
       const value = Math.round(v * 1e6) / 1e6;
-      const r = report(data, await runJob({ dataDir, overrides: { [param]: value }, seeds, days }, threads));
+      const r = report(data, await runJob({ dataDir, overrides: { ...overrides, [param]: value }, seeds, days }, threads));
       const hits = r.metrics.filter((m) => m.ok).length;
       rows.push([String(value), `${hits}/${r.metrics.length}`, ...r.metrics.map((m) => `${fmt(m.value)}${m.ok === false ? '!' : ''}`)]);
       console.error(`  ${param} = ${value}: ${hits} targets hit`);
@@ -211,7 +213,7 @@ async function main(): Promise<void> {
     console.log(storyReport(seasons).join('\n'));
     console.log(`\n(${((performance.now() - t0) / 1000).toFixed(1)}s)`);
   } else if (cmd === 'season') {
-    console.log(seasonLog(loadGameData(dataDir), num(opts, 'seed'), days).join('\n'));
+    console.log(seasonLog(applyOverrides(loadGameData(dataDir), overrides), num(opts, 'seed'), days).join('\n'));
   } else {
     console.log(USAGE);
     process.exitCode = cmd ? 1 : 0;

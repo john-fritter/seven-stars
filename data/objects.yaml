@@ -13,6 +13,7 @@
 #   assigned:    only whoever is assigned this object at the ceremony can use it (beds)
 #   cost / speciesCost: a flat cost when scoring (a cold shower)
 #   tags:        drive the personality grid and the mood modifier (personality.yaml)
+#   loud:        proposal (floor plan): keeps sleepers up, in the room and through the wall (needs.yaml noise)
 #   nightTags:   extra tags during the contestant's night (the hot tub after hours is risky)
 #   onlySpecies / notSpecies / ranks: who can use it
 #   logs:        an event logged when the action is finished, for scoring (a karaoke performance)
@@ -103,12 +104,12 @@ types:
   dance_floor:
     capacity: 8
     actions:
-      - { id: dance, label: dances, minutes: 30, gains: { fun: 15, social: 6 }, recreation: dancing,
+      - { id: dance, label: dances, loud: true, minutes: 30, gains: { fun: 15, social: 6 }, recreation: dancing,
           company: true, tags: [social, crowd, game] }
   karaoke_stage:
     capacity: 1
     actions:
-      - { id: karaoke, label: sings karaoke, minutes: 10, gains: { fun: 15 }, recreation: music,
+      - { id: karaoke, label: sings karaoke, loud: true, minutes: 10, gains: { fun: 15 }, recreation: music,
           logs: karaoke, tags: [performing] }
   window_seat:
     capacity: 2
@@ -118,12 +119,12 @@ types:
   arcade:
     capacity: 2
     actions:
-      - { id: arcade, label: plays the arcade, minutes: 30, gains: { fun: 15, social: 4 }, recreation: games,
+      - { id: arcade, label: plays the arcade, loud: true, minutes: 30, gains: { fun: 15, social: 4 }, recreation: games,
           company: true, tags: [game] }
   bowling_lane:
     capacity: 2
     actions:
-      - { id: bowl, label: bowls, minutes: 30, gains: { fun: 15, social: 4 }, recreation: games,
+      - { id: bowl, label: bowls, loud: true, minutes: 30, gains: { fun: 15, social: 4 }, recreation: games,
           company: true, tags: [game, social] }
   vending_snacks:
     capacity: 1

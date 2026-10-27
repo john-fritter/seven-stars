@@ -139,6 +139,7 @@ thoughts:
   kiss_rebuffed: { label: "Kiss rebuffed by {who}", value: -12, hours: 48, stack: 1, source: rejection }
   lovin:         { label: "Lovin' with {who}", value: 10, hours: 24, stack: 1, source: romance }
   turned_down:   { label: "Turned down by {who}", value: -10, hours: 24, stack: 1, source: rejection } # hours: proposal
+  heard_through_wall: { label: "Heard them through the wall", value: -1, hours: 6, stack: 1, source: discomfort } # proposal (floor plan)
   disturbed:     { label: "Kept up by the roommates", value: -3, hours: 12, stack: 1, source: discomfort } # proposal
   saw_lovin:     { label: "Saw {who} going at it in public", value: -4, hours: 12, stack: 1, source: person,  # proposal
                    scale: [{ axis: modesty, k: 1 }] }                                                      # the shameless don't mind

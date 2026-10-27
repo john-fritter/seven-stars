@@ -10,6 +10,7 @@ import { begin, endActivity, onToilet, PASSED_OUT } from './actions.js';
 import { think } from './thoughts.js';
 import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
+import { canSee } from './station.js';
 
 type Stage = Ctx['data']['booze']['stages'][number];
 
@@ -190,7 +191,7 @@ export function giftDrink(ctx: Ctx, c: Contestant, o: Contestant): void {
 export function hammeredHour(ctx: Ctx, c: Contestant): void {
   if (stageOf(ctx, c)?.id !== 'hammered' || c.asleep || c.breakdown || c.activity?.action === PASSED_OUT || onToilet(ctx, c)) return;
   const b = ctx.data.booze;
-  const saw = ctx.w.contestants.filter((o) => o !== c && o.room === c.room && !o.asleep);
+  const saw = ctx.w.contestants.filter((o) => o !== c && canSee(ctx.st, o.room, c.room) && !o.asleep);
   if (chance(ctx.w.rng, b.puke.perHour)) {
     addNeed(c, 'hygiene', b.puke.hygiene);
     log(ctx, 'puke', [c.id], c.room);

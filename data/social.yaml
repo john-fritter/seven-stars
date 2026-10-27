@@ -14,6 +14,11 @@ absorbed:
   tags: [exposed]                  # proposal: not mid-shower
   actions: [fight, at_door, lovin, sleepwalk, passed_out]   # sleepwalk: traits.yaml; passed_out: booze.yaml
 
+# Proposal (floor plan): walking into a corridor or the common room where someone is, a walker may
+# start one of the interactions marked `passing: true` without stopping, at this × their usual
+# chance of starting an interaction.
+passing: 0.5
+
 # Proposal: who they turn to, × (1 + affection ÷ 100 × affection + attraction ÷ 10 × attraction),
 # never below `min`.
 partner: { affection: 1, attraction: 1, min: 0.2 }
@@ -34,20 +39,20 @@ partner: { affection: 1, attraction: 1, min: 0.2 }
 # `actor` / `target`: ledger changes, the actor's toward the target and the target's toward the actor.
 # `thought`: a thought the target gets about the actor. `targetGains`: needs the target gains.
 # `glass`: only through the fishbowl's glass, never face to face. "outside" means only someone
-# outside the cell starts it; "either" means either side can.
+# outside the cell starts it; "either" means either side can. `passing`: can happen in passing (above).
 factorRange: [0.1, 5]
 interactions:
-  - { id: chitchat, weight: 1, social: 8, knows: 0.02,
+  - { id: chitchat, passing: true, weight: 1, social: 8, knows: 0.02,
       actor: { affection: 0.25 }, target: { affection: 0.25 } }   # M8: was 0.5; 37% of pairs were friends
   - { id: deep_talk, weight: 0.075, scale: [{ by: chemistry, k: 5 }], social: 12, knows: 0.25,
       actor: { affection: 10, trust: 3 }, target: { affection: 10, trust: 3 } }   # trust: proposal
-  - { id: kind_words, weight: 0.02, scale: [{ by: kind }], social: 4,
+  - { id: kind_words, passing: true, weight: 0.02, scale: [{ by: kind }], social: 4,
       target: { affection: 3 }, thought: kind_words }                           # affection: proposal
-  - { id: flirt, weight: 0.02, move: flirt, needs: { attraction: 4 }, social: 4,
+  - { id: flirt, passing: true, weight: 0.02, move: flirt, needs: { attraction: 4 }, social: 4,
       scale: [{ by: attraction }, { by: privacy, k: 1 }, { by: brave, k: 0.5 }] }
-  - { id: slight, weight: 0.02, scale: [{ by: affection, k: -2 }, { by: kind, k: -1 }],
+  - { id: slight, passing: true, weight: 0.02, scale: [{ by: affection, k: -2 }, { by: kind, k: -1 }],
       target: { affection: -5 }, thought: slighted }
-  - { id: insult, weight: 0.007, scale: [{ by: affection, k: -2 }, { by: kind, k: -1 }],
+  - { id: insult, passing: true, weight: 0.007, scale: [{ by: affection, k: -2 }, { by: kind, k: -1 }],
       target: { affection: -15, fear: 3 }, thought: insulted, fight: true,       # fear: proposal
       witnessThought: saw_cruelty }
   # Gifts: a carried drink (booze.yaml carry and gift).

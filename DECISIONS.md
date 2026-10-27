@@ -366,7 +366,7 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Still open: 52% of drinks come before noon, peaking right after the wake chime, and nobody knows yet why people reach for one first thing; panics are still a quarter of all breaks.
 - [ ] Still open: about 30% of breaks are still extreme, and the three most-broken people in a season still have about 45% of its breaks; both come from the bottom ranks and the fishbowl sitting near mood 0.
 
-**Proposed for the floor plan (Oct 23, design only, nothing built).** Written up in DESIGN.md Part two, The floor plan: the next pass. The shape is john's call.
+**Proposed for the floor plan (Oct 23; walking, sight lines, noise and passing built Oct 27).** Written up in DESIGN.md Part two, The floor plan: the next pass. john asked (Oct 27) to try all three shapes; all three are in `data/plans.yaml` and the ring is `use` for now. The shape is still john's call.
 
 - [ ] Shape: a ring corridor (the Promenade) round the common room, with the cafe, restroom and confessional inside it, the lounge and spa on the space side, the garden, airlock and suite to the west, the cage, medbay and rec room to the east, and the good room and dorm to the south. Alternatives: a spine corridor, or the hub made real.
 - [ ] Scale: about 60 × 50 tiles, a tile a metre, walking 25 tiles a minute, so trips stay 1 to 3 minutes.
@@ -377,4 +377,8 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Seen going in together: two people through the same closed door within two minutes, if anyone sees it, counts like a seen flirt.
 - [ ] The discreet way round: someone sneaking, or with a person they're cheating with, takes the route past the fewest watchers, each watcher costing walking minutes × deceptive ÷ 10.
 - [ ] The drifting dead: about 15 minutes after a spacing, everyone in the lounge gets "{who} drifted past the window" (fear −4, a day).
+- [ ] Tried Oct 27 (200 seeds × 30 days each): all three shapes hit 11 of 11 targets. The hub is the gentlest and most watched (deaths 2.23 a week, stay 2.99 weeks, 3.0 witnesses per break), the spine has the most hallway run-ins (49 a week in the hall) and the fewest kept up at night, the ring the most kept up (6.1 a week, 2.2 through a wall). Walking takes about 30 minutes a day, half the old graph.
+- [ ] As built: walks are rounded to whole minutes (at least 1) along the openings' midpoints; any public room that isn't a corridor or `through` costs 5× to cross; a glass cell walks out through its room; corridors don't count as neighbours for noise.
+- [ ] Loud actions (dance, karaoke, bowling, arcade) keep sleepers up in the room and through a wall, like a snorer. "Heard them through the wall": −1 for six hours, and they know about it.
+- [ ] Passing: on entering a corridor or the common room where someone is, 0.5 × their usual chance of chitchat, kind words, a flirt, a slight or an insult. About 57 to 69 a week.
 - [ ] The morning drinking isn't the layout: tripling walking times leaves 50–52% of drinks before noon. The evening is: 41–58% of contestants nap between 17:00 and 21:00, because fun and social sit at 94–99 all day and a nap wins. To look at in its own thread.

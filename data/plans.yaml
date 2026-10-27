@@ -1,0 +1,161 @@
+# The floor plan. DESIGN.md Part two, The floor plan. All of it is proposal: john is trying
+# three shapes (Oct 27) before choosing one.
+#
+# use:         which plan the station is built on (the harness takes --plan to switch)
+# walkSpeed:   tiles a minute (a tile is a metre); walks take max(1, round(path length ÷ walkSpeed))
+# detour:      a walk only crosses corridors and the plan's `through` rooms, and nowhere private;
+#              any other public room costs this × its distance to cross (so the spa is reached
+#              through the lounge, and nobody else cuts through the lounge)
+# corridor:    what every corridor is like: access all, no objects
+# soundproof:  rooms nothing carries in or out of through the walls
+#
+# Each plan:
+#   size:       the deck, [width, height]
+#   through:    rooms people walk through on their way somewhere, besides corridors
+#   windows:    wall segments that look out into space (drawing only for now)
+#   rooms:      every room in rooms.yaml: [x, y, width, height]. Only a glass cell may sit inside
+#               another room (the fishbowl in the common room).
+#   corridors:  extra spaces for walking: { id, name, rect }
+#   openings:   { a, b, kind, at: [x1, y1, x2, y2] } on the wall a and b share.
+#               door:  walk through it; it blocks sight and sound
+#               arch:  walk through it, and see and hear through it
+#               glass: see through it, nothing more
+#               bend:  where two corridors meet round a corner; walk, but no line of sight
+# Rooms that share a wall hear each other's noise (needs.yaml noise.throughWall).
+
+use: ring
+walkSpeed: 25
+detour: 5
+corridor: { privacy: 0.3, temperature: 68, comfort: 40 }
+soundproof: [suite]
+
+plans:
+  # The Promenade: a ring corridor round the common room. The public rooms are inside it, the
+  # lounge and spa face space, the quiet side is west and the loud side east.
+  ring:
+    size: [60, 50]
+    through: [common, cafe]
+    windows: [[12, 0, 38, 0]]
+    rooms:
+      garden: [0, 0, 12, 22]
+      lounge: [12, 0, 26, 12]
+      spa: [38, 0, 10, 12]
+      cage: [48, 4, 12, 14]
+      medbay: [48, 18, 12, 8]
+      rec: [48, 26, 12, 14]
+      airlock: [0, 22, 12, 6]
+      suite: [0, 28, 12, 22]
+      good: [12, 40, 24, 10]
+      dorm: [36, 40, 24, 10]
+      common: [15, 15, 30, 14]
+      fishbowl: [39, 17, 5, 5]
+      cafe: [15, 29, 14, 8]
+      restroom: [29, 29, 10, 8]
+      confessional: [39, 29, 6, 8]
+    corridors:
+      - { id: ring_n, name: Promenade (north), rect: [12, 12, 36, 3] }
+      - { id: ring_s, name: Promenade (south), rect: [12, 37, 36, 3] }
+      - { id: ring_w, name: Promenade (west), rect: [12, 15, 3, 22] }
+      - { id: ring_e, name: Promenade (east), rect: [45, 15, 3, 22] }
+    openings:
+      - { a: lounge, b: ring_n, kind: arch, at: [20, 12, 30, 12] }
+      - { a: spa, b: lounge, kind: door, at: [38, 9, 38, 11] }
+      - { a: spa, b: lounge, kind: glass, at: [38, 1, 38, 8.5] }
+      - { a: common, b: ring_n, kind: door, at: [28.5, 15, 31.5, 15] }
+      - { a: common, b: ring_w, kind: door, at: [15, 20.5, 15, 23.5] }
+      - { a: common, b: ring_e, kind: door, at: [45, 20.5, 45, 23.5] }
+      - { a: cafe, b: common, kind: arch, at: [16, 29, 28, 29] }
+      - { a: cafe, b: ring_s, kind: door, at: [20.5, 37, 23.5, 37] }
+      - { a: restroom, b: common, kind: door, at: [32.5, 29, 35, 29] }
+      - { a: confessional, b: common, kind: door, at: [41, 29, 43, 29] }
+      - { a: garden, b: ring_w, kind: door, at: [12, 16.5, 12, 19] }
+      - { a: airlock, b: ring_w, kind: door, at: [12, 24, 12, 26] }
+      - { a: suite, b: ring_w, kind: door, at: [12, 32, 12, 34.5] }
+      - { a: good, b: ring_s, kind: door, at: [22, 40, 24.5, 40] }
+      - { a: dorm, b: ring_s, kind: door, at: [40, 40, 42.5, 40] }
+      - { a: rec, b: ring_e, kind: door, at: [48, 31, 48, 33.5] }
+      - { a: medbay, b: ring_e, kind: door, at: [48, 21, 48, 23.5] }
+      - { a: cage, b: ring_e, kind: arch, at: [48, 15.5, 48, 18] }
+      - { a: ring_n, b: ring_w, kind: bend, at: [12, 15, 15, 15] }
+      - { a: ring_n, b: ring_e, kind: bend, at: [45, 15, 48, 15] }
+      - { a: ring_s, b: ring_w, kind: bend, at: [12, 37, 15, 37] }
+      - { a: ring_s, b: ring_e, kind: bend, at: [45, 37, 48, 37] }
+
+  # The spine: one long hallway, cruise-ship style, with rooms on both sides. Everyone passes
+  # everyone, and the whole hall sees its whole length.
+  spine:
+    size: [72, 36]
+    through: [common, cafe]
+    windows: [[12, 0, 38, 0]]
+    rooms:
+      garden: [0, 0, 12, 15]
+      lounge: [12, 0, 26, 15]
+      spa: [38, 0, 10, 15]
+      cage: [48, 0, 12, 15]
+      medbay: [60, 0, 6, 15]
+      airlock: [66, 0, 6, 15]
+      suite: [0, 19, 10, 15]
+      good: [10, 19, 12, 15]
+      cafe: [22, 19, 10, 15]
+      common: [32, 19, 18, 11]
+      fishbowl: [44, 21, 5, 5]
+      restroom: [32, 30, 9, 6]
+      confessional: [41, 30, 9, 6]
+      rec: [50, 19, 10, 15]
+      dorm: [60, 19, 12, 15]
+    corridors:
+      - { id: hall, name: The hall, rect: [0, 15, 72, 4] }
+    openings:
+      - { a: garden, b: hall, kind: door, at: [5, 15, 7.5, 15] }
+      - { a: lounge, b: hall, kind: arch, at: [18, 15, 30, 15] }
+      - { a: spa, b: lounge, kind: door, at: [38, 12, 38, 14] }
+      - { a: spa, b: lounge, kind: glass, at: [38, 1, 38, 11] }
+      - { a: cage, b: hall, kind: arch, at: [50, 15, 58, 15] }
+      - { a: medbay, b: hall, kind: door, at: [62, 15, 64, 15] }
+      - { a: airlock, b: hall, kind: door, at: [68, 15, 70, 15] }
+      - { a: suite, b: hall, kind: door, at: [4, 19, 6.5, 19] }
+      - { a: good, b: hall, kind: door, at: [15, 19, 17.5, 19] }
+      - { a: cafe, b: hall, kind: door, at: [25, 19, 28, 19] }
+      - { a: cafe, b: common, kind: arch, at: [32, 20, 32, 29] }
+      - { a: common, b: hall, kind: door, at: [36, 19, 40, 19] }
+      - { a: restroom, b: common, kind: door, at: [35, 30, 37.5, 30] }
+      - { a: confessional, b: common, kind: door, at: [44, 30, 46, 30] }
+      - { a: rec, b: hall, kind: door, at: [54, 19, 56.5, 19] }
+      - { a: dorm, b: hall, kind: door, at: [65, 19, 67.5, 19] }
+
+  # The hub made real: no corridors, every door opens off the common room (today's graph, drawn).
+  hub:
+    size: [60, 44]
+    through: [common, cafe]
+    windows: [[14, 0, 36, 0]]
+    rooms:
+      lounge: [14, 0, 22, 12]
+      spa: [36, 0, 12, 12]
+      garden: [0, 12, 14, 8]
+      airlock: [0, 20, 14, 4]
+      suite: [0, 24, 14, 10]
+      common: [14, 12, 34, 22]
+      fishbowl: [40, 14, 5, 5]
+      cage: [48, 12, 12, 6]
+      medbay: [48, 18, 12, 5]
+      rec: [48, 23, 12, 6]
+      dorm: [48, 29, 12, 5]
+      cafe: [14, 34, 10, 10]
+      restroom: [24, 34, 8, 8]
+      confessional: [32, 34, 5, 8]
+      good: [37, 34, 11, 10]
+    openings:
+      - { a: lounge, b: common, kind: arch, at: [20, 12, 30, 12] }
+      - { a: spa, b: lounge, kind: door, at: [36, 9, 36, 11] }
+      - { a: spa, b: lounge, kind: glass, at: [36, 1, 36, 8.5] }
+      - { a: garden, b: common, kind: door, at: [14, 15, 14, 17.5] }
+      - { a: airlock, b: common, kind: door, at: [14, 21, 14, 23] }
+      - { a: suite, b: common, kind: door, at: [14, 27, 14, 29.5] }
+      - { a: cage, b: common, kind: arch, at: [48, 13, 48, 17] }
+      - { a: medbay, b: common, kind: door, at: [48, 19.5, 48, 21.5] }
+      - { a: rec, b: common, kind: door, at: [48, 24.5, 48, 27] }
+      - { a: dorm, b: common, kind: door, at: [48, 30.5, 48, 32.5] }
+      - { a: cafe, b: common, kind: arch, at: [15, 34, 23, 34] }
+      - { a: restroom, b: common, kind: door, at: [26.5, 34, 29, 34] }
+      - { a: confessional, b: common, kind: door, at: [33.5, 34, 35.5, 34] }
+      - { a: good, b: common, kind: door, at: [41, 34, 43.5, 34] }

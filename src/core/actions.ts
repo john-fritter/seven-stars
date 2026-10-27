@@ -13,10 +13,10 @@ import { feel, rel } from './ledger.js';
 import { addNeed, needUrgency } from './needs.js';
 import { between, chance, pick, weightedIndex } from './rng.js';
 import { bedtime, labelOf, lovinArrive, morning } from './romance.js';
-import { walkMinutes, type ObjectInstance } from './station.js';
+import { along, canSee, nextDoor, walkMinutes, type ObjectInstance } from './station.js';
 import { actionPull, desperateEase, ownRepeats } from './ratings.js';
 import { caughtIn, infraction, sneakCost } from './show.js';
-import { askToShare, companyPull, expectedKnockOdds, guestOf, knock, occupants } from './social.js';
+import { askToShare, companyPull, expectedKnockOdds, guestOf, inPassing, knock, occupants } from './social.js';
 import { discomfortAt, preferredSetting, setThermostat, situationComfort } from './temperature.js';
 import { think } from './thoughts.js';
 import { traitFx } from './traits.js';
@@ -189,7 +189,8 @@ function bedExtra(ctx: Ctx, c: Contestant, o: ObjectInstance, def: ActionDef, ni
   if (def.kind !== 'sleep') return 0;
   let x = 0;
   if (def.assigned && night) for (const m of bedmates(ctx, c, o)) x += bedmateFeeling(ctx, c, m);
-  if (ctx.w.contestants.some((n) => n !== c && n.room === o.room && noisy(ctx, n))) x -= ctx.data.needs.sleep.noise.cost;
+  const din = noiseAt(ctx, c, o.room);
+  if (din) x -= ctx.data.needs.sleep.noise.cost * din.k;
   return x;
 }
 
@@ -354,6 +355,7 @@ export function begin(ctx: Ctx, c: Contestant, p: Plan): void {
     room: p.room,
     phase: 'walk',
     startedAt: t,
+    from: c.room,
     arriveAt: t + walk,
     minutes: p.endAt === undefined ? (p.minutes ?? null) : null,
     endAt: p.endAt ?? null,
@@ -410,7 +412,7 @@ export function endActivity(ctx: Ctx, c: Contestant, how: 'done' | 'interrupted'
     const risky = ctx.data.thoughts.moments.risky;
     if (def && (def.tags.includes(risky.tag) || (def.nightTags.includes(risky.tag) && isNightFor(ctx, c, ctx.w.t)))) think(ctx, c, risky.thought);
     // Seen in the shower (or on an open toilet): the modest mind.
-    if (def?.tags.includes('exposed') && !def.private && ctx.w.contestants.some((o) => o !== c && o.room === c.room && !o.asleep)) {
+    if (def?.tags.includes('exposed') && !def.private && ctx.w.contestants.some((o) => o !== c && canSee(ctx.st, o.room, c.room) && !o.asleep)) {
       think(ctx, c, ctx.data.actions.modestyThought);
       const enjoyed = traitFx(ctx.data, c).exposedThought; // an exhibitionist enjoys it
       if (enjoyed) think(ctx, c, enjoyed);
@@ -451,6 +453,22 @@ export function endActivity(ctx: Ctx, c: Contestant, how: 'done' | 'interrupted'
   }
 }
 
+/** Whether they're making a racket: a snorer or hummer, or someone doing something loud. */
+function racket(ctx: Ctx, o: Contestant): boolean {
+  if (noisy(ctx, o)) return true;
+  const a = o.activity;
+  return !o.asleep && a?.phase === 'do' && !!actionDef(ctx, a)?.loud;
+}
+
+/** The noise a sleeper in `room` would hear: in the room at full strength, next door through the wall. */
+function noiseAt(ctx: Ctx, c: Contestant, room: string): { who: Contestant; k: number } | null {
+  const near = ctx.w.contestants.find((o) => o !== c && o.room === room && racket(ctx, o));
+  if (near) return { who: near, k: 1 };
+  const walls = nextDoor(ctx.st, room);
+  const far = walls.length ? ctx.w.contestants.find((o) => o !== c && walls.includes(o.room) && racket(ctx, o)) : undefined;
+  return far ? { who: far, k: ctx.data.needs.sleep.noise.throughWall } : null;
+}
+
 /** Thoughts on waking: where they slept, who beside them, and who kept them up. */
 function wokeUp(ctx: Ctx, c: Contestant, a: Activity, def: ActionDef): void {
   const night = ctx.w.t - a.arriveAt >= ctx.data.thoughts.sleepMinutes;
@@ -466,13 +484,27 @@ function wokeUp(ctx: Ctx, c: Contestant, a: Activity, def: ActionDef): void {
   }
 }
 
+/**
+ * A minute of walking: they're in whichever space the path has reached (a corridor, the common
+ * room), where others can see them go by, and may have a word with someone in passing.
+ */
+function passThrough(ctx: Ctx, c: Contestant, a: Activity): void {
+  if (!a.from) return;
+  const walk = a.arriveAt - a.startedAt;
+  const here = along(ctx.st, a.from, a.room, (ctx.w.t - a.startedAt + 0.5) / walk);
+  if (!here || here.space === a.room || here.space === c.room) return;
+  (ctx.w.show.seen[c.room] ??= {})[c.id] = ctx.w.t; // for "seen near the victim"
+  c.room = here.space;
+  inPassing(ctx, c);
+}
+
 /** One minute of whatever the contestant is doing. */
 export function runActivity(ctx: Ctx, c: Contestant): void {
   const a = c.activity;
   if (!a) return;
   const t = ctx.w.t;
   if (a.phase === 'walk') {
-    if (t < a.arriveAt) return;
+    if (t < a.arriveAt) return passThrough(ctx, c, a);
     arrive(ctx, c);
   }
   if (a.endAt !== null && t >= a.endAt) {
@@ -516,12 +548,13 @@ function sleepMinute(ctx: Ctx, c: Contestant, a: Activity, def: ActionDef): bool
     const mate = ctx.w.objects[a.object]!.find((id) => id !== c.id && ctx.w.contestants.find((o) => o.id === id)?.asleep);
     if (mate) a.bedmate = mate;
   }
-  const culprit = ctx.w.contestants.find((o) => o !== c && o.room === c.room && noisy(ctx, o));
-  if (culprit) {
-    gain *= s.noise.restMult;
+  const din = noiseAt(ctx, c, c.room);
+  if (din) {
+    const culprit = din.who;
+    gain *= 1 - (1 - s.noise.restMult) * din.k;
     a.kept = culprit.id;
-    if (chance(ctx.w.rng, s.noise.wakeChance)) {
-      log(ctx, 'kept_up', [c.id, culprit.id], c.room, { noise: traitFx(ctx.data, culprit).noise });
+    if (chance(ctx.w.rng, s.noise.wakeChance * din.k)) {
+      log(ctx, 'kept_up', [c.id, culprit.id], c.room, { noise: traitFx(ctx.data, culprit).noise ?? culprit.activity?.action, ...(din.k < 1 ? { wall: true } : {}) });
       endActivity(ctx, c, 'woke');
       return true;
     }

@@ -147,9 +147,17 @@ describe('trait effects', () => {
     alone(w, a, b, fan);
     for (const c of [a, b, fan]) Object.assign(c, { room: 'lounge', asleep: false });
     b.traits = ['show_off'];
-    const plainPts = (log(ctx, 'karaoke', [a.id], 'lounge').data!.awards as Record<string, number>)[a.id]!;
+    w.show.today = {};
+    w.show.mine = {};
+    // Points without the surprise bonus, which depends on what each of them usually does.
+    const pts = (id: string) => {
+      const d = log(ctx, 'karaoke', [id], 'lounge').data!;
+      return (d.awards as Record<string, number>)[id]! / ((d.surprise as number | undefined) ?? 1);
+    };
+    const plainPts = pts(a.id);
     w.show.today = {}; // no boredom between the two
-    const showPts = (log(ctx, 'karaoke', [b.id], 'lounge').data!.awards as Record<string, number>)[b.id]!;
+    w.show.mine = {};
+    const showPts = pts(b.id);
     expect(showPts).toBeCloseTo(plainPts * 1.5, 1);
     expect(b.thoughts.map((t) => t.id)).toContain('everyone_watching');
     expect(a.thoughts.map((t) => t.id)).not.toContain('everyone_watching');

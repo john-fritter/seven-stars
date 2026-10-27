@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createWorld, step } from '../src/core/index.js';
 import { axisFactor, urgency } from '../src/core/needs.js';
 import { rankOrder } from '../src/core/schedule.js';
-import { station, walkMinutes } from '../src/core/station.js';
+import { along, canHear, canSee, nextDoor, station, walkMinutes } from '../src/core/station.js';
 import { discomfortAt } from '../src/core/temperature.js';
 import { ctxFor, data } from './helpers.js';
 
@@ -28,8 +28,34 @@ describe('walking', () => {
     const st = station(data);
     expect(walkMinutes(st, 'common', 'common')).toBe(0);
     expect(walkMinutes(st, 'lounge', 'spa')).toBe(1);
-    expect(walkMinutes(st, 'rec', 'spa')).toBe(2); // through the lounge
-    expect(walkMinutes(st, 'dorm', 'suite')).toBe(5); // through the common room
+    expect(walkMinutes(st, 'rec', 'spa')).toBe(2); // across the common room and through the lounge
+    expect(walkMinutes(st, 'dorm', 'suite')).toBe(2); // along the south Promenade
+    expect(walkMinutes(st, 'fishbowl', 'cafe')).toBe(1); // a glass cell walks out through its room
+  });
+
+  it('walks through the spaces in between, never anywhere private', () => {
+    const st = station(data);
+    const route = (a: string, b: string) => {
+      const p = st.paths[st.roomIndex.get(a)!]![st.roomIndex.get(b)!]!;
+      return p.spaces.filter((s, i) => i === 0 || s !== p.spaces[i - 1]);
+    };
+    expect(route('rec', 'spa')).toEqual(['rec', 'ring_e', 'common', 'ring_n', 'lounge', 'spa']);
+    expect(route('suite', 'dorm')).toEqual(['suite', 'ring_w', 'ring_s', 'dorm']);
+    expect(along(st, 'suite', 'dorm', 0.5)!.space).toBe('ring_s');
+    for (const p of st.paths.flat()) if (p) for (const s of p.spaces.slice(1, -1)) expect(['occupants', 'robots']).not.toContain(st.room.get(s)!.access);
+  });
+
+  it('sees through arches and glass, hears through arches, and knows its walls', () => {
+    const st = station(data);
+    expect(canSee(st, 'common', 'cafe')).toBe(true);
+    expect(canHear(st, 'common', 'cafe')).toBe(true);
+    expect(canSee(st, 'lounge', 'spa')).toBe(true);
+    expect(canHear(st, 'lounge', 'spa')).toBe(false);
+    expect(canSee(st, 'common', 'fishbowl')).toBe(true);
+    expect(canSee(st, 'common', 'restroom')).toBe(false);
+    expect(canSee(st, 'ring_n', 'ring_e')).toBe(false); // round the corner
+    expect(nextDoor(st, 'dorm').sort()).toEqual(['good', 'rec']);
+    expect(nextDoor(st, 'suite')).toEqual([]); // soundproofed
   });
 });
 

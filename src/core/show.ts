@@ -13,6 +13,7 @@ import { addMeter } from './scoring.js';
 import { think } from './thoughts.js';
 import { found } from './trials.js';
 import type { Body, Contestant } from './types.js';
+import { canSee } from './station.js';
 
 /** Logs an infraction and holds it for the ceremony. `scored` is what the act itself earned them. */
 export function infraction(ctx: Ctx, c: Contestant, rule: string, room: string, scored = 0, detail: Record<string, unknown> = {}): void {
@@ -128,7 +129,7 @@ export function space(ctx: Ctx, c: Contestant, cause: string, room = ctx.data.sc
     log(ctx, 'immunity_spent', [c.id], c.room, { cause, left: c.immunities });
     return false;
   }
-  const witnesses = ctx.w.contestants.filter((o) => o !== c && !o.asleep && (o.room === room || ctx.st.room.get(o.room)!.glass === room)).map((o) => o.id);
+  const witnesses = ctx.w.contestants.filter((o) => o !== c && !o.asleep && canSee(ctx.st, o.room, room)).map((o) => o.id);
   kill(ctx, c, cause, room, witnesses);
   for (const o of ctx.w.contestants) if (witnesses.includes(o.id)) think(ctx, o, ctx.data.rules.spacing.watched);
   return true;
