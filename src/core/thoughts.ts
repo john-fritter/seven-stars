@@ -1,9 +1,10 @@
 // Thoughts and mood: mood is the base plus every active thought. DESIGN.md Part two,
 // Thoughts, mood and breaks. Conditions (low needs, the temperature) are thoughts refreshed
 // while they last; breaks (breaks.ts) read the sources to pick what kind of break.
+import type { Need } from '../data/schema.js';
 import type { Ctx } from './context.js';
 import { axis } from './booze.js';
-import { axisFactor } from './needs.js';
+import { addNeed, axisFactor } from './needs.js';
 import { derived } from './derived.js';
 import { clothingWarmth, discomfortAt } from './temperature.js';
 import { traitFx } from './traits.js';
@@ -35,6 +36,7 @@ export function think(ctx: Ctx, c: Contestant, id: string, about: string | null 
     c.thoughts.splice(c.thoughts.indexOf(oldest), 1);
   }
   c.thoughts.push({ id, about, value, until: ctx.w.t + def.hours * 60 });
+  for (const n in def.needs) addNeed(c, n as Need, def.needs[n as Need]!);
   updateMood(ctx, c);
 }
 

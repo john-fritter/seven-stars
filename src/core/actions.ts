@@ -10,7 +10,7 @@ import { accessRank, canEnter, dayOf, effectOn, effectsToday, inRanks, isNightFo
 import { gathering } from './schedule.js';
 import { gainsOf, personalityOf, tagMult } from './derived.js';
 import { feel, rel } from './ledger.js';
-import { addNeed, needUrgency } from './needs.js';
+import { addNeed, freshness, needUrgency, wearThin } from './needs.js';
 import { between, chance, pick, weightedIndex } from './rng.js';
 import { bedtime, labelOf, lovinArrive, morning } from './romance.js';
 import { along, canSee, nextDoor, walkMinutes, type ObjectInstance } from './station.js';
@@ -95,7 +95,7 @@ function scoreAction(ctx: Ctx, c: Contestant, def: ActionDef, room: string, othe
   let pulls = (def.kind === 'sleep' || def.kind === 'toilet' ? 0 : pull) + extra;
   for (const [n, g] of gainsOf(ctx.data, c, def)) {
     if (n === 'social' && def.company && !others.get(room)) continue;
-    needs += needTerm(ctx, c, n, g);
+    needs += needTerm(ctx, c, n, g * freshness(ctx, c, def.id, n));
   }
   if (def.kind === 'sleep') {
     needs += needTerm(ctx, c, 'rest', (100 - c.needs.rest) * def.quality!);
@@ -500,6 +500,8 @@ function passThrough(ctx: Ctx, c: Contestant, a: Activity): void {
   if (!here || here.space === a.room || here.space === c.room) return;
   (ctx.w.show.seen[c.room] ??= {})[c.id] = ctx.w.t; // for "seen near the victim"
   c.room = here.space;
+  // Cutting through a room above their rank (the lounge on the way to the spa) is being in it.
+  if (!canEnter(ctx, c, c.room) && !caughtIn(ctx, c, c.room)) infraction(ctx, c, 'above_rank', c.room, 0, { doing: a.action, passing: true });
   inPassing(ctx, c);
 }
 
@@ -534,10 +536,14 @@ export function runActivity(ctx: Ctx, c: Contestant): void {
       const gains = gainsOf(ctx.data, c, def);
       if (gains.length === 0) return;
       const others = def.company ? ctx.w.contestants.some((o) => o !== c && o.room === c.room) : true;
+      let worn = false;
       for (const [n, g] of gains) {
         if (n === 'social' && !others) continue;
-        addNeed(c, n, g / def.minutes);
+        const f = freshness(ctx, c, def.id, n);
+        if (ctx.data.needs.tolerance.needs.includes(n)) worn = true;
+        addNeed(c, n, (g * f) / def.minutes);
       }
+      if (worn) wearThin(ctx, c, def.id, def.minutes);
     }
   }
 }

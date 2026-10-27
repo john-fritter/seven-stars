@@ -2,7 +2,7 @@
 import type { GameData } from '../data/schema.js';
 import { decide, endActivity, followComfort, onToilet, runActivity, sleepwalk } from './actions.js';
 import type { Ctx } from './context.js';
-import { drainNeeds } from './needs.js';
+import { drainNeeds, recover } from './needs.js';
 import { socialRound } from './social.js';
 import { soberMinute } from './booze.js';
 import { maybeBreak } from './breaks.js';
@@ -86,6 +86,7 @@ function tick(ctx: Ctx): void {
         maybeBreak(ctx, c);
         hammeredHour(ctx, c);
         sleepwalk(ctx, c);
+        recover(ctx, c);
       }
       c.health = Math.min(100, c.health + ctx.data.social.health.recoverPerHour / 6);
     }

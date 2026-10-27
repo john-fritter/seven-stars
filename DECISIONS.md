@@ -389,3 +389,13 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Naps weren't causing the morning drinking: with naps banned outright, drinks between 07:00 and 09:00 didn't change. 86% of drinks before noon were by the hungover. While the hangover lasts (8 hours from the chime), a drink scores × 0.3. Drinks before noon 52% → 28%, 07:00–09:00 24% → 11%; drinks a day 22.3 → 19.9; the peak is now 16:00–19:00.
 - [ ] The ceremony and event chimes wake sleepers above rest 30 (was 40), level with the nap line. Without it, tired evening nappers slept through the ceremony: skipped-ceremony fines 0.01 → 0.41 a day; with it, 0.03.
 - [ ] Side effects: hookups 3.16 → 2.88 a week (fewer trips to bed by day; target is 2+), deaths 2.46 → 2.16 a week, breaks 2.26 → 2.48 a day, average stay 2.71 → 3.10 weeks.
+
+**Proposed for fun and social (Oct 27; john chose the full rework).** Written up in DESIGN.md Part two, Needs (Fun and social, as built). Social was offered ~6× what it drained and fun ~3.5×, and both sat at 90+ 95% of waking time.
+
+- [ ] Chitchat +2 social (was 8), deep talk +8 (was 12), social drain 8 an hour (was 5). How often people talk is unchanged.
+- [ ] Recreation wears thin: +0.3 tolerance per go at an action that gives fun, its fun × max(0.4, 1 − tolerance), recovering 0.04 an hour. Not drinks.
+- [ ] Bad moments cost fun and social (thought rows carry `needs`): rejections and insults cost social, humiliation, losing, grief and hangovers cost fun, from −3 to −30.
+- [ ] Faster drain in the wrong places: social × 1.5 alone, fun × 2 idle or queueing, both × 1.5 in the fishbowl; both drain 0.3 asleep (was 0).
+- [ ] The lonely seek company: a room with anyone awake pulls 1.5 × social urgency.
+- [ ] Good company and having a good time: above 60 (was 80), +9 (was +6).
+- [ ] Result: social 97 → 73 and fun 95 → 68 at day's end; wake around 55, evenings around 80. 11 of 11 targets. Cost: extreme breaks 4.9 → 7.9 a week (28% → 38% of breaks), catatonia 0.5 → 0.9 a week, deaths 2.16 → 2.50 a week, murders a little up. The miserable lose the free +12 full sliders used to give everyone.

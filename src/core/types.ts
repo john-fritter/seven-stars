@@ -69,6 +69,7 @@ export interface Contestant {
 
   intox: number; // 0.. intoxication
   drinks: number; // hangover weight of what they've drunk since the last wake chime
+  tolerance: Record<string, number>; // action id -> how worn out on it they are, 0..1 (needs.yaml tolerance)
   hammeredSince: number | null;
   inventory: string[]; // carried drinks, by quality
   breakdown: Breakdown | null; // in the middle of a mental break

@@ -24,12 +24,60 @@ export function axisFactor(k: number, axis: number): number {
 export function drainNeeds(ctx: Ctx, c: Contestant): void {
   const r = c.asleep ? derived(ctx.data, c).asleep : derived(ctx.data, c).awake;
   const n = c.needs;
+  let social = 1;
+  let fun = 1;
+  if (!c.asleep) [social, fun] = situation(ctx, c);
   n.hunger = Math.max(0, n.hunger - r[0]!);
   n.rest = Math.max(0, n.rest - r[1]!);
   n.hygiene = Math.max(0, n.hygiene - r[2]!);
   n.bladder = Math.max(0, n.bladder - r[3]!);
-  n.social = Math.max(0, n.social - r[4]!);
-  n.fun = Math.max(0, n.fun - r[5]!);
+  n.social = Math.max(0, n.social - r[4]! * social);
+  n.fun = Math.max(0, n.fun - r[5]! * fun);
+}
+
+/**
+ * Social and fun drain faster in the wrong places (needs.yaml situational): alone (nobody else
+ * awake in the room), killing time (idle, queueing, turned away at a door), or in the fishbowl.
+ */
+function situation(ctx: Ctx, c: Contestant): [number, number] {
+  const s = ctx.data.needs.situational;
+  let social = 1;
+  let fun = 1;
+  if (!ctx.w.contestants.some((o) => o !== c && o.room === c.room && !o.asleep)) {
+    social *= s.alone.social ?? 1;
+    fun *= s.alone.fun ?? 1;
+  }
+  if (c.activity && s.idle.actions.includes(c.activity.action)) {
+    social *= s.idle.drain.social ?? 1;
+    fun *= s.idle.drain.fun ?? 1;
+  }
+  if (c.confined) {
+    social *= s.confined.social ?? 1;
+    fun *= s.confined.fun ?? 1;
+  }
+  return [social, fun];
+}
+
+/** Recreation wears thin (needs.yaml tolerance): what's left of an action's gain for `n`. */
+export function freshness(ctx: Ctx, c: Contestant, actionId: string, n: Need): number {
+  const t = ctx.data.needs.tolerance;
+  if (!t.needs.includes(n)) return 1;
+  return Math.max(t.floor, 1 - (c.tolerance[actionId] ?? 0));
+}
+
+/** A minute of something that wears thin: perUse spread over the action's minutes. */
+export function wearThin(ctx: Ctx, c: Contestant, actionId: string, minutes: number): void {
+  c.tolerance[actionId] = Math.min(1, (c.tolerance[actionId] ?? 0) + ctx.data.needs.tolerance.perUse / minutes);
+}
+
+/** Hourly: tolerance recovers. */
+export function recover(ctx: Ctx, c: Contestant): void {
+  const k = ctx.data.needs.tolerance.recoverPerHour;
+  for (const id in c.tolerance) {
+    const v = c.tolerance[id]! - k;
+    if (v <= 0) delete c.tolerance[id];
+    else c.tolerance[id] = v;
+  }
 }
 
 export function addNeed(c: Contestant, n: Need, amount: number): void {

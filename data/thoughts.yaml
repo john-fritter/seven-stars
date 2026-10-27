@@ -49,8 +49,8 @@ needs:
   - { need: fun,     below: 20, thought: bored }
 # Tuning proposal (M8): well-met needs lift mood too, as in RimWorld and The Sims. Without them
 # almost nothing good reached mood and it sat near the break lines.
-  - { need: social,  above: 80, thought: good_company }
-  - { need: fun,     above: 80, thought: good_time }
+  - { need: social,  above: 60, thought: good_company }   # fun and social (Oct 27): was above 80
+  - { need: fun,     above: 60, thought: good_time }
   - { need: comfort, above: 70, thought: comfortable }
 
 # Too cold / too hot: −perDegrees per degree felt outside your range, up to −max, refreshed every
@@ -70,6 +70,9 @@ moments:
   watched:   { thought: watched_performing, events: [karaoke, dance_off] }     # performing with an audience (vain)
   breakdown: { thought: saw_breakdown }                                        # in the room when someone breaks (kind)
 
+# `needs` (proposal, Oct 27: fun and social): what the moment does to their needs when it happens,
+# so the show's cruelty shows in the sliders too. Rejection and insults cost social; humiliation,
+# losing, grief and the morning after cost fun.
 thoughts:
   trapped:     { label: "Trapped here", value: -5, hours: 100000, stack: 1, source: fear }   # value set by `trapped` above
 
@@ -97,8 +100,8 @@ thoughts:
   lonely:      { label: "Lonely", value: -4, hours: 0.5, stack: 1, source: rejection }         # proposal
   bored:       { label: "Bored stiff", value: -4, hours: 0.5, stack: 1, source: discomfort,    # proposal
                  scale: [{ axis: playful }] }
-  good_company: { label: "Good company", value: 6, hours: 0.5, stack: 1, source: person }        # proposal (M8)
-  good_time:   { label: "Having a good time", value: 6, hours: 0.5, stack: 1, source: discomfort, # proposal (M8)
+  good_company: { label: "Good company", value: 9, hours: 0.5, stack: 1, source: person }        # proposal (M8); fun and social (Oct 27): was 6
+  good_time:   { label: "Having a good time", value: 9, hours: 0.5, stack: 1, source: discomfort, # proposal (M8); Oct 27: was 6
                  scale: [{ axis: playful }] }
   comfortable: { label: "Comfortable", value: 3, hours: 0.5, stack: 1, source: discomfort }      # proposal (M8)
   too_cold:    { label: "Too cold", value: -1, hours: 0.5, stack: 1, source: discomfort }      # value set by the temperature line
@@ -114,13 +117,13 @@ thoughts:
   dressed_nobody: { label: "Dressed like nobody", value: -3, hours: 25, stack: 1, source: status, scale: [{ axis: vain }] }
 
   # People
-  insulted:    { label: "Insulted by {who}", value: -6, hours: 48, stack: 3, source: person }
-  slighted:    { label: "Slighted by {who}", value: -3, hours: 24, stack: 3, source: person }      # proposal
+  insulted:    { label: "Insulted by {who}", value: -6, hours: 48, stack: 3, source: person, needs: { social: -10 } }
+  slighted:    { label: "Slighted by {who}", value: -3, hours: 24, stack: 3, source: person, needs: { social: -5 } } # proposal
   kind_words:  { label: "Kind words from {who}", value: 5, hours: 12, stack: 2, source: person } # hours: proposal
-  rebuffed:    { label: "Rebuffed by {who}", value: -8, hours: 48, stack: 2, source: rejection }
-  awkward:     { label: "Awkward flirt from {who}", value: -3, hours: 12, stack: 1, source: rejection } # proposal
-  turned_away: { label: "Turned away at the door by {who}", value: -5, hours: 24, stack: 2, source: rejection }
-  lost_fight:  { label: "Lost a fight to {who}", value: -8, hours: 24, stack: 2, source: person }  # proposal
+  rebuffed:    { label: "Rebuffed by {who}", value: -8, hours: 48, stack: 2, source: rejection, needs: { social: -10 } }
+  awkward:     { label: "Awkward flirt from {who}", value: -3, hours: 12, stack: 1, source: rejection, needs: { social: -3 } } # proposal
+  turned_away: { label: "Turned away at the door by {who}", value: -5, hours: 24, stack: 2, source: rejection, needs: { social: -10 } }
+  lost_fight:  { label: "Lost a fight to {who}", value: -8, hours: 24, stack: 2, source: person, needs: { fun: -15 } } # proposal
   won_fight:   { label: "Won a fight against {who}", value: 3, hours: 12, stack: 2, source: person } # proposal
   saw_cruelty: { label: "Watched {who} be cruel", value: -2, hours: 12, stack: 2, source: person,   # proposal: "witnessing
                  scale: [{ axis: kind }] }                                                         # cruelty hurts more"
@@ -136,9 +139,9 @@ thoughts:
 
   # Romance
   kissed:        { label: "Kissed {who}", value: 6, hours: 24, stack: 1, source: romance }          # proposal
-  kiss_rebuffed: { label: "Kiss rebuffed by {who}", value: -12, hours: 48, stack: 1, source: rejection }
+  kiss_rebuffed: { label: "Kiss rebuffed by {who}", value: -12, hours: 48, stack: 1, source: rejection, needs: { social: -15 } }
   lovin:         { label: "Lovin' with {who}", value: 10, hours: 24, stack: 1, source: romance }
-  turned_down:   { label: "Turned down by {who}", value: -10, hours: 24, stack: 1, source: rejection } # hours: proposal
+  turned_down:   { label: "Turned down by {who}", value: -10, hours: 24, stack: 1, source: rejection, needs: { social: -15 } } # hours: proposal
   heard_through_wall: { label: "Heard them through the wall", value: -1, hours: 6, stack: 1, source: discomfort } # proposal (floor plan)
   disturbed:     { label: "Kept up by the roommates", value: -3, hours: 12, stack: 1, source: discomfort } # proposal
   saw_lovin:     { label: "Saw {who} going at it in public", value: -4, hours: 12, stack: 1, source: person,  # proposal
@@ -147,13 +150,13 @@ thoughts:
   # Beds, sleep and privacy (needs.yaml sleep). All proposal.
   slept_beside:  { label: "Slept beside {who}", value: 4, hours: 24, stack: 1, source: romance }
   shared_bed:    { label: "Had to share a bed with {who}", value: -5, hours: 24, stack: 1, source: person }
-  share_refused: { label: "{who} wouldn't share a bed", value: -3, hours: 12, stack: 1, source: rejection }
-  kept_up:       { label: "{who} kept me up", value: -4, hours: 24, stack: 1, source: discomfort }
+  share_refused: { label: "{who} wouldn't share a bed", value: -3, hours: 12, stack: 1, source: rejection, needs: { social: -5 } }
+  kept_up:       { label: "{who} kept me up", value: -4, hours: 24, stack: 1, source: discomfort, needs: { fun: -5 } }
   no_privacy:    { label: "No privacy", value: -3, hours: 6, stack: 1, source: humiliation, scale: [{ axis: modesty, k: 1 }] }
   exclusive:     { label: "Exclusive with {who}", value: 5, hours: 48, stack: 1, source: romance }     # proposal
   not_exclusive: { label: "{who} won't commit", value: -10, hours: 24, stack: 1, source: rejection }   # "Hurt: −10"
-  dumped:        { label: "Dumped by {who}", value: -20, hours: 72, stack: 1, source: rejection }      # hours: proposal
-  betrayed:      { label: "Betrayed by {who}", value: -20, hours: 168, stack: 1, source: heartbreak, scale: [{ axis: loyal }] }  # Oct 23: source person → heartbreak
+  dumped:        { label: "Dumped by {who}", value: -20, hours: 72, stack: 1, source: rejection, needs: { social: -30, fun: -20 } } # hours: proposal
+  betrayed:      { label: "Betrayed by {who}", value: -20, hours: 168, stack: 1, source: heartbreak, scale: [{ axis: loyal }], needs: { social: -20, fun: -20 } } # Oct 23: source person → heartbreak
   jealous:       { label: "Jealous of {who}", value: -6, hours: 48, stack: 2, source: heartbreak }     # proposal; about the rival (Oct 23: was −5 for a day, about the partner; source person → heartbreak)
   pining:        { label: "Wants {who} back", value: -3, hours: 48, stack: 1, source: rejection }      # proposal (Oct 23)
   guilty:        { label: "Cheating on {who}", value: -5, hours: 24, stack: 1, source: guilt }         # proposal
@@ -163,27 +166,27 @@ thoughts:
   drink_good:    { label: "A good drink", value: 4, hours: 3, stack: 3, source: booze }
   drink_cheap:   { label: "A cheap drink", value: 2, hours: 3, stack: 3, source: booze }
   drink_rotgut:  { label: "Rotgut", value: 1, hours: 3, stack: 3, source: booze }
-  hangover:      { label: "Hungover", value: -3, hours: 8, stack: 1, source: discomfort }   # value set by booze.yaml hangover
-  puked:         { label: "Threw up in front of everyone", value: -8, hours: 24, stack: 1, source: humiliation }   # proposal (Oct 23)
+  hangover:      { label: "Hungover", value: -3, hours: 8, stack: 1, source: discomfort, needs: { fun: -15 } } # value set by booze.yaml hangover
+  puked:         { label: "Threw up in front of everyone", value: -8, hours: 24, stack: 1, source: humiliation, needs: { fun: -10 } } # proposal (Oct 23)
   saw_puke:      { label: "Watched {who} throw up", value: -2, hours: 6, stack: 1, source: discomfort }          # proposal (Oct 23)
-  passed_out:    { label: "Passed out in front of everyone", value: -6, hours: 24, stack: 1, source: humiliation } # proposal (Oct 23)
+  passed_out:    { label: "Passed out in front of everyone", value: -6, hours: 24, stack: 1, source: humiliation, needs: { fun: -10 } } # proposal (Oct 23)
 
   # Breaks (breaks.yaml)
   catharsis:     { label: "Catharsis", value: 25, hours: 36, stack: 1, source: catharsis }  # Oct 23 (john: catharsis, not a cooldown): was +15 for a day
 
   # The show
   doomed:        { label: "The show is going to kill me", value: -4, hours: 1.5, stack: 1, source: fear }  # value set by meter.yaml doomed
-  sentenced:     { label: "Sentenced in public", value: -10, hours: 24, stack: 1, source: humiliation }
-  fishbowl_night: { label: "A night in the fishbowl", value: -12, species: { aquatic: -4 }, hours: 24, stack: 1, source: humiliation }
+  sentenced:     { label: "Sentenced in public", value: -10, hours: 24, stack: 1, source: humiliation, needs: { fun: -20 } }
+  fishbowl_night: { label: "A night in the fishbowl", value: -12, species: { aquatic: -4 }, hours: 24, stack: 1, source: humiliation, needs: { social: -20, fun: -20 } }
   rank_up:       { label: "Rank went up", value: 5, hours: 24, stack: 1, source: status }
-  rank_down:     { label: "Rank went down", value: -8, hours: 24, stack: 1, source: status }
-  mocked:        { label: "Mocked through the glass by {who}", value: -4, hours: 12, stack: 2, source: humiliation } # proposal
+  rank_down:     { label: "Rank went down", value: -8, hours: 24, stack: 1, source: status, needs: { fun: -10 } }
+  mocked:        { label: "Mocked through the glass by {who}", value: -4, hours: 12, stack: 2, source: humiliation, needs: { social: -5 } } # proposal
   fed:           { label: "{who} passed food through the slot", value: 4, hours: 12, stack: 1, source: person }     # proposal
 
   # Deaths
-  watched_execution: { label: "Watched an execution", value: -8, hours: 48, stack: 3, source: fear }
-  someone_died:  { label: "{who} died", value: -6, hours: 72, stack: 1, source: fear }
-  friend_died:   { label: "My friend {who} died", value: -12, hours: 168, stack: 1, source: grief }
+  watched_execution: { label: "Watched an execution", value: -8, hours: 48, stack: 3, source: fear, needs: { fun: -15 } }
+  someone_died:  { label: "{who} died", value: -6, hours: 72, stack: 1, source: fear, needs: { fun: -10 } }
+  friend_died:   { label: "My friend {who} died", value: -12, hours: 168, stack: 1, source: grief, needs: { social: -20, fun: -20 } }
   rival_died:    { label: "{who} got what was coming", value: 6, hours: 72, stack: 1, source: person,
                    scale: [{ axis: kind, k: -0.8 }] }      # proposal: the cruel gloat more
   relieved_died: { label: "Can't say I'll miss {who}", value: 3, hours: 48, stack: 1, source: person,
@@ -195,7 +198,7 @@ thoughts:
   near_killer:   { label: "In a room with {who}, a killer", value: -5, hours: 0.5, stack: 1, source: fear }
 
   # The Wheel, the daily event and trials (all proposals)
-  spun_wheel:    { label: "Had to spin the Wheel", value: -5, hours: 24, stack: 1, source: fear }
+  spun_wheel:    { label: "Had to spin the Wheel", value: -5, hours: 24, stack: 1, source: fear, needs: { fun: -10 } }
   won_immunity:  { label: "Won a secret immunity", value: 8, hours: 48, stack: 1, source: status }
   won_dance_off: { label: "Won the dance-off", value: 5, hours: 24, stack: 1, source: status }
   lost_dance_off: { label: "Lost the dance-off", value: -4, hours: 24, stack: 1, source: humiliation, scale: [{ axis: vain }] }
