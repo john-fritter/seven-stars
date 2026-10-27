@@ -130,6 +130,7 @@ export const needsSchema = z.object({
   asleepDrain: z.record(needEnum, num),
   sleep: z.object({
     restPerHour: num,
+    napBelow: num.min(0).max(100),
     // Sharing a bed: how a contestant feels about a bedmate, and the thoughts it leaves.
     share: z.object({ neutral: num, pull: num, partners: z.array(z.string()).default([]), reluctant: unit, refused: z.string(), labels: z.record(z.string(), num).default({}), good: z.string(), bad: z.string() }),
     // Noisy people (traits with `noise`) disturb sleepers in the same room.
@@ -501,7 +502,7 @@ export const boozeSchema = z.object({
   bladderPerDrink: num,
   stages: z.array(stageSchema),
   blackout: unit,
-  hangover: z.object({ thought: z.string(), min: num, from: num, to: num }),
+  hangover: z.object({ thought: z.string(), min: num, from: num, to: num, drinkMult: unit }),
   together: z.object({ affection: num }),
   pull: z.object({
     taste: num,

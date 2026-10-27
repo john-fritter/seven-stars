@@ -15,6 +15,10 @@ asleepDrain: { hunger: 0.5, rest: 0, hygiene: 1, bladder: 0.3, social: 0, fun: 0
 
 sleep:
   restPerHour: 12        # × the bed's quality: suite 1.2, good 1.0, dorm 0.8, couch 0.6
+  # Proposal (naps, Oct 27): outside their night, sleep is only a choice with rest under this.
+  # Fun and social sit at 94 to 99 all day, so by late afternoon a nap at rest ~65 outscored
+  # everything else and half the cast slept through the evening. Was effectively 100.
+  napBelow: 30
   # Proposal: every bed sleeps two. Sharing is welcome with someone they fancy and unwelcome
   # otherwise. Scoring a bed with someone in it (or a host's bed), the bedmate adds
   #   pull × (attraction − neutral) ÷ 10 + labels[their label for the bedmate]

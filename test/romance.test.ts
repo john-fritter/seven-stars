@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { axis, drink, giftDrink, hammeredHour, hangover, qualityFor, soberMinute, soberFactor, stageOf } from '../src/core/booze.js';
+import { axis, drink, giftDrink, hammeredHour, hangover, hungoverFactor, qualityFor, soberMinute, soberFactor, stageOf } from '../src/core/booze.js';
 import { createWorld, step } from '../src/core/index.js';
 import { fadeLedger, meet, rel } from '../src/core/ledger.js';
 import { askExclusive, evidence, exclusiveOdds, kiss, kissOdds, looseLips, lovin, piningMult, propositionOdds, remember, secretFlingOdds } from '../src/core/romance.js';
@@ -115,6 +115,18 @@ describe('booze', () => {
     c.drinks = 1; // one fancy drink: no hangover
     hangover(ctx, c);
     expect(c.thoughts.filter((x) => x.id === 'hangover')).toHaveLength(1);
+  });
+
+  it('puts the hungover off booze until the hangover wears off', () => {
+    const { ctx, cast } = aboard();
+    const c = cast[0]!;
+    Object.assign(c, { thoughts: [], drinks: 0 });
+    expect(hungoverFactor(ctx, c)).toBe(1);
+    c.drinks = 10;
+    hangover(ctx, c);
+    expect(hungoverFactor(ctx, c)).toBe(data.booze.hangover.drinkMult);
+    c.thoughts = [];
+    expect(hungoverFactor(ctx, c)).toBe(1);
   });
 
   it('makes a better drink a strong favor', () => {

@@ -4,7 +4,7 @@
 //
 // Gains are capped at what the need can still take. A weighted pick among the top few follows.
 import type { ActionDef, MealDef, Need } from '../data/schema.js';
-import { drinkFun, drinkPull, finishDrink, qualityFor, soberFactor, stageMult } from './booze.js';
+import { drinkFun, drinkPull, finishDrink, hungoverFactor, qualityFor, soberFactor, stageMult } from './booze.js';
 import { breakArrive, breakMinute, endBreak } from './breaks.js';
 import { accessRank, canEnter, dayOf, effectOn, effectsToday, inRanks, isNightFor, log, noisy, timeOfDay, type Ctx } from './context.js';
 import { gathering } from './schedule.js';
@@ -115,7 +115,7 @@ function scoreAction(ctx: Ctx, c: Contestant, def: ActionDef, room: string, othe
   let costs = walk * a.walkCostPerMinute + (def.speciesCost[c.species] ?? def.cost);
   if (def.tags.includes('exposed') && !def.private && others.get(room)) costs += (c.modesty / 10) * a.modestyCost;
 
-  const enough = def.kind === 'drink' ? soberFactor(ctx, c) * traitFx(ctx.data, c).drink : 1;
+  const enough = def.kind === 'drink' ? soberFactor(ctx, c) * hungoverFactor(ctx, c) * traitFx(ctx.data, c).drink : 1;
   const after = def.nightTags.length && isNightFor(ctx, c, ctx.w.t) ? tagMult(ctx.data, c, def.nightTags) : 1; // the hot tub after hours
   // A performance gets old for the performer: the stage gets passed around.
   const encore = def.logs ? ctx.data.actions.encore ** ownRepeats(ctx, c, def.logs) : 1;
@@ -147,6 +147,11 @@ export function usable(ctx: Ctx, c: Contestant, def: ActionDef): boolean {
   if (def.notSpecies?.includes(c.species)) return false;
   if ((def.when && !effectOn(ctx, def.when)) || (def.unless && effectOn(ctx, def.unless))) return false;
   return inRanks(accessRank(ctx, c), def.ranks);
+}
+
+/** By day, sleep is only a choice once they're actually tired (needs.yaml sleep.napBelow). */
+function napOk(ctx: Ctx, c: Contestant, def: ActionDef, night: boolean): boolean {
+  return def.kind !== 'sleep' || night || c.needs.rest < ctx.data.needs.sleep.napBelow;
 }
 
 /** A bed `c` may use: their own, or their host's when it sleeps two. */
@@ -220,7 +225,7 @@ function candidates(ctx: Ctx, c: Contestant): Candidate[] {
       for (const def of o.actions) {
         if (def.assigned && !bedAllowed(ctx, c, o, guestHere ? host : undefined)) continue;
         if (def.kind === 'thermostat' && (sneak || guest || preferredSetting(ctx, c) === ctx.w.rooms[room.id]!.setting)) continue;
-        if (!usable(ctx, c, def)) continue;
+        if (!usable(ctx, c, def) || !napOk(ctx, c, def, night)) continue;
         // The night pull is for a bed of their own (or their host's), not the nearest couch.
         const bedtime = night && (def.assigned || o.id === c.bed);
         const score = scoreAction(ctx, c, def, room.id, others, critical, bedtime, pull, bedExtra(ctx, c, o, def, night)) - risk;
@@ -264,7 +269,7 @@ function knockCandidates(ctx: Ctx, c: Contestant, others: Map<string, number>, n
       const odds = host === best ? bestOdds : expectedKnockOdds(ctx, c, host);
       for (const def of o.actions) {
         if (def.assigned && !bedAllowed(ctx, c, o, host)) continue;
-        if (!k.actions.includes(def.id) || !usable(ctx, c, def)) continue;
+        if (!k.actions.includes(def.id) || !usable(ctx, c, def) || !napOk(ctx, c, def, night)) continue;
         const score = scoreAction(ctx, c, def, room.id, others, false, night, pull, bedExtra(ctx, c, o, def, night)) * odds - k.cost;
         if (score > 0) out.push({ def, object: o, room: room.id, knock: host.id, score });
       }
@@ -286,7 +291,7 @@ function shareCandidates(ctx: Ctx, c: Contestant, others: Map<string, number>, n
     if (o.id === c.bed || ctx.w.objects[o.id]!.length >= o.capacity || guestOf(ctx, host)) continue;
     const odds = expectedKnockOdds(ctx, c, host);
     for (const def of o.actions) {
-      if (def.kind !== 'sleep' || !usable(ctx, c, def)) continue;
+      if (def.kind !== 'sleep' || !usable(ctx, c, def) || !napOk(ctx, c, def, night)) continue;
       const score = scoreAction(ctx, c, def, roomId, others, false, night, pull, bedExtra(ctx, c, o, def, night)) * odds - k.cost;
       if (score > 0) out.push({ def, object: o, room: roomId, knock: host.id, score });
     }
