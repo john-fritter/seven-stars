@@ -14,6 +14,7 @@ export interface Activity {
   room: string;
   phase: 'walk' | 'do';
   startedAt: number; // when they set off
+  from?: string; // where they set off from (the walk goes through the spaces in between)
   arriveAt: number;
   minutes: number | null; // how long once there; null: a fixed endAt or its own end condition (sleep)
   endAt: number | null; // set on arrival; null: runs until its own end condition

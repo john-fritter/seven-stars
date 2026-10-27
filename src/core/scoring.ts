@@ -12,14 +12,15 @@ import { surpriseOf } from './ratings.js';
 import { think } from './thoughts.js';
 import { traitFx } from './traits.js';
 import type { Contestant, SimEvent } from './types.js';
+import { canSee } from './station.js';
 
 const round2 = (x: number) => Math.round(x * 100) / 100;
 
-/** Awake contestants who saw an event: in its room, not taking part. */
+/** Awake contestants who saw an event: in its room or with a line of sight into it, not taking part. */
 export function witnessesOf(ctx: Ctx, e: SimEvent): string[] {
   const listed = e.data?.witnesses;
   if (Array.isArray(listed)) return listed as string[];
-  return ctx.w.contestants.filter((c) => c.room === e.room && !c.asleep && !e.actors.includes(c.id)).map((c) => c.id);
+  return ctx.w.contestants.filter((c) => e.room !== undefined && canSee(ctx.st, c.room, e.room) && !c.asleep && !e.actors.includes(c.id)).map((c) => c.id);
 }
 
 /** The witness multiplier: 1 + witnessEach per witness, capped. */

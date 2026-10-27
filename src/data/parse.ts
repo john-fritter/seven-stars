@@ -56,9 +56,7 @@ function crossCheck(d: GameData, dir: string): void {
       if (!types[t]) errors.push(`${dir}/rooms.yaml: rooms.${i}.objects.${t}: no such object type in objects.yaml`);
     }
   });
-  d.rooms.links.forEach(([a, b], i) => {
-    for (const id of [a, b]) if (!rooms.has(id)) errors.push(`${dir}/rooms.yaml: links.${i}: no room "${id}"`);
-  });
+  checkPlans(d, dir, errors);
 
   const checkAction = (a: GameData['objects']['personal'][number], at: string) => {
     for (const s of [...Object.keys(a.speciesGains), ...Object.keys(a.speciesCost), ...(a.onlySpecies ?? []), ...(a.notSpecies ?? [])]) {
@@ -146,6 +144,7 @@ function crossCheck(d: GameData, dir: string): void {
   for (const [r, c] of Object.entries(d.clothing.byRank)) thought(c.thought, `clothing.yaml: byRank.${r}.thought`);
   d.social.interactions.forEach((x, i) => thought(x.witnessThought, `social.yaml: interactions.${i}.witnessThought`));
   thought(d.social.fight.witnessThought, 'social.yaml: fight.witnessThought');
+  thought(d.romance.proposition.heard, 'romance.yaml: proposition.heard');
 
   const bz = d.booze;
   for (const q of bz.order) if (!bz.qualities[q]) errors.push(`${dir}/booze.yaml: order: no quality "${q}" in qualities`);
@@ -273,4 +272,83 @@ function crossCheck(d: GameData, dir: string): void {
   }
 
   if (errors.length) throw new DataError(`Bad data:\n${errors.map((e) => `  ${e}`).join('\n')}`);
+}
+
+type Rect = readonly [number, number, number, number];
+type Seg = readonly [number, number, number, number];
+
+/** Whether a wall segment lies along one of the rectangle's edges. */
+export function onEdge([x, y, w, h]: Rect, [x1, y1, x2, y2]: Seg): boolean {
+  const within = (v: number, lo: number, hi: number) => v >= lo - 1e-9 && v <= hi + 1e-9;
+  if (x1 === x2) return (x1 === x || x1 === x + w) && within(Math.min(y1, y2), y, y + h) && within(Math.max(y1, y2), y, y + h);
+  if (y1 === y2) return (y1 === y || y1 === y + h) && within(Math.min(x1, x2), x, x + w) && within(Math.max(x1, x2), x, x + w);
+  return false;
+}
+
+function inside([x, y, w, h]: Rect, [X, Y, W, H]: Rect): boolean {
+  return x >= X && y >= Y && x + w <= X + W && y + h <= Y + H;
+}
+
+function overlaps([x, y, w, h]: Rect, [X, Y, W, H]: Rect): boolean {
+  return x < X + W && X < x + w && y < Y + H && Y < y + h;
+}
+
+/** The floor plans: every room placed, nothing overlapping, openings on shared walls, every room reachable. */
+function checkPlans(d: GameData, dir: string, errors: string[]): void {
+  const file = `${dir}/plans.yaml`;
+  const roomDefs = new Map(d.rooms.rooms.map((r) => [r.id, r]));
+  if (!d.plans.plans[d.plans.use]) errors.push(`${file}: use: no plan "${d.plans.use}"`);
+  for (const id of d.plans.soundproof) if (!roomDefs.has(id)) errors.push(`${file}: soundproof: no room "${id}"`);
+  for (const [name, plan] of Object.entries(d.plans.plans)) {
+    const at = `${file}: plans.${name}`;
+    const rects = new Map<string, Rect>();
+    for (const r of d.rooms.rooms) {
+      const rect = plan.rooms[r.id];
+      if (rect) rects.set(r.id, rect);
+      else errors.push(`${at}.rooms: no place for room "${r.id}"`);
+    }
+    for (const id of Object.keys(plan.rooms)) if (!roomDefs.has(id)) errors.push(`${at}.rooms.${id}: no such room in rooms.yaml`);
+    for (const c of plan.corridors) {
+      if (rects.has(c.id) || roomDefs.has(c.id)) errors.push(`${at}.corridors: "${c.id}" is already a room`);
+      rects.set(c.id, c.rect);
+    }
+    for (const id of plan.through) if (!rects.has(id)) errors.push(`${at}.through: no room "${id}"`);
+    const ids = [...rects.keys()];
+    const cellOf = (a: string, b: string) => roomDefs.get(a)?.glass === b && inside(rects.get(a)!, rects.get(b)!);
+    for (let i = 0; i < ids.length; i++)
+      for (let j = i + 1; j < ids.length; j++) {
+        const [a, b] = [ids[i]!, ids[j]!];
+        if (overlaps(rects.get(a)!, rects.get(b)!) && !cellOf(a, b) && !cellOf(b, a)) errors.push(`${at}.rooms: "${a}" and "${b}" overlap`);
+      }
+    const [W, H] = plan.size;
+    for (const [id, [x, y, w, h]] of rects) if (x < 0 || y < 0 || x + w > W || y + h > H) errors.push(`${at}.rooms.${id}: off the deck`);
+    plan.openings.forEach((o, i) => {
+      const ra = rects.get(o.a);
+      const rb = rects.get(o.b);
+      if (!ra) errors.push(`${at}.openings.${i}.a: no room "${o.a}"`);
+      if (!rb) errors.push(`${at}.openings.${i}.b: no room "${o.b}"`);
+      if (ra && rb && !(onEdge(ra, o.at) && onEdge(rb, o.at))) errors.push(`${at}.openings.${i}: [${o.at.join(', ')}] isn't on a wall "${o.a}" and "${o.b}" share`);
+    });
+    // Everyone can get everywhere they're allowed, walking only through public spaces.
+    const open = (id: string) => {
+      const r = roomDefs.get(id);
+      return !r || (r.access !== 'robots' && r.access !== 'occupants');
+    };
+    const start = d.schedule.arrivalRoom;
+    const seen = new Set([start]);
+    const queue = [start];
+    while (queue.length) {
+      const s = queue.shift()!;
+      if (s !== start && !open(s)) continue;
+      for (const o of plan.openings) {
+        if (o.kind === 'glass') continue;
+        const next = o.a === s ? o.b : o.b === s ? o.a : null;
+        if (next && !seen.has(next)) {
+          seen.add(next);
+          queue.push(next);
+        }
+      }
+    }
+    for (const r of d.rooms.rooms) if (r.access !== 'robots' && !r.glass && !seen.has(r.id)) errors.push(`${at}: nobody can walk to "${r.id}"`);
+  }
 }

@@ -1,4 +1,4 @@
-# The station as a graph of rooms. DESIGN.md Part two, Rooms, objects and access.
+# The station's rooms. DESIGN.md Part two, Rooms, objects and access.
 #
 # access:      all | ranks | occupants | robots
 #              ranks uses `ranks: [best, worst]`; occupants means whoever has a bed there (guests come later)
@@ -38,21 +38,4 @@ rooms:
       objects: { fishbowl_floor: 1, toilet: 1 } }
   - { id: airlock, name: Airlock, access: robots, privacy: 0, temperature: 70, comfort: 0, objects: {} }
 
-# Walking minutes between adjacent rooms. Proposal until the floor plan exists: the common room
-# is the hub, the lounge connects to the spa and the rec room. Other trips take the shortest path.
-links:
-  - [common, cafe, 1]
-  - [common, restroom, 1]
-  - [common, confessional, 1]
-  - [common, lounge, 2]
-  - [common, rec, 2]
-  - [common, cage, 2]
-  - [common, garden, 2]
-  - [common, medbay, 2]
-  - [common, good, 2]
-  - [common, dorm, 2]
-  - [common, suite, 3]
-  - [common, airlock, 2]
-  - [common, fishbowl, 1]
-  - [lounge, spa, 1]
-  - [lounge, rec, 1]
+# Where the rooms are, and how long it takes to walk between them, is the floor plan: plans.yaml.

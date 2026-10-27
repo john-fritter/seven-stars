@@ -19,4 +19,12 @@ describe('data loading', () => {
     const read = (name: string) => (name === 'ranks' ? real(name).replace('"dorm:bed_dorm:3"', '"dorm:bed_dorm:9"') : real(name));
     expect(() => parseGameData(read)).toThrow(/ranks\.yaml: ranks\.6\.bed/);
   });
+
+  it('checks the floor plans: openings on shared walls, no overlaps, every room reachable', () => {
+    const swap = (from: string, to: string) => (name: string) => (name === 'plans' ? real(name).replace(from, to) : real(name));
+    expect(() => parseGameData(swap('at: [20, 12, 30, 12]', 'at: [20, 11, 30, 11]'))).toThrow(/plans\.ring\.openings\.0: .* isn't on a wall "lounge" and "ring_n" share/);
+    expect(() => parseGameData(swap('garden: [0, 0, 12, 22]', 'garden: [0, 0, 16, 22]'))).toThrow(/"lounge" and "garden" overlap/);
+    expect(() => parseGameData(swap('      - { a: dorm, b: ring_s, kind: door, at: [40, 40, 42.5, 40] }\n', ''))).toThrow(/plans\.ring: nobody can walk to "dorm"/);
+    expect(() => parseGameData(swap('use: ring', 'use: maze'))).toThrow(/use: no plan "maze"/);
+  });
 });

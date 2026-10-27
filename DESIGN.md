@@ -16,7 +16,7 @@ A single deck seen from above, RimWorld-style, dressed as seventies sci-fi luxur
 
 **Rich but cramped.** There are enough beds, but some are much better than others. There is enough simple food, but not enough treats. Space, quiet, hot water and privacy are all in short supply, and species preferences clash, above all over the thermostat. Nobody works; days are filled with needs, activities and competing for comforts.
 
-**Proposed floor plan (to be designed).** Every room should create opportunities, not just decoration.
+**Proposed floor plan (layout in Part two, The floor plan).** Every room should create opportunities, not just decoration.
 
 | Room | What's in it | What it sets up |
 | --- | --- | --- |
@@ -462,7 +462,7 @@ Schedule events override the action scoring: everyone attends ceremonies, trials
 
 ## Rooms, objects and access
 
-The station is a graph of rooms with walking times between them; exact geometry waits for the floor plan. Each room has an access rule and an apparent-privacy value that contestants believe.
+The station is laid out on a floor plan (below, The floor plan: the next pass): rooms are rectangles on a grid, joined by doors, arches and glass, with corridors between them, and walking times come from the paths. Each room has an access rule and an apparent-privacy value that contestants believe.
 
 | Room | Access | Apparent privacy | Key objects |
 | --- | --- | --- | --- |
@@ -507,6 +507,81 @@ The station is a graph of rooms with walking times between them; exact geometry 
 | Drug shelf | 1 | Sedatives (taken items) | 2 min |
 
 Using an object in a room above your rank is an infraction, whether you walked in or slipped in behind someone, unless an occupant let you in (see Rank, privileges, rules and punishments).
+
+## The floor plan: the next pass
+
+*Decided direction (john, Oct 23: D-114): the station gets a real floor plan with corridors, sight lines and distances. john asked (Oct 27) to build all three shapes and try them rather than pick one on paper; items 1 to 4 below are built, 5 to 7 aren't. The shape is still john's call (Open) and every number is a proposal for data. The plan drawn out: https://claude.ai/artifact/FXjEnuCALv94igW9Y1RQdA*
+
+**Why.** Today the station is a hub graph: every room hangs off the common room, 1 to 3 minutes away, and walking is a timer. While someone walks they stay in the room they left until the minute they arrive, so nobody is ever in a corridor, nobody passes anyone, and nobody sees who went where. Witnessing is the same room or the fishbowl's glass, and noise never goes through a wall. So the layout decides nothing a viewer would notice: who walks past whom, who sees what through a doorway, where you can slip off unseen, whose bedroom is next to the party. Those are the things a floor plan is for.
+
+**What it doesn't explain: the morning drinking.** 51% of drinks come before noon and 23% between 07:00 and 09:00 (12 seeds × 20 days). Tripling every walking time leaves that at 50 to 52%, so distance to the bar isn't it. Two things are:
+
+- **The evening is half asleep.** Between 17:00 and 21:00, 41 to 58% of contestants are napping. Fun and social sit at 94 to 99 all day, so by late afternoon a nap (rest is down to about 68) outscores everything else. The evening, which should be the lounge's prime time, is half empty, and the drinks happen when everyone is up: the long free stretches from 07:00 to 09:00 and 10:00 to 13:00.
+- **Nobody drinks for the fun.** Fun at the moment someone picks a drink averages 93 to 99, so drinks are chosen on the personality pulls and the lounge's comfort, which don't care what time it is.
+
+That's a needs problem (nothing is ever short), not a layout one, and it belongs in its own thread. The floor plan can make the evening worth staying up for, but it won't stop the naps by itself.
+
+### The shape (proposed: a ring)
+
+One deck, seen from above, about 60 × 50 tiles (a tile is a metre). A corridor, **the Promenade**, three tiles wide, runs in a ring around the middle. The public rooms sit inside the ring, everything else opens off its outside, and the space-side hull runs along the north.
+
+| Where | Rooms | Why there |
+| --- | --- | --- |
+| Inside the ring | Common room (center, fishbowl in its corner), Cafe (open to the common room through a wide arch), Public restroom and Confessional (doors only into the common room) | Everyone comes through the common room several times a day: meals, the restroom, the diary room, the ceremony. Rank 7 sleeps on its couches, beside the restroom door |
+| North, on the space hull | Lounge (panoramic window along the whole north wall, wide arch onto the ring), Spa (reached only through the lounge, with a glass wall onto it) | The evening hub faces space. The top three soak in full view of the bar; rank 7 can look in from the corridor at a party they're locked out of |
+| West | Garden (a dead end, one door, the still at the back behind the plants), Airlock, Suite | The quiet side. The garden is the one place off the beaten path. The suite has nobody through the wall |
+| East | Cage room (open to the ring, so passers-by watch), Medbay (next to the cage), Rec room | The loud side |
+| South, inner hull | Good room, Basic dorm | The dorm shares a wall with the rec room and the good room. The suite is soundproofed, so nothing carries through its walls |
+
+Rough walking times at 25 tiles a minute (computed from the plan, not typed in): next door 1 minute, across the station 2 to 3, the dorm to the bar about 2.5. That's close to today's 1 to 3, so the clock and tuning don't move much.
+
+**Alternatives** for john to weigh: **a spine**, one long corridor with rooms on both sides like a cruise ship deck (one choke point, so everyone passes everyone, and no long way round); **the hub made real**, the common room as the only corridor with every door opening off it (closest to today, everything witnessed, nowhere to sneak). The ring is the middle: busy enough to bump into people, with two ways round anything and a quiet far side.
+
+### What the sim does with it
+
+All of it is data in `data/plans.yaml`, which holds all three shapes; `use` picks one, and `sim --plan spine` (or the debug view's plan picker) switches. Each plan gives every room in `rooms.yaml` a rectangle on the grid, adds its corridors as spaces of their own (access all, apparent privacy 0.3, 68°F, no objects), and lists the openings between two spaces, each a **door**, an **arch**, **glass** or a **bend** (two corridors meeting round a corner: walkable, no line of sight). Walking times come from the geometry; `links` in `rooms.yaml` is gone. Loading checks that rectangles don't overlap (except the fishbowl inside the common room), every opening sits on a wall its two spaces share, and every room can be walked to.
+
+1. **Walking is through spaces** (built). A trip runs from the middle of one room through the midpoints of the openings to the middle of the next, at 25 tiles a minute, rounded to whole minutes (at least 1). Each minute a walker is in whichever space that point of the path is in, so they're in the corridor, then the common room, and can be seen in each; they only enter the room they're going to on arrival, as before. Paths cross corridors and the plan's `through` rooms (the common room and cafe); any other public room costs 5× its distance to cross, so only the spa's visitors go through the lounge; bedrooms and the airlock are never crossed. A glass cell walks out through the room round it. Paths are worked out once per pair of spaces.
+2. **Sight lines** (built). Seeing reaches your own space plus any space joined to it by an arch or glass, and a corridor segment sees its whole length but not round a corner. Hearing reaches your own space and through arches, not glass. Everything that today reads "awake in the same room" (witness counts for scoring, "watched them throw up", murder witnesses, seeing a kiss) reads "can see" instead (fights, insults, breaks, puking, kisses and lovin' seen, spacings, the modest in the shower); a scene that airs someone's secret needs hearing. Proposed openings: common ↔ cafe arch, common ↔ fishbowl glass (as now), lounge ↔ north Promenade arch, lounge ↔ spa glass, cage ↔ east Promenade arch. Every other opening is a door, and a door blocks both.
+3. **Noise through walls** (built). Rooms whose rectangles share at least a tile of wall are neighbours, except corridors and the soundproofed suite. A racket next door costs sleepers half what it does in the room (`needs.yaml` noise.throughWall 0.5, on both the rest lost and the wake chance): snorers and hummers as before, and now anyone dancing, singing karaoke, bowling or at the arcade (`loud: true` in `objects.yaml`), in the room or next door. Lovin' keeps sleepers next door up too, and anyone awake next door gets "heard them through the wall" (−1, six hours) and knows about it, as if they'd seen it (gossip and jealousy).
+4. **Passing in the corridor** (built). Each time a walker enters a corridor or the common room where someone else is (walking, or free to talk), they may start an interaction marked `passing` in `social.yaml` (chitchat, kind words, a flirt, a slight, an insult) at 0.5 × their usual chance, without stopping. An insult can still start a fight on the spot. It's the hallway run-in reality TV runs on.
+5. **Seen going in together** (not built). When two people go through the same closed door within two minutes (the restroom, a bedroom, the garden) and someone sees it, the watcher remembers "went in together" as a gossip item that counts like a seen flirt: spillable, and grounds for jealousy for a partner. The restroom's cover story finally has something to cover.
+6. **The discreet way round** (not built). Someone sneaking above their rank, or heading somewhere with a person they're cheating with, picks the route that passes the fewest watchers, weighted by deceit (each person they'd pass costs walking minutes × deceptive ÷ 10). The cameras still log the infraction; this is about the other contestants.
+7. **The dead drift past the window** (not built). After a spacing, the robots walk the condemned from the common room round the Promenade to the airlock in front of anyone on the way, and about 15 minutes later the body drifts past the lounge window: everyone in the lounge gets "{who} drifted past the window" (fear −4, a day). It's the show's defining image and it costs one thought row.
+
+**The debug view** (built) draws the plan from the same data: rooms and corridors as their rectangles with temperatures, doors as gaps, arches dashed orange, glass and the window in blue. Dots slide along their paths while walking, the contestant cards sit under the plan by room, and a plan picker in the header restarts the season on another shape. Clicking a room to light up what it sees and hears isn't built. The Phaser client later draws art over the same grid; whether it's authored in Tiled and converted is a question for then.
+
+### Trying the three shapes (Oct 27)
+
+200 seeds × 30 days each, against main before the floor plan (the hub graph). All three shapes hit all 11 targets with no retuning:
+
+| | Old graph | Ring | Spine | Hub made real |
+| --- | --- | --- | --- | --- |
+| Deaths a week | 2.49 | 2.46 | 2.46 | 2.23 |
+| Average stay (weeks) | 2.67 | 2.71 | 2.70 | 2.99 |
+| Breaks a day | 2.11 | 2.26 | 2.21 | 2.30 |
+| Hookups a week | 2.94 | 3.16 | 2.98 | 3.40 |
+| Fights a week | 4.12 | 4.24 | 4.24 | 4.31 |
+
+What the layout itself changes (60 seeds × 30 days each):
+
+| | Old graph | Ring | Spine | Hub made real |
+| --- | --- | --- | --- | --- |
+| Minutes walking a day, each | 62 | 32 | 32 | 29 |
+| Run-ins in passing a week | 0.9 | 57 | 69 | 68 |
+| ...of them in a corridor | 0 | 20 | 49 | 0 |
+| Sleepers kept up a week | 3.7 | 6.1 | 2.5 | 4.8 |
+| ...through a wall | 0 | 2.2 | 0.2 | 2.3 |
+| Lovin' overheard next door a week | 0 | 0.5 | 0.2 | 0.7 |
+| Witnesses per break (none watching) | 2.2 (30%) | 2.3 (26%) | 2.7 (23%) | 3.0 (20%) |
+| Witnesses per puke (none watching) | 2.7 (30%) | 2.5 (27%) | 3.2 (19%) | 3.5 (21%) |
+| Witnesses per kiss (none watching) | 2.8 (14%) | 2.9 (14%) | 2.8 (15%) | 3.0 (11%) |
+| Drinks before noon | 52% | 52% | 52% | 51% |
+| Asleep 17:00–21:00 | 53% | 56% | 58% | 55% |
+
+What it shows: the shape matters less than it looks. Walks are short (about half the old graph's guesses), and most of the drama happens where people stop and do things, the lounge above all, so the shape mostly changes who walks past whom. The hub is the most watched (everyone crosses one big room) and the gentlest (fewer deaths, longer stays, more hookups, more people seeing breakdowns). The spine has the most hallway run-ins, nearly all in the hall, and the quietest nights: its good room backs onto the cafe rather than the dorm. The ring has the most people kept up, with the dorm between the rec room and the good room; in the hub the dorm backs onto the common room. Doubling every walk (12 tiles a minute) didn't change the picture. The morning drinking and the evening naps are the same on every shape.
+
+The parts that would make shapes differ more aren't built: seen going in together, the discreet way round (both need corridors worth avoiding), and the drifting dead.
 
 ## Contestants, species and the generator
 
@@ -1087,7 +1162,7 @@ A killer who accuses an innocent and wins walks free; the engine keeps the truth
 
 The core is a TypeScript library with no I/O, no clock and no global randomness. Everything tunable lives in YAML data files, hot-reloaded by the harness and debug view.
 
-**Data files:** schedule, rooms (including temperatures), objects, species, clothing, generator, traits, needs, personality, actions, social (interactions, the ledger, attraction, fights, knocking), romance, thoughts, breaks, booze, scoring, ranks, rules, wheel, events, trials.
+**Data files:** schedule, rooms (including temperatures), plans (the floor plans), objects, species, clothing, generator, traits, needs, personality, actions, social (interactions, the ledger, attraction, fights, knocking), romance, thoughts, breaks, booze, scoring, ranks, rules, wheel, events, trials.
 
 **Core API (sketch):**
 
@@ -1258,7 +1333,7 @@ The meter's numbers (size, drain, award sizes) are the most important unanswered
 **Characters and station**
 
 - [x] The species roster (six, decided Oct 18). Still open: real names and the art.
-- [ ] The floor plan, bed qualities and perceived-privacy spots.
+- [ ] The floor plan (designed in Part two, The floor plan: the next pass), bed qualities and perceived-privacy spots.
 - [ ] Final names for the eight personality sliders, and whether traits or quirks sit on top.
 
 **Engine and presentation**

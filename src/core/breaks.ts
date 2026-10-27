@@ -17,6 +17,7 @@ import { airIt, pourOut } from './romance.js';
 import { grievance, think } from './thoughts.js';
 import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
+import { canSee } from './station.js';
 
 type Kind = Ctx['data']['breaks']['kinds'][string];
 
@@ -153,7 +154,7 @@ export function startBreak(ctx: Ctx, c: Contestant, level: Level, source: string
   log(ctx, 'break', [c.id, ...(target ? [target.id] : [])], c.room, { level, kind: id, source, mood: Math.round(c.mood), ...(nudged && kind.attack ? { desperate: true } : {}) });
   // Watching someone fall apart hurts the kind.
   const saw = ctx.data.thoughts.moments.breakdown.thought;
-  for (const o of ctx.w.contestants) if (o !== c && o.room === c.room && !o.asleep) think(ctx, o, saw, c.id);
+  for (const o of ctx.w.contestants) if (o !== c && canSee(ctx.st, o.room, c.room) && !o.asleep) think(ctx, o, saw, c.id);
   begin(ctx, c, { action: id, object: null, room: room ?? c.room, minutes: kind.minutes });
 }
 
@@ -188,6 +189,7 @@ function chase(ctx: Ctx, c: Contestant, target: Contestant): void {
   const t = ctx.w.t;
   a.room = target.activity?.room ?? target.room;
   a.phase = 'walk';
+  a.from = c.room;
   a.startedAt = t;
   a.arriveAt = t + Math.max(1, ctx.st.walk[ctx.st.roomIndex.get(c.room)!]![ctx.st.roomIndex.get(a.room)!]!);
   a.endAt = null;
@@ -249,7 +251,7 @@ export function attack(ctx: Ctx, c: Contestant, target: Contestant): void {
   });
   if (!fight.killed) return;
   const dead = fight.loser;
-  const witnesses = ctx.w.contestants.filter((o) => o !== c && o !== dead && o.room === room && !o.asleep);
+  const witnesses = ctx.w.contestants.filter((o) => o !== c && o !== dead && canSee(ctx.st, o.room, room) && !o.asleep);
   log(ctx, 'murder', [c.id, dead.id], room, { name: dead.name, weapon: p.weapons[room] ? room : null, witnesses: witnesses.map((w) => w.id) });
   for (const w of witnesses) {
     feel(ctx, w, c, 'fear', p.witnessFear, 'saw a murder');

@@ -43,7 +43,8 @@ proposition:
   kissesFirst: 1
   thought: lovin                  # both, "mood +10 for a day"
   bond: 10                        # affection, both ways
-  disturbed: disturbed            # anyone asleep in the room, when it starts
+  disturbed: disturbed            # anyone asleep in the room, when it starts (or next door, plans.yaml)
+  heard: heard_through_wall       # proposal (floor plan): anyone awake next door hears it, and knows
   # Proposal: lovin' moves a label of none, flirting or ex to dating for someone whose monogamy is
   # at least datingAt, otherwise to fling. Mismatched expectations happen without anyone lying.
   # Each earlier lovin' with the same person counts as datingPerLovin more monogamy, so a fling

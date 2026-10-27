@@ -12,6 +12,7 @@ import { feel, meet, rel, relation, warm } from './ledger.js';
 import { addNeed, axisFactor } from './needs.js';
 import { between, chance, next, weightedIndex } from './rng.js';
 import { friction } from './people.js';
+import { canSee } from './station.js';
 import { think } from './thoughts.js';
 import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
@@ -54,17 +55,37 @@ export function socialRound(ctx: Ctx): void {
     const others = cast.filter((o) => o !== c && (o.room === c.room || throughGlass(ctx, c, o)) && available(ctx, o));
     if (others.length === 0) continue;
     if (!chance(ctx.w.rng, interactionChance(ctx, c))) continue;
-    const p = ctx.data.social.partner;
-    const weights = others.map((o) => {
-      const r = relation(ctx, c, o);
-      return Math.max(p.min, 1 + (r.affection / 100) * p.affection + (r.attraction / 10) * p.attraction) * piningMult(ctx, c, o);
-    });
-    const o = others[weightedIndex(ctx.w.rng, weights)]!;
+    const o = others[weightedIndex(ctx.w.rng, partnerWeights(ctx, c, others))]!;
     const defs = interactionsFor(ctx, c, o);
     if (!defs.length) continue;
     const def = defs[weightedIndex(ctx.w.rng, defs.map((d) => interactionWeight(ctx, c, o, d)))]!;
     interact(ctx, c, o, def);
   }
+}
+
+/** Who they turn to, × (1 + affection and attraction), and more toward someone they're pining for. */
+function partnerWeights(ctx: Ctx, c: Contestant, others: Contestant[]): number[] {
+  const p = ctx.data.social.partner;
+  return others.map((o) => {
+    const r = relation(ctx, c, o);
+    return Math.max(p.min, 1 + (r.affection / 100) * p.affection + (r.attraction / 10) * p.attraction) * piningMult(ctx, c, o);
+  });
+}
+
+/**
+ * Walking into a corridor or the common room: a word in passing with someone there (another
+ * walker, or someone free to talk), from the interactions marked `passing`, without stopping.
+ */
+export function inPassing(ctx: Ctx, c: Contestant): void {
+  if (c.asleep || c.breakdown) return;
+  const others = ctx.w.contestants.filter((o) => o !== c && o.room === c.room && !o.asleep && !o.breakdown && (o.activity?.phase === 'walk' || available(ctx, o)));
+  if (!others.length || !chance(ctx.w.rng, interactionChance(ctx, c) * ctx.data.social.passing)) return;
+  const o = others[weightedIndex(ctx.w.rng, partnerWeights(ctx, c, others))]!;
+  if (!c.ledger[o.id]) meet(ctx, c, o);
+  const defs = ctx.data.social.interactions.filter((d) => d.passing && !d.glass);
+  const weights = defs.map((d) => interactionWeight(ctx, c, o, d));
+  if (!weights.some((w) => w > 0)) return;
+  interact(ctx, c, o, defs[weightedIndex(ctx.w.rng, weights)]!);
 }
 
 /**
@@ -290,7 +311,7 @@ export function brawl(ctx: Ctx, swinger: Contestant, other: Contestant, opts: Br
   think(ctx, loser, f.lost, winner.id);
 
   const room = insulted.room;
-  const witnesses = ctx.w.contestants.filter((w) => w !== insulter && w !== insulted && w.room === room && !w.asleep).map((w) => w.id);
+  const witnesses = ctx.w.contestants.filter((w) => w !== insulter && w !== insulted && canSee(ctx.st, w.room, room) && !w.asleep).map((w) => w.id);
   for (const c of [insulter, insulted]) {
     endActivity(ctx, c, 'interrupted');
     if (!(killed && c === loser)) begin(ctx, c, { action: FIGHT, object: null, room, minutes: f.minutes });

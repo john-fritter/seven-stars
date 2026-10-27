@@ -39,6 +39,7 @@ sleep:
     cost: 1
     thought: kept_up
     affection: -3
+    throughWall: 0.5     # proposal (floor plan): noise next door counts this much (rest lost and the wake chance)
 
 bladder:
   criticalBelow: 10      # proposal: below this it overrides everything and they head for a toilet

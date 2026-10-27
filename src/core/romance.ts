@@ -12,7 +12,7 @@ import { canEnter, isNightFor, log, type Ctx } from './context.js';
 import { feel, rel, relation } from './ledger.js';
 import { axisFactor } from './needs.js';
 import { between, chance, pick } from './rng.js';
-import { walkMinutes, type ObjectInstance } from './station.js';
+import { canHear, canSee, nextDoor, walkMinutes, type ObjectInstance } from './station.js';
 import { interact, shareOdds } from './social.js';
 import { think } from './thoughts.js';
 import { traitFx } from './traits.js';
@@ -271,11 +271,23 @@ function consummate(ctx: Ctx, c: Contestant, o: Contestant): void {
     feel(ctx, a, b, 'affection', p.bond, 'lovin');
     think(ctx, a, p.thought, b.id);
   }
-  for (const x of ctx.w.contestants) if (x !== c && x !== o && x.room === room && x.asleep) think(ctx, x, p.disturbed);
+  // Asleep in the room or next door, it keeps them up; awake next door, they hear it, and know.
+  const walls = nextDoor(ctx.st, room);
+  for (const x of ctx.w.contestants) {
+    if (x === c || x === o) continue;
+    if (x.asleep && (x.room === room || walls.includes(x.room))) think(ctx, x, p.disturbed);
+    else if (!x.asleep && walls.includes(x.room)) {
+      think(ctx, x, p.heard, c.id);
+      log(ctx, 'overheard', [x.id, c.id, o.id], x.room, { from: room });
+      remember(ctx, x, c, o, 'lovin');
+      evidence(ctx, x, c, o, 'lovin');
+      evidence(ctx, x, o, c, 'lovin');
+    }
+  }
   const inBed = c.activity?.object != null;
   const exposed = ctx.st.room.get(room)!.access !== 'occupants'; // outside a bedroom: a show
   log(ctx, 'lovin', [c.id, o.id], room, { first, couple, minutes: (c.activity?.endAt ?? ctx.w.t) - ctx.w.t, where: inBed ? 'bed' : exposed ? 'public' : 'bedroom' });
-  if (exposed) for (const x of ctx.w.contestants) if (x !== c && x !== o && x.room === room && !x.asleep) think(ctx, x, p.here.witnessThought, c.id);
+  if (exposed) for (const x of ctx.w.contestants) if (x !== c && x !== o && canSee(ctx.st, x.room, room) && !x.asleep) think(ctx, x, p.here.witnessThought, c.id);
   aftermath(ctx, c, o, 'lovin');
 }
 
@@ -288,7 +300,7 @@ function aftermath(ctx: Ctx, b: Contestant, c: Contestant, what: string): void {
   remember(ctx, b, b, c, what);
   remember(ctx, c, b, c, what);
   for (const a of ctx.w.contestants) {
-    if (a === b || a === c || a.room !== b.room || a.asleep) continue;
+    if (a === b || a === c || !canSee(ctx.st, a.room, b.room) || a.asleep) continue;
     remember(ctx, a, b, c, what);
     evidence(ctx, a, b, c, what);
     evidence(ctx, a, c, b, what);
@@ -363,7 +375,7 @@ export function airIt(ctx: Ctx, c: Contestant, target: Contestant): void {
   const known = latestAbout(ctx, c, target);
   if (!known) return;
   const [who, other] = known;
-  const heard = ctx.w.contestants.filter((x) => x !== c && x !== who && x !== other && x.room === c.room && !x.asleep);
+  const heard = ctx.w.contestants.filter((x) => x !== c && x !== who && x !== other && canHear(ctx.st, x.room, c.room) && !x.asleep);
   log(ctx, 'scene', [c.id, who.id, other.id], c.room, { heard: heard.map((x) => x.id) });
   for (const x of heard) tell(ctx, x, who, other, 'scene');
 }

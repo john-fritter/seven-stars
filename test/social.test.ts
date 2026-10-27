@@ -176,7 +176,7 @@ describe('knocking', () => {
     const { w, ctx, cast } = aboard();
     step(w, 14 * 60); // after the first ceremony, everyone has a bed
     const host = cast.find((c) => c.rank === 1)!;
-    const k = cast.find((c) => c.rank === 7)!;
+    const k = cast.filter((c) => c !== host && c.rank !== null).sort((x, y) => y.rank! - x.rank!)[0]!; // the lowest ranked
     meet(ctx, host, k);
     Object.assign(rel(host, k)!, { affection: 100, attraction: 10 });
     host.asleep = false;
