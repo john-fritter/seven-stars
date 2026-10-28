@@ -78,6 +78,7 @@ export function rollContestant(data: GameData, rng: Rng, id: string, t: number, 
     tolerance: {},
     hammeredSince: null,
     inventory: [],
+    snacks: 0,
     breakdown: null,
     seen: [],
   };

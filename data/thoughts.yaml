@@ -47,11 +47,22 @@ needs:
   - { need: hygiene, below: 20, thought: filthy }
   - { need: social,  below: 20, thought: lonely }
   - { need: fun,     below: 20, thought: bored }
+# Proposal (need sliders, Oct 27): running low stings before it's desperate. Hunger, rest, hygiene
+# and comfort almost never reached mood (exhausted never fired in 8,000 contestant-days).
+  - { need: hunger,  below: 40, thought: peckish }
+  - { need: rest,    below: 35, thought: tired }
+  - { need: hygiene, below: 40, thought: grubby }
+  - { need: comfort, below: 35, thought: uncomfortable }
+# ...and being well looked after feels good, so the station's perks (the suite's bed, the hot
+# shower, a second helping) reach mood through the body, not just through status thoughts.
+  - { need: hunger,  above: 80, thought: well_fed }
+  - { need: rest,    above: 75, thought: well_rested }
+  - { need: hygiene, above: 80, thought: fresh }
 # Tuning proposal (M8): well-met needs lift mood too, as in RimWorld and The Sims. Without them
 # almost nothing good reached mood and it sat near the break lines.
   - { need: social,  above: 45, thought: good_company }   # fun and social (Oct 27): was above 80
   - { need: fun,     above: 45, thought: good_time }
-  - { need: comfort, above: 70, thought: comfortable }
+  - { need: comfort, above: 65, thought: comfortable }   # need sliders (Oct 27): was above 70
 
 # Too cold / too hot: −perDegrees per degree felt outside your range, up to −max, refreshed every
 # ten minutes while it lasts.
@@ -64,9 +75,9 @@ sleepMinutes: 180   # proposal
 # Not one per trait: each moment leaves one thought whose `scale` reads the sliders (k: 1 means
 # 0 at the bottom of the slider, so nothing at all), and traits multiply thoughts as usual. All proposal.
 moments:
-  helped:    { thought: helped, interactions: [kind_words, gift, pass_food] }  # whoever helped (kind, loyal)
+  helped:    { thought: helped, interactions: [kind_words, gift, pass_food, share_snack] }  # whoever helped (kind, loyal)
   risky:     { thought: thrill, tag: risky, infractions: [above_rank] }        # finishing something risky, or sneaking in (brave)
-  guilt:     { thought: guilty_conscience, infractions: [above_rank, theft] }  # caught sneaking or stealing (honest)
+  guilt:     { thought: guilty_conscience, infractions: [above_rank, theft] }        # also swiping a snack (ranks.yaml)  # caught sneaking or stealing (honest)
   watched:   { thought: watched_performing, events: [karaoke, dance_off] }     # performing with an audience (vain)
   breakdown: { thought: saw_breakdown }                                        # in the room when someone breaks (kind)
 
@@ -96,7 +107,18 @@ thoughts:
 
   # Needs and comfort
   hungry:      { label: "Hungry", value: -4, hours: 0.5, stack: 1, source: hunger }            # proposal
-  exhausted:   { label: "Exhausted", value: -6, hours: 0.5, stack: 1, source: discomfort }     # proposal
+  exhausted:   { label: "Exhausted", value: -8, hours: 0.5, stack: 1, source: discomfort }     # proposal; need sliders (Oct 27): was −6
+  peckish:     { label: "Peckish", value: -2, hours: 0.5, stack: 1, source: hunger }           # proposal (need sliders)
+  tired:       { label: "Tired", value: -3, hours: 0.5, stack: 1, source: discomfort }         # proposal (need sliders)
+  grubby:      { label: "Feeling grubby", value: -2, hours: 0.5, stack: 1, source: discomfort } # proposal (need sliders)
+  uncomfortable: { label: "Uncomfortable", value: -3, hours: 0.5, stack: 1, source: discomfort } # proposal (need sliders)
+  well_fed:    { label: "Well fed", value: 2, hours: 0.5, stack: 1, source: hunger }            # proposal (need sliders)
+  well_rested: { label: "Well rested", value: 3, hours: 0.5, stack: 1, source: discomfort }    # proposal (need sliders)
+  fresh:       { label: "Feeling fresh", value: 2, hours: 0.5, stack: 1, source: discomfort }  # proposal (need sliders)
+  nothing_left: { label: "Nothing left for me", value: -4, hours: 6, stack: 1, source: hunger }   # proposal (need sliders): an empty table
+  snacks_gone: { label: "The snack machine's empty", value: -1, hours: 2, stack: 1, source: hunger } # proposal (need sliders)
+  shared_snack: { label: "{who} shared a snack with me", value: 3, hours: 12, stack: 2, source: person } # proposal (need sliders)
+  snack_swiped: { label: "{who} pinched my snack", value: -3, hours: 12, stack: 2, source: person }  # proposal (need sliders)
   filthy:      { label: "Couldn't wash", value: -6, hours: 0.5, stack: 1, source: discomfort } # "couldn't wash −6"
   lonely:      { label: "Lonely", value: -2, hours: 0.5, stack: 1, source: rejection }         # proposal (mood slide, Oct 27: was −4)
   bored:       { label: "Bored stiff", value: -2, hours: 0.5, stack: 1, source: discomfort,    # proposal (Oct 27: was −4)

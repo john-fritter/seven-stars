@@ -66,7 +66,7 @@ function busy(ctx: Ctx, c: Contestant): boolean {
 export function kissOdds(ctx: Ctx, target: Contestant, kisser: Contestant): number {
   const r = rel(target, kisser);
   if (!r) return 0;
-  return clamp((attractionNow(ctx, target, r.attraction) / 10) * (1 + r.affection / 100) * ctx.data.romance.kiss.successScale * agreeMult(ctx, target), 0, 1);
+  return clamp((attractionNow(ctx, target, r.attraction, kisser) / 10) * (1 + r.affection / 100) * ctx.data.romance.kiss.successScale * agreeMult(ctx, target), 0, 1);
 }
 
 export function kiss(ctx: Ctx, c: Contestant, o: Contestant): void {
@@ -95,7 +95,7 @@ export function kiss(ctx: Ctx, c: Contestant, o: Contestant): void {
 export function propositionOdds(ctx: Ctx, target: Contestant, asker: Contestant): number {
   const p = ctx.data.romance.proposition;
   const r = rel(target, asker);
-  const attraction = r ? attractionNow(ctx, target, r.attraction) : 0;
+  const attraction = r ? attractionNow(ctx, target, r.attraction, asker) : 0;
   if (!r || attraction < p.attraction || r.affection < p.affection) return 0;
   return clamp((attraction / 10) * p.successScale * attachedMult(ctx, target, asker) * agreeMult(ctx, target), 0, 1);
 }

@@ -86,8 +86,14 @@ export function drinkLimit(ctx: Ctx, c: Contestant): number {
 }
 
 /** Attraction as they judge it right now: beer goggles add a little when drunk. */
-export function attractionNow(ctx: Ctx, c: Contestant, attraction: number): number {
-  return attraction + (stageOf(ctx, c)?.goggles ?? 0);
+export function attractionNow(ctx: Ctx, c: Contestant, attraction: number, seen?: Contestant): number {
+  return attraction + (stageOf(ctx, c)?.goggles ?? 0) - (seen ? grubbiness(ctx, seen) : 0);
+}
+
+/** How much less attractive someone is for needing a wash (needs.yaml grubby). */
+export function grubbiness(ctx: Ctx, c: Contestant): number {
+  const g = ctx.data.needs.grubby;
+  return g && c.needs.hygiene < g.below ? g.attraction : 0;
 }
 
 /** How much readier they are to say yes when drunk. */

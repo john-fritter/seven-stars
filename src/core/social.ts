@@ -2,7 +2,8 @@
 // and romance, and Rank, privileges, rules and punishments (Getting let in).
 import type { InteractionDef } from '../data/schema.js';
 import { actionDef, bedmateFeeling, begin, endActivity, FIGHT } from './actions.js';
-import { attractionNow, axis, giftDrink, moveMult, stageMult, stageOf } from './booze.js';
+import { attractionNow, axis, giftDrink, grubbiness, moveMult, stageMult, stageOf } from './booze.js';
+import { shareSnack, swipeSnack } from './pantry.js';
 import { log, type Ctx } from './context.js';
 import { askExclusive, attachedMult, breakUp, evidence, kiss, invite, looseLips, moveAllowed, piningMult, proposition } from './romance.js';
 import { boldness, chanceBoost, interactionBoost } from './ratings.js';
@@ -128,11 +129,12 @@ function interactionsFor(ctx: Ctx, c: Contestant, o: Contestant): InteractionDef
 export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: InteractionDef): number {
   const r = relation(ctx, c, o);
   const n = def.needs;
-  if (n.attraction !== undefined && attractionNow(ctx, c, r.attraction) < n.attraction) return 0;
+  if (n.attraction !== undefined && attractionNow(ctx, c, r.attraction, o) < n.attraction) return 0;
   if (n.affection !== undefined && r.affection < n.affection) return 0;
   if (n.labels && !n.labels.includes(r.label)) return 0;
   if (n.flirted && r.flirts === 0) return 0;
   if (n.inventory && c.inventory.length === 0) return 0;
+  if ((n.stash && c.snacks <= 0) || (n.theirStash && o.snacks <= 0)) return 0;
   if (!moveAllowed(ctx, c, o, def)) return 0;
   const [lo, hi] = ctx.data.social.factorRange;
   let w = def.weight * moveMult(ctx, c, def.id) * (traitFx(ctx.data, c).interactions[def.id] ?? 1) * moodInteraction(ctx, c, def.id);
@@ -150,7 +152,7 @@ export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: I
         f = 1 + (k * r.affection) / 100;
         break;
       case 'attraction':
-        f = attractionNow(ctx, c, r.attraction) / 5;
+        f = attractionNow(ctx, c, r.attraction, o) / 5;
         break;
       case 'chemistry':
         f = 1 + k * r.chemistry;
@@ -160,6 +162,12 @@ export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: I
         break;
       case 'monogamy':
         f = axisFactor(k, c.monogamy);
+        break;
+      case 'hungry': // ×1 at hunger 50, up to 1 + k when starving
+        f = 1 + (k * (50 - c.needs.hunger)) / 50;
+        break;
+      case 'targetHungry':
+        f = 1 + (k * (50 - o.needs.hunger)) / 50;
         break;
       default:
         f = axisFactor(k, axis(ctx, c, s.by));
@@ -211,6 +219,10 @@ export function interact(ctx: Ctx, c: Contestant, o: Contestant, def: Interactio
       return breakUp(ctx, c, o);
     case 'gift':
       return giftDrink(ctx, c, o);
+    case 'share_snack':
+      return shareSnack(ctx, c, o);
+    case 'swipe_snack':
+      return swipeSnack(ctx, c, o);
   }
   const e = log(ctx, def.id, [c.id, o.id], c.room);
   looseLips(ctx, c, o, def.id);
@@ -237,7 +249,7 @@ function brokenUp(ctx: Ctx, a: Contestant, b: Contestant): boolean {
 
 /** Odds a flirt lands: the target's attraction back ÷ 10 × successScale. */
 export function flirtOdds(ctx: Ctx, target: Contestant, flirter: Contestant): number {
-  return clamp(((rel(target, flirter)?.attraction ?? 0) / 10) * ctx.data.social.flirt.successScale, 0, 1);
+  return clamp((((rel(target, flirter)?.attraction ?? 0) - grubbiness(ctx, flirter)) / 10) * ctx.data.social.flirt.successScale, 0, 1);
 }
 
 function flirt(ctx: Ctx, c: Contestant, o: Contestant): void {
@@ -269,7 +281,9 @@ const round2 = (x: number) => Math.round(x * 100) / 100;
 export function fightChance(ctx: Ctx, insulted: Contestant, insulter?: Contestant): number {
   const f = ctx.data.social.fight;
   const drunk = Math.max(stageMult(ctx, insulted, 'fight'), insulter ? stageMult(ctx, insulter, 'fight') : 1);
-  return clamp(f.chance * axisFactor(f.calmK, axis(ctx, insulted, 'calm')) * traitFx(ctx.data, insulted).fight * drunk, 0, 1);
+  const fuse = ctx.data.needs.fuse;
+  const tired = fuse && insulted.needs.rest < fuse.restBelow ? fuse.fight : 1; // short of sleep, short of temper
+  return clamp(f.chance * axisFactor(f.calmK, axis(ctx, insulted, 'calm')) * traitFx(ctx.data, insulted).fight * drunk * tired, 0, 1);
 }
 
 /** Fighting power without the die: strength and stamina. */

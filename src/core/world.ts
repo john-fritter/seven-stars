@@ -36,7 +36,7 @@ export function createWorld(data: GameData, seed: number): World {
 }
 
 function newShow(): World['show'] {
-  return { day: 1, today: {}, mine: {}, pairs: {}, pending: [], effects: {}, booked: null, event: null, lastFormat: null, button: null, bedSwap: null, bodies: [], trials: [], trialOn: null, seen: {}, names: [], cage: {} };
+  return { day: 1, today: {}, mine: {}, pairs: {}, pending: [], effects: {}, booked: null, event: null, lastFormat: null, button: null, bedSwap: null, bodies: [], trials: [], trialOn: null, seen: {}, names: [], cage: {}, spread: {}, snacks: 0, restocked: 0 };
 }
 
 /** Swaps the data a world runs on, for hot-reloading tuned values. */

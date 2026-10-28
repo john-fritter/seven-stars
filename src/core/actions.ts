@@ -10,6 +10,7 @@ import { accessRank, canEnter, dayOf, effectOn, effectsToday, inRanks, isNightFo
 import { gathering } from './schedule.js';
 import { gainsOf, personalityOf, tagMult } from './derived.js';
 import { feel, rel } from './ledger.js';
+import { nothingLeft, seconds, serve, snackThere, takeSnack } from './pantry.js';
 import { addNeed, freshness, needUrgency, wearThin } from './needs.js';
 import { between, chance, pick, weightedIndex } from './rng.js';
 import { bedtime, labelOf, lovinArrive, morning } from './romance.js';
@@ -34,6 +35,7 @@ export const AT_DOOR = 'at_door'; // turned away after knocking
 export const LOVIN = 'lovin'; // lumps under the covers (romance.ts)
 export const SLEEPWALK = 'sleepwalk'; // a sleepwalker's wander (traits.yaml)
 export const PASSED_OUT = 'passed_out'; // out cold where they fell (booze.yaml passOut)
+export const LIE_AWAKE = 'lie_awake'; // woken in the night, staring at the ceiling (needs.yaml noise.lieAwake)
 
 const defCache = new WeakMap<Activity, ActionDef | undefined>();
 
@@ -146,6 +148,7 @@ export function usable(ctx: Ctx, c: Contestant, def: ActionDef): boolean {
   if (def.onlySpecies && !def.onlySpecies.includes(c.species)) return false;
   if (def.notSpecies?.includes(c.species)) return false;
   if ((def.when && !effectOn(ctx, def.when)) || (def.unless && effectOn(ctx, def.unless))) return false;
+  if (def.takes && !snackThere(ctx, c, def.takes)) return false;
   return inRanks(accessRank(ctx, c), def.ranks);
 }
 
@@ -389,8 +392,20 @@ function arrive(ctx: Ctx, c: Contestant): void {
   // The cameras see everything: walking in above your rank is logged the moment it happens.
   if (!canEnter(ctx, c, a.room) && !caughtIn(ctx, c, a.room)) infraction(ctx, c, 'above_rank', a.room, 0, { doing: a.action });
   if (a.minutes !== null) a.endAt = ctx.w.t + a.minutes;
-  if (a.action === MEAL) c.eaten[ctx.data.schedule.meals.find((m) => m.id === a.meal)!.group] = dayOf(ctx.w.t);
+  if (a.action === MEAL) {
+    const group = ctx.data.schedule.meals.find((m) => m.id === a.meal)!.group;
+    c.eaten[group] = dayOf(ctx.w.t);
+    if (serve(ctx, c, a, group) <= 0) {
+      nothingLeft(ctx, c, a);
+      endActivity(ctx, c, 'interrupted');
+      return;
+    }
+  }
   const def = actionDef(ctx, a);
+  if (def?.takes && !takeSnack(ctx, c, def.takes, a.room)) {
+    endActivity(ctx, c, 'interrupted');
+    return;
+  }
   if (def?.kind === 'sleep') c.asleep = true;
   if (a.action === LOVIN) lovinArrive(ctx, c);
   if (c.breakdown && a.action === c.breakdown.kind) breakArrive(ctx, c);
@@ -407,10 +422,13 @@ export function endActivity(ctx: Ctx, c: Contestant, how: 'done' | 'interrupted'
     if (def?.kind === 'thermostat') setThermostat(ctx, c, a.room);
     if (def?.kind === 'drink') finishDrink(ctx, c, a.booze!, a.room);
     if (a.action === MEAL) {
-      log(ctx, 'meal', [c.id], a.room, { meal: a.meal, food: a.food });
+      log(ctx, 'meal', [c.id], a.room, { meal: a.meal, food: a.food, ...(a.portion !== undefined && a.portion < 1 ? { portion: Math.round(a.portion * 100) / 100 } : {}), ...(a.seconds ? { seconds: true } : {}) });
       const thought = ctx.data.ranks.food[a.food!]!.thought;
       if (thought) think(ctx, c, thought);
     }
+    // What it took out of them (needs.yaml exertion): a fight, lovin', the toilet.
+    const cost = ctx.data.needs.exertion[a.action]?.cost;
+    if (cost) for (const n in cost) addNeed(c, n as Need, cost[n as Need]!);
     if (def?.logs) log(ctx, def.logs, [c.id], a.room);
     if (def?.thought && def.kind !== 'sleep') think(ctx, c, def.thought);
     // Got away with something risky: the brave get a rush.
@@ -505,6 +523,10 @@ function passThrough(ctx: Ctx, c: Contestant, a: Activity): void {
   inPassing(ctx, c);
 }
 
+function mealGroup(ctx: Ctx, a: Activity): string {
+  return ctx.data.schedule.meals.find((m) => m.id === a.meal)!.group;
+}
+
 /** One minute of whatever the contestant is doing. */
 export function runActivity(ctx: Ctx, c: Contestant): void {
   const a = c.activity;
@@ -513,8 +535,9 @@ export function runActivity(ctx: Ctx, c: Contestant): void {
   if (a.phase === 'walk') {
     if (t < a.arriveAt) return passThrough(ctx, c, a);
     arrive(ctx, c);
+    if (c.activity !== a) return; // nothing left when they got there
   }
-  if (a.endAt !== null && t >= a.endAt) {
+  if (a.endAt !== null && t >= a.endAt && !(a.action === MEAL && seconds(ctx, c, a, mealGroup(ctx, a)))) {
     endActivity(ctx, c, 'done');
     return;
   }
@@ -524,7 +547,7 @@ export function runActivity(ctx: Ctx, c: Contestant): void {
     const p = ctx.w.contestants.find((o) => o.id === a.partner);
     if (a.endAt === null && (p?.activity?.action !== LOVIN || p.activity.partner !== c.id)) endActivity(ctx, c, 'interrupted');
   } else if (a.action === MEAL) {
-    addNeed(c, 'hunger', ctx.data.ranks.food[a.food!]!.hunger / ctx.data.schedule.mealMinutes);
+    addNeed(c, 'hunger', a.bite ?? ctx.data.ranks.food[a.food!]!.hunger / ctx.data.schedule.mealMinutes);
   } else if (c.breakdown && a.action === c.breakdown.kind) {
     breakMinute(ctx, c);
   } else if (def) {
@@ -567,6 +590,8 @@ function sleepMinute(ctx: Ctx, c: Contestant, a: Activity, def: ActionDef): bool
     if (chance(ctx.w.rng, s.noise.wakeChance * din.k)) {
       log(ctx, 'kept_up', [c.id, culprit.id], c.room, { noise: traitFx(ctx.data, culprit).noise ?? culprit.activity?.action, ...(din.k < 1 ? { wall: true } : {}) });
       endActivity(ctx, c, 'woke');
+      // Woken in the night (and not taken up with whoever's beside them), they lie there a while.
+      if (!c.activity && s.noise.lieAwake && isNightFor(ctx, c, ctx.w.t)) begin(ctx, c, { action: LIE_AWAKE, object: null, room: c.room, minutes: s.noise.lieAwake });
       return true;
     }
   }

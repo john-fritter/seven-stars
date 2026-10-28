@@ -33,6 +33,10 @@ export function drainNeeds(ctx: Ctx, c: Contestant): void {
   n.bladder = Math.max(0, n.bladder - r[3]!);
   n.social = Math.max(0, n.social - r[4]! * social);
   n.fun = Math.max(0, n.fun - r[5]! * fun);
+  // Exertion (needs.yaml): dancing works up a sweat, sitting still is restful.
+  const a = c.activity;
+  const ex = a && a.phase === 'do' ? ctx.data.needs.exertion[a.action]?.perHour : undefined;
+  if (ex) for (const k in ex) addNeed(c, k as Need, -ex[k as Need]! / 60);
 }
 
 /**
