@@ -48,7 +48,7 @@ describe('thoughts', () => {
     const { w, ctx, cast } = aboard();
     const c = cast[0]!;
     Object.assign(c, { personality: flat(5), rank: 4, room: 'cafe', thoughts: [] });
-    Object.assign(c.needs, { hunger: 10, social: 40, fun: 40, comfort: 50 });
+    Object.assign(c.needs, { hunger: 10, rest: 60, hygiene: 60, social: 40, fun: 40, comfort: 50 });
     w.rooms.cafe!.temp = data.species.species[c.species]!.comfort[0] - 6; // rank-4 clothes add 1: felt 5° under
     conditions(ctx, c);
     expect(c.thoughts.find((x) => x.id === 'hungry')?.value).toBeCloseTo(-4);

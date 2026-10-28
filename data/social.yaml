@@ -76,6 +76,12 @@ interactions:
       target: { affection: -5 }, thought: mocked, witnessThought: saw_cruelty }
   - { id: pass_food, weight: 0.15, glass: outside, scale: [{ by: affection, k: 1 }, { by: kind, k: 1 }],
       social: 2, targetGains: { hunger: 20 }, target: { affection: 8 }, thought: fed }
+  # Proposal (need sliders, Oct 28): a stashed snack (ranks.yaml snacks) shared with someone hungry,
+  # or swiped from someone who has one (the owner may not notice).
+  - { id: share_snack, weight: 0.8, move: share_snack, needs: { stash: true }, social: 2,
+      scale: [{ by: kind, k: 1 }, { by: affection, k: 1 }, { by: targetHungry, k: 1 }] }
+  - { id: swipe_snack, weight: 0.1, move: swipe_snack, needs: { theirStash: true },
+      scale: [{ by: kind, k: -1 }, { by: honest, k: -1 }, { by: hungry, k: 1 }] }
 # Gossip waits for rumors.
 
 # Flirting. Success odds = the target's attraction back ÷ 10 × successScale.

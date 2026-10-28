@@ -33,7 +33,9 @@ export function breakLines(ctx: Ctx, calm: number, shift = 0): Record<Level, num
 
 /** The deepest line their mood is under, if any. */
 export function breakLevel(ctx: Ctx, c: Contestant): Level | null {
-  const lines = breakLines(ctx, axis(ctx, c, 'calm'), traitFx(ctx.data, c).breakLine);
+  const fuse = ctx.data.needs.fuse;
+  const tired = fuse && c.needs.rest < fuse.restBelow ? fuse.breakLines : 0; // short of sleep, short of temper
+  const lines = breakLines(ctx, axis(ctx, c, 'calm'), traitFx(ctx.data, c).breakLine + tired);
   if (c.mood < lines.extreme) return 'extreme';
   if (c.mood < lines.major) return 'major';
   if (c.mood < lines.minor) return 'minor';

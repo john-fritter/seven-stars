@@ -265,9 +265,12 @@ describe('the daily event', () => {
     const events = step(w, data.schedule.event.resolveAfter + 2);
     const b = events.find((e) => e.type === 'button')!;
     const pressers = b.data!.pressers as string[];
+    // Anyone who scored something else in those minutes (a brawl breaking out) is left out.
+    const scored = new Set(events.filter((e) => e.type !== 'button' && e.points).flatMap((e) => e.actors));
     for (const c of w.contestants) {
+      if (scored.has(c.id)) continue;
       const expected = pressers.includes(c.id) ? 70 : 50 - 5 * pressers.length;
-      // The meter keeps draining by the minute, and other things may score: only roughly.
+      // The meter keeps draining by the minute: only roughly.
       expect(Math.abs(c.meter - Math.max(0, expected))).toBeLessThan(12);
     }
     expect(w.show.button?.pressers).toEqual(pressers);

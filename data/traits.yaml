@@ -303,7 +303,7 @@ traits:
   hoards:
     label: Hoards
     group: body
-    rule: "Carries drinks off three times as often"
+    rule: "Carries drinks off, and pockets snacks, three times as often"
     weight: 1
     carry: 3
   night_owl:

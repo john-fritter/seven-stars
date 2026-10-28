@@ -15,7 +15,9 @@ needs:
 asleepDrain: { hunger: 0.5, rest: 0, hygiene: 1, bladder: 0.3, social: 0.3, fun: 0.3, comfort: 0 }
 
 sleep:
-  restPerHour: 12        # × the bed's quality: suite 1.2, good 1.0, dorm 0.8, couch 0.6
+  restPerHour: 9         # × the bed's quality: suite 1.2, good 1.0, dorm 0.8, couch 0.6
+                         # need sliders (Oct 28): was 12, so every bed, couch included, refilled more than a
+                         # day's rest and a snorer or a hummer cost nothing
   # Proposal (naps, Oct 27): outside their night, sleep is only a choice with rest under this.
   # Fun and social sit at 94 to 99 all day, so by late afternoon a nap at rest ~65 outscored
   # everything else and half the cast slept through the evening. Was effectively 100.
@@ -45,6 +47,7 @@ sleep:
     thought: kept_up
     affection: -3
     throughWall: 0.5     # proposal (floor plan): noise next door counts this much (rest lost and the wake chance)
+    lieAwake: 15         # proposal (need sliders): woken in the night, they lie awake this many minutes first
 
 bladder:
   criticalBelow: 10      # proposal: below this it overrides everything and they head for a toilet
@@ -64,3 +67,31 @@ situational:
 tolerance: { needs: [fun], perUse: 0.3, recoverPerHour: 0.04, floor: 0.4 }
 
 comfortFollowPerHour: 30 # proposal: how fast comfort moves toward the current situation's comfort
+
+# Proposal (need sliders, Oct 28; john: "if you fight a cage match you should be more tired and
+# hungry"). What people do wears on them, by action id: `perHour` drains that much more an hour
+# while doing it (negative: restful), `cost` comes off once it's done. Fights cover cage matches.
+exertion:
+  fight:    { cost: { rest: -10, hunger: -8, hygiene: -15 } }
+  lovin:    { cost: { rest: -8, hunger: -5, hygiene: -15 } }    # a shower calls
+  toilet:   { cost: { hygiene: -3 } }                           # until they wash their hands (the sink gives +5)
+  dance:    { perHour: { rest: 4, hunger: 3, hygiene: 4 } }     # sweat
+  bowl:     { perHour: { rest: 4, hunger: 3, hygiene: 6 } }
+  karaoke:  { perHour: { rest: 3, hygiene: 4 } }
+  arcade:   { perHour: { hygiene: 2 } }
+  tend_plants: { perHour: { rest: 2, hygiene: 4 } }             # dirt under the nails
+  tantrum:  { cost: { rest: -8, hunger: -4, hygiene: -5 } }
+  wreck:    { cost: { rest: -5, hygiene: -5 } }
+  blowup:   { cost: { rest: -8, hygiene: -5 } }
+  panic:    { cost: { rest: -8 } }
+  sit:      { perHour: { rest: -2 } }
+  gaze:     { perHour: { rest: -2 } }
+  bench:    { perHour: { rest: -2 } }
+  soak:     { perHour: { rest: -3 } }
+
+# Proposal (need sliders): short of sleep, short of temper. Under rest `restBelow` their break
+# lines sit `breakLines` higher and an insult starts a fight × `fight` as often.
+fuse: { restBelow: 25, breakLines: 5, fight: 1.5 }
+# Proposal: anyone under hygiene `below` is this much less attractive to everyone (attraction
+# 0–10; it counts for flirts, kisses and propositions). The neat freak's dislike is on top.
+grubby: { below: 20, attraction: 1 }

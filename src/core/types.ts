@@ -25,6 +25,9 @@ export interface Activity {
   length?: number; // how long the lovin' lasts once both are there
   bedmate?: string; // who slept beside them
   kept?: string; // who kept them up (a snorer, a hummer)
+  bite?: number; // a meal: hunger a minute from the portion they got
+  seconds?: boolean; // a meal: they've gone back for more
+  portion?: number; // a meal: how much of a portion they were served (0..1)
 }
 
 export interface Contestant {
@@ -72,6 +75,8 @@ export interface Contestant {
   tolerance: Record<string, number>; // action id -> how worn out on it they are, 0..1 (needs.yaml tolerance)
   hammeredSince: number | null;
   inventory: string[]; // carried drinks, by quality
+  snacks: number; // snacks stashed from the machine (ranks.yaml snacks)
+  foundEmpty?: number; // when they last found the snack machine empty
   breakdown: Breakdown | null; // in the middle of a mental break
   seen: Sighting[]; // romance they know about (saw, did, or heard), for gossip and confessions
 }
@@ -168,6 +173,9 @@ export interface ShowState {
   seen: Record<string, Record<string, number>>; // room -> contestant -> when they last left it
   names: string[]; // every name cast this season, so nobody arrives with a dead contestant's name
   cage: Record<string, number>; // "a|b" -> cage matches that pair has fought this season
+  spread: Record<string, number>; // meal group -> portions left today (ranks.yaml spread)
+  snacks: number; // left in the snack machine
+  restocked: number; // when it was last refilled
 }
 
 /** One reason in the ledger. Repeats of the same reason merge into the latest entry. */

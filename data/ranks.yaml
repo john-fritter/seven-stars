@@ -19,4 +19,27 @@ ranks:
 food:
   gourmet:   { hunger: 70, thought: ate_gourmet }
   plain:     { hunger: 70 }
-  leftovers: { hunger: 50, thought: ate_leftovers }
+  leftovers: { hunger: 70, thought: ate_leftovers }
+
+# Proposal (need sliders, Oct 28; john: food quality isn't quantity). A portion fills the same
+# whatever the food; what changes is how much there is and who gets it. Each meal group's first
+# sitting puts out perEater × everyone aboard (outside the fishbowl), served in rank order: nobody
+# takes the last portions while a better rank who hasn't eaten is still awake, and `last` (rank
+# 7's leftovers) only gets what nobody ahead will need. Finishing a plate under `secondsBelow`, or
+# greedy (greed × (10 − kind) ÷ 10), they go back for up to another portion if there's at least
+# minPortion beyond what the others still to eat need. Turning up to nothing leaves `empty`.
+spread: { perEater: 1.0, last: [leftovers], secondsBelow: 85, greed: 0.3, minPortion: 0.25, secondsMinutes: 15, empty: nothing_left }
+
+# Proposal: the snack machine holds `stock` a day, refilled at `restock`. A snack fills `hunger`.
+# Taking one, there's a `carry` chance (× traits, Hoards ×3) they pocket another for later, up to
+# `max` stashed. Stashed snacks can be eaten, shared with someone hungry or swiped (social.yaml).
+# Swiping isn't a rule the show enforces (the producers love it); the owner notices with `noticed`.
+snacks:
+  stock: 14
+  restock: "06:00"
+  hunger: 20
+  carry: 0.15
+  max: 2
+  empty: snacks_gone
+  share: { affection: 8, thought: shared_snack }
+  swipe: { noticed: 0.5, affection: -10, thought: snack_swiped }

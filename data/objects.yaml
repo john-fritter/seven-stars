@@ -129,7 +129,7 @@ types:
   vending_snacks:
     capacity: 1
     actions:
-      - { id: snack, label: gets a snack, minutes: 5, gains: { hunger: 20, fun: 3 }, tags: [] }
+      - { id: snack, label: gets a snack, minutes: 5, gains: { hunger: 20, fun: 3 }, takes: machine, tags: [] }
   hot_tub:
     capacity: 4
     actions:
@@ -150,4 +150,5 @@ types:
 
 # Actions that need no object.
 personal:
+  - { id: eat_snack, label: eats a stashed snack, minutes: 5, gains: { hunger: 20, fun: 3 }, takes: stash, tags: [] }   # proposal (need sliders)
   - { id: groom, label: grooms, minutes: 15, gains: { hygiene: 20 }, onlySpecies: [feline], tags: [solitary] }

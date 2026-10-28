@@ -10,6 +10,7 @@ import { cast } from './generator.js';
 import { shuffle } from './rng.js';
 import { confine, fishbowlMinute, rollCall, sentencing, spacings } from './show.js';
 import { hangover } from './booze.js';
+import { openSpread, restock } from './pantry.js';
 import { forget, think, trappedHere } from './thoughts.js';
 import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
@@ -64,9 +65,12 @@ export function runSchedule(ctx: Ctx): void {
   if (m === s.event.at + s.event.resolveAfter) resolveEvent(ctx);
   if (m === ctx.data.events.button.revealAt && ctx.w.show.button) revealButton(ctx);
 
+  if (ctx.data.ranks.snacks && m === ctx.data.ranks.snacks.restock) restock(ctx);
   // A meal opening pulls awake people out of what they're doing so they can choose to go.
   for (const meal of s.meals) {
     if (m !== meal.from) continue;
+    // The group's first sitting puts out the day's spread (rank 7's leftovers come out of dinner's).
+    if (s.meals.find((x) => x.group === meal.group) === meal) openSpread(ctx, meal.group);
     for (const c of ctx.w.contestants) {
       if (!c.asleep && !c.breakdown && !onToilet(ctx, c) && openMeals(ctx, c).some((x) => x.id === meal.id)) endActivity(ctx, c, 'interrupted');
     }

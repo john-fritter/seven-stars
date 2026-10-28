@@ -212,6 +212,32 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
           singers.set(a!, (singers.get(a!) ?? 0) + 1);
           s.karaoke++;
           break;
+        case 'meal_empty':
+          add(n, data.food === 'leftovers' ? 'emptyLast' : 'emptyOther');
+          break;
+        case 'meal':
+          add(n, 'meals');
+          if (data.food === 'leftovers') add(n, 'mealsLast');
+          if (data.portion !== undefined) add(n, 'mealsShort');
+          break;
+        case 'seconds':
+          add(n, 'seconds');
+          if (data.greedy) add(n, 'secondsGreedy');
+          break;
+        case 'sold_out':
+          add(n, 'soldOut');
+          add(n, 'soldOutAt', e.t % MINUTES_PER_DAY);
+          break;
+        case 'swipe_snack':
+          add(n, 'swipes');
+          if (data.noticed) add(n, 'swipesNoticed');
+          break;
+        case 'share_snack':
+          add(n, 'shares');
+          break;
+        case 'kept_up':
+          add(n, 'keptUp');
+          break;
       }
       if (HOSTILE.has(e.type) && known.has(b!)) add(n, 'killerSnubbed');
       if (e.type === 'cage_match' && (known.has(a!) || known.has(b!))) add(n, 'killerCaged');
@@ -291,6 +317,13 @@ export function storyReport(seeds: StorySeed[]): string[] {
   line(`  ${per(n('breaks'), days)} a day, ${pct(n('extremeBreaks'), n('breaks'))} extreme, ${per(n('catatonic'), days)} catatonic spells a day`);
   line(`  the three most-broken people in a season had ${pct(n('breaksTop3'), n('breaks'))} of its breaks`);
   top(merge(seeds, (s) => s.breakKinds), n('breaks'), 8);
+  line();
+  line('Food and sleep');
+  line(`  ${per(n('meals'), days, 1)} meals a day; ${per(n('seconds'), days, 1)} second helpings (${pct(n('secondsGreedy'), n('seconds'))} by someone already full)`);
+  line(`  rank 7's leftovers: ${pct(n('mealsShort'), n('mealsLast') + n('emptyLast'))} came up short, ${pct(n('emptyLast'), n('mealsLast') + n('emptyLast'))} nothing at all; empty tables for anyone else ${per(n('emptyOther') * 7, days)} a week`);
+  line(`  the snack machine sold out on ${pct(n('soldOut'), days)} of days, around ${n('soldOut') ? clock(Math.round(n('soldOutAt') / n('soldOut'))) : '-'} on average`);
+  line(`  stashed snacks: ${per(n('swipes') * 7, days)} swiped a week (${pct(n('swipesNoticed'), n('swipes'))} noticed), ${per(n('shares') * 7, days)} shared`);
+  line(`  sleepers woken by noise ${per(n('keptUp') * 7, days)} a week`);
   line();
   line('Booze and gossip');
   line(`  ${per(n('drinks'), days, 1)} drinks a day, ${pct(n('drinksMorning'), n('drinks'))} before noon; ${per(n('hammered'), days)} hammered a day, ${per(n('pukes') * 7, days)} pukes and ${per(n('passedOut') * 7, days)} pass-outs a week`);
@@ -375,6 +408,18 @@ export function seasonLog(data: GameData, seed: number, days: number): string[] 
           break;
         case 'puke':
           s = `${nm(a)} throws up${at}`;
+          break;
+        case 'meal_empty':
+          s = `${nm(a)} turns up for ${x.meal === 'leftovers' ? 'the leftovers' : x.meal} and there's nothing left${at}`;
+          break;
+        case 'swipe_snack':
+          s = `${nm(a)} swipes ${nm(b)}'s snack${x.noticed ? ' and gets caught' : ''}${at}`;
+          break;
+        case 'share_snack':
+          s = `${nm(a)} shares a snack with a hungry ${nm(b)}${at}`;
+          break;
+        case 'sold_out':
+          s = `The snack machine is empty (${nm(a)} took the last one)`;
           break;
         case 'passed_out':
           s = `${nm(a)} passes out${at}`;

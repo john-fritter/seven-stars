@@ -399,3 +399,17 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] The lonely seek company: a room with anyone awake pulls 1.5 × social urgency.
 - [ ] Good company and having a good time: above 45 (was 80), +9 (was +6). Lonely and bored −2 (were −4).
 - [ ] Result: social 97 → 75 and fun 95 → 79 at day's end; wake around 60, evenings around 85. 11 of 11 targets. Extreme breaks 4.4 → 5.7 a week (27% → 32% of breaks), catatonia 0.48 → 0.67 a week, deaths 2.46 → 2.29 a week. A first cut (lines at 60, sentences and the fishbowl hitting the sliders too) had extreme breaks at 7.9: the miserable lost the free mood full sliders gave them.
+
+**Proposed for the need sliders (Oct 28; john approved the revised proposal).** Written up in DESIGN.md Part two, Needs (Food, exertion and sleep, as built). An audit found hunger, rest and hygiene changed 1.4–3.5% of choices, 96% of meals were eaten on a full stomach, "exhausted" never fired, and ranks 1–6 had identical bodies. 200 seeds × 30 days: 11 of 11 targets before and after.
+
+- [ ] Food quality isn't quantity (john): a portion fills 70 whatever the food (leftovers were 50). Gourmet and leftovers stay mood thoughts.
+- [ ] The spread: 1 portion per contestant aboard per meal group, served in rank order; rank 7's leftovers are what nobody ahead will need. Seconds under hunger 85 or out of greed (0.3 × (10 − kind) ÷ 10), up to a portion if a quarter is spare. An empty table: "nothing left for me" −4 for six hours. Rank 7 finds nothing at 11% of their leftovers.
+- [ ] Meal pull 2.25 (was 3).
+- [ ] The snack machine holds 14 a day, refilled at 06:00; 15% chance (Hoards ×3) of pocketing a second, up to 2 stashed. Finding it empty: −1, and they don't try again before the refill. Sells out on 27% of days.
+- [ ] Stashed snacks can be eaten, shared (hunger +20, affection +8, "shared a snack" +3) or swiped (owner notices half the time: affection −10, "pinched my snack" −3; the honest feel guilty). Swiping isn't fined: as theft it triggered the collective no-breakfast punishment almost daily; as a minor rule its fines raised meter deaths.
+- [ ] Exertion by action (needs.yaml exertion): fights rest −10, hunger −8, hygiene −15; lovin' rest −8, hunger −5, hygiene −15; the toilet hygiene −3; dancing and other recreation drain faster; sitting, gazing and soaking ease rest.
+- [ ] Beds refill 9 rest an hour (was 12). Woken in the night, they lie awake 15 minutes.
+- [ ] New thoughts: peckish (<40, −2), tired (<35, −3), grubby (<40, −2), uncomfortable (comfort <35, −3), exhausted −8 (was −6); well fed (>80, +2), well rested (>75, +3), feeling fresh (>80, +2); comfortable from 65 (was 70).
+- [ ] Under rest 25, break lines +5 and fights × 1.5. Under hygiene 20, 1 point less attractive to everyone.
+- [ ] Ceremony, event and trial chimes wake sleepers above rest 20 (were 30, 30, 40).
+- [ ] Side effects: hookups 3.37 → 3.05 a week, deaths 2.29 → 2.55 a week (more fines for sneaking a hot shower), mood 48.9 → 48.7, extreme breaks 5.7 → 5.8 a week. Rest still barely separates the ranks; possible follow-up.

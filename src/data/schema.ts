@@ -115,6 +115,8 @@ export const actionSchema = z.object({
   booze: z.string().optional(),
   when: z.string().optional(),
   unless: z.string().optional(),
+  // Proposal (need sliders): uses up a snack from the machine's stock or from their own stash.
+  takes: z.enum(['machine', 'stash']).optional(),
 });
 
 export const objectsSchema = z.object({
@@ -134,7 +136,7 @@ export const needsSchema = z.object({
     // Sharing a bed: how a contestant feels about a bedmate, and the thoughts it leaves.
     share: z.object({ neutral: num, pull: num, partners: z.array(z.string()).default([]), reluctant: unit, refused: z.string(), labels: z.record(z.string(), num).default({}), good: z.string(), bad: z.string() }),
     // Noisy people (traits with `noise`) disturb sleepers in the same room.
-    noise: z.object({ restMult: num.min(0), wakeChance: unit, cost: num, thought: z.string(), affection: num, throughWall: unit }),
+    noise: z.object({ restMult: num.min(0), wakeChance: unit, cost: num, thought: z.string(), affection: num, throughWall: unit, lieAwake: z.number().int().nonnegative().default(0) }),
   }),
   bladder: z.object({ criticalBelow: num, waitMinutes: z.number().int().positive() }),
   // Proposal (fun and social, Oct 27): drain multipliers in the wrong places, and recreation
@@ -146,6 +148,12 @@ export const needsSchema = z.object({
   }),
   tolerance: z.object({ needs: z.array(needEnum), perUse: num.min(0), recoverPerHour: num.min(0), floor: unit }),
   comfortFollowPerHour: num,
+  // Proposal (need sliders, Oct 28): what people do wears on them. By action id: extra drain an
+  // hour while doing it (negative eases it), and a cost once it's done.
+  exertion: z.record(z.string(), z.object({ perHour: needMap.default({}), cost: needMap.default({}) })).default({}),
+  // Tired people have a shorter fuse; the grubby are less attractive to everyone nearby.
+  fuse: z.object({ restBelow: num, breakLines: num, fight: num.min(0) }).optional(),
+  grubby: z.object({ below: num, attraction: num }).optional(),
 });
 
 export const speciesSchema = z.object({
@@ -173,6 +181,21 @@ export const ranksSchema = z.object({
   thoughts: z.object({ up: z.string(), down: z.string() }),
   ranks: z.record(rankKey, z.object({ bed: z.string(), food: z.string() })),
   food: z.record(z.string(), z.object({ hunger: num, thought: z.string().optional() })),
+  // Proposal (need sliders, Oct 28): each meal group puts out a spread, served in rank order.
+  spread: z.object({ perEater: num.positive(), last: z.array(z.string()).default([]), secondsBelow: num, greed: unit, minPortion: unit, secondsMinutes: z.number().int().positive(), empty: z.string() }).optional(),
+  // The snack machine holds a day's stock, restocked at `restock`; hoarders stash extras.
+  snacks: z
+    .object({
+      stock: z.number().int().nonnegative(),
+      restock: clock,
+      hunger: num,
+      carry: unit,
+      max: z.number().int().nonnegative(),
+      empty: z.string(),
+      share: z.object({ affection: num, thought: z.string() }),
+      swipe: z.object({ noticed: unit, affection: num, thought: z.string() }),
+    })
+    .optional(),
 });
 
 export const temperatureSchema = z.object({
@@ -333,9 +356,9 @@ export const DIMS = ['affection', 'trust', 'fear', 'attraction'] as const;
 export type Dim = (typeof DIMS)[number];
 const dimMap = z.partialRecord(z.enum(DIMS), num);
 
-const scaleBy = z.union([axisEnum, z.enum(['affection', 'attraction', 'chemistry', 'privacy', 'monogamy'])]);
+const scaleBy = z.union([axisEnum, z.enum(['affection', 'attraction', 'chemistry', 'privacy', 'monogamy', 'hungry', 'targetHungry'])]);
 
-export const MOVES = ['flirt', 'kiss', 'proposition', 'invite', 'exclusive', 'breakup', 'gift'] as const;
+export const MOVES = ['flirt', 'kiss', 'proposition', 'invite', 'exclusive', 'breakup', 'gift', 'share_snack', 'swipe_snack'] as const;
 export type Move = (typeof MOVES)[number];
 export const LABELS = ['none', 'flirting', 'fling', 'dating', 'exclusive', 'ex'] as const;
 export type Label = (typeof LABELS)[number];
@@ -351,6 +374,8 @@ export const interactionSchema = z.object({
       labels: z.array(z.enum(LABELS)).optional(),
       flirted: z.boolean().optional(),
       inventory: z.boolean().optional(),
+      stash: z.boolean().optional(), // they have a snack stashed
+      theirStash: z.boolean().optional(), // the target has one
     })
     .default({}),
   move: z.enum(MOVES).optional(),
