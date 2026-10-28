@@ -42,9 +42,9 @@ partner: { affection: 1, attraction: 1, min: 0.2 }
 # outside the cell starts it; "either" means either side can. `passing`: can happen in passing (above).
 factorRange: [0.1, 5]
 interactions:
-  - { id: chitchat, passing: true, weight: 1, social: 8, knows: 0.02,
+  - { id: chitchat, passing: true, weight: 1, social: 2, knows: 0.02,   # fun and social (Oct 27): was 8; it was 3/4 of all social offered
       actor: { affection: 0.25 }, target: { affection: 0.25 } }   # M8: was 0.5; 37% of pairs were friends
-  - { id: deep_talk, weight: 0.075, scale: [{ by: chemistry, k: 5 }], social: 12, knows: 0.25,
+  - { id: deep_talk, weight: 0.075, scale: [{ by: chemistry, k: 5 }], social: 8, knows: 0.25,
       actor: { affection: 10, trust: 3 }, target: { affection: 10, trust: 3 } }   # trust: proposal
   - { id: kind_words, passing: true, weight: 0.02, scale: [{ by: kind }], social: 4,
       target: { affection: 3 }, thought: kind_words }                           # affection: proposal
@@ -148,7 +148,9 @@ attraction:
 # Not for sleeping or the toilet.
 # Proposal: a believed-private spot pulls harder when they're up to something: the attraction term for
 # anyone they fancy past romance.yaml proposition.attraction is × 1 + private × the room's privacy.
-companyPull: { affection: 0.3, attraction: 0.3, fear: -0.3, private: 2 }
+# Proposal (fun and social, Oct 27): `lonely` adds lonely × their social urgency to any room with
+# someone awake in it, so the lonely seek company instead of spiralling alone.
+companyPull: { affection: 0.3, attraction: 0.3, fear: -0.3, private: 2, lonely: 1.5 }
 
 # People as mood (DESIGN.md Part two, Personality, traits and mood: People as mood, grudges and
 # friction). All proposal.

@@ -46,7 +46,9 @@ blackout: 0.3
 
 # Next morning at the wake chime: anyone whose drinks since the last chime add up to at least
 # `min` (the qualities' hangover values) gets a hangover of that size, between from and to.
-hangover: { thought: hangover, min: 3, from: -3, to: -10 }   # proposal: min
+# drinkMult (proposal, Oct 27): while the hangover lasts (8 hours from the chime), a drink scores
+# × this. 86% of morning drinks were by the hungover, chasing last night's misery with more.
+hangover: { thought: hangover, min: 3, from: -3, to: -10, drinkMult: 0.3 }   # proposal: min
 
 # Drinking together: finishing a drink while others in the room are drinking warms you to each of
 # them, so a round together is +2 both ways.

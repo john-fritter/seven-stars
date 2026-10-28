@@ -130,12 +130,21 @@ export const needsSchema = z.object({
   asleepDrain: z.record(needEnum, num),
   sleep: z.object({
     restPerHour: num,
+    napBelow: num.min(0).max(100),
     // Sharing a bed: how a contestant feels about a bedmate, and the thoughts it leaves.
     share: z.object({ neutral: num, pull: num, partners: z.array(z.string()).default([]), reluctant: unit, refused: z.string(), labels: z.record(z.string(), num).default({}), good: z.string(), bad: z.string() }),
     // Noisy people (traits with `noise`) disturb sleepers in the same room.
     noise: z.object({ restMult: num.min(0), wakeChance: unit, cost: num, thought: z.string(), affection: num, throughWall: unit }),
   }),
   bladder: z.object({ criticalBelow: num, waitMinutes: z.number().int().positive() }),
+  // Proposal (fun and social, Oct 27): drain multipliers in the wrong places, and recreation
+  // wearing thin when repeated.
+  situational: z.object({
+    alone: z.partialRecord(needEnum, num.min(0)).default({}),
+    idle: z.object({ actions: z.array(z.string()), drain: z.partialRecord(needEnum, num.min(0)) }),
+    confined: z.partialRecord(needEnum, num.min(0)).default({}),
+  }),
+  tolerance: z.object({ needs: z.array(needEnum), perUse: num.min(0), recoverPerHour: num.min(0), floor: unit }),
   comfortFollowPerHour: num,
 });
 
@@ -410,7 +419,7 @@ export const socialSchema = z.object({
     firstImpression: unit,
     approach: unit,
   }),
-  companyPull: z.object({ affection: num, attraction: num, fear: num, private: num.default(0) }),
+  companyPull: z.object({ affection: num, attraction: num, fear: num, private: num.default(0), lonely: num }),
   // People as mood (DESIGN.md Part two, Personality, traits and mood: People as mood, grudges and friction).
   people: z.object({
     friend: z.object({ thought: z.string(), at: num }),
@@ -470,6 +479,8 @@ export const thoughtsSchema = z.object({
       stack: z.number().int().positive(),
       source: z.string(),
       scale: axisScale,
+      // Proposal (fun and social, Oct 27): needs it knocks down (or tops up) when it happens.
+      needs: z.partialRecord(needEnum, num).default({}),
     }),
   ),
 });
@@ -501,7 +512,7 @@ export const boozeSchema = z.object({
   bladderPerDrink: num,
   stages: z.array(stageSchema),
   blackout: unit,
-  hangover: z.object({ thought: z.string(), min: num, from: num, to: num }),
+  hangover: z.object({ thought: z.string(), min: num, from: num, to: num, drinkMult: unit }),
   together: z.object({ affection: num }),
   pull: z.object({
     taste: num,

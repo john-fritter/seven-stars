@@ -22,8 +22,10 @@ ceremony:
   at: "21:00"
   minutes: 30            # proposal
   resolveAfter: 20       # proposal
-  wakeAbove: 40          # proposal: the ceremony chime wakes sleepers with rest above this; the
-                         # exhausted sleep through it, and skipping the ceremony is an infraction
+  wakeAbove: 30          # proposal: the ceremony chime wakes sleepers with rest above this; the
+                         # exhausted sleep through it, and skipping the ceremony is an infraction.
+                         # Naps (Oct 27): was 40; kept at needs.yaml sleep.napBelow so a tired
+                         # evening napper (who lies down under 30) is woken once they've had a doze
   room: common
 
 # The daily event (events.yaml picks the format). Everyone is summoned like the ceremony;
@@ -32,7 +34,7 @@ event:
   at: "15:00"
   minutes: 60
   resolveAfter: 20       # proposal
-  wakeAbove: 40          # proposal: as the ceremony
+  wakeAbove: 30          # proposal: as the ceremony (was 40)
 
 # Pending trials (trials.yaml), held after the morning arrivals so newcomers can break ties.
 trials:

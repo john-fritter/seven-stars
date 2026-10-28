@@ -6,15 +6,20 @@ needs:
   rest:    { drainPerHour: 4,  weight: 1.0, start: [70, 95] }
   hygiene: { drainPerHour: 3,  weight: 0.6, start: [60, 90] }
   bladder: { drainPerHour: 15, weight: 1.5, start: [60, 100] }
-  social:  { drainPerHour: 5,  weight: 0.8, start: [50, 80] }
+  social:  { drainPerHour: 8,  weight: 0.8, start: [50, 80] }   # fun and social (Oct 27): was 5
   fun:     { drainPerHour: 4,  weight: 0.7, start: [50, 80] }
   comfort: { drainPerHour: 0,  weight: 0.5, start: [50, 50] }   # set by surroundings, see comfortFollowPerHour
 
 # Proposal: drain multipliers while asleep (rest refills instead of draining).
-asleepDrain: { hunger: 0.5, rest: 0, hygiene: 1, bladder: 0.3, social: 0, fun: 0, comfort: 0 }
+# Fun and social (Oct 27): were 0, so everyone woke as topped up as they went to bed.
+asleepDrain: { hunger: 0.5, rest: 0, hygiene: 1, bladder: 0.3, social: 0.3, fun: 0.3, comfort: 0 }
 
 sleep:
   restPerHour: 12        # × the bed's quality: suite 1.2, good 1.0, dorm 0.8, couch 0.6
+  # Proposal (naps, Oct 27): outside their night, sleep is only a choice with rest under this.
+  # Fun and social sit at 94 to 99 all day, so by late afternoon a nap at rest ~65 outscored
+  # everything else and half the cast slept through the evening. Was effectively 100.
+  napBelow: 30
   # Proposal: every bed sleeps two. Sharing is welcome with someone they fancy and unwelcome
   # otherwise. Scoring a bed with someone in it (or a host's bed), the bedmate adds
   #   pull × (attraction − neutral) ÷ 10 + labels[their label for the bedmate]
@@ -44,5 +49,18 @@ sleep:
 bladder:
   criticalBelow: 10      # proposal: below this it overrides everything and they head for a toilet
   waitMinutes: 2         # proposal: when every toilet they can use is taken, they queue this long and look again
+
+# Proposal (fun and social, Oct 27). Social was offered about six times what it drained and fun about
+# three and a half times, and only the clock ever lowered either, so both sat at 90+ almost all day.
+# Drain multipliers in the wrong places, awake only:
+#   alone:    nobody else awake in the room
+#   idle:     killing time (nothing worth doing, queueing for a toilet, turned away at a door)
+situational:
+  alone: { social: 1.5 }
+  idle: { actions: [idle, wait, at_door], drain: { fun: 2 } }
+# Recreation wears thin: each action's gains of these needs × max(floor, 1 − tolerance), where
+# tolerance rises by perUse over one go (spread over its minutes, to at most 1) and falls
+# recoverPerHour. Window-staring and dancing on repeat give less and less.
+tolerance: { needs: [fun], perUse: 0.3, recoverPerHour: 0.04, floor: 0.4 }
 
 comfortFollowPerHour: 30 # proposal: how fast comfort moves toward the current situation's comfort

@@ -363,7 +363,7 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Scoring: spilling a secret 3 (1 to the listener), a confession 10 each, a scene that airs it 6, throwing up 4, passing out 3.
 - [ ] Dating comes a little easier: monogamy 4 (was 5) reads a kiss or a hookup as dating, since gossip and murder end couples sooner (couple nights had fallen to 0.49).
 - [ ] Meter drain 1.4 → 1.2 an hour: murders and trials now take about 0.8 a week.
-- [ ] Still open: 52% of drinks come before noon, peaking right after the wake chime, and nobody knows yet why people reach for one first thing; panics are still a quarter of all breaks.
+- [ ] Still open: panics are still a quarter of all breaks. (The morning drinking: see naps and the morning drinking, Oct 27.)
 - [ ] Still open: about 30% of breaks are still extreme, and the three most-broken people in a season still have about 45% of its breaks; both come from the bottom ranks and the fishbowl sitting near mood 0.
 
 **Proposed for the floor plan (Oct 23; walking, sight lines, noise and passing built Oct 27).** Written up in DESIGN.md Part two, The floor plan: the next pass. john asked (Oct 27) to try all three shapes; all three are in `data/plans.yaml` and the ring is `use` for now. The shape is still john's call.
@@ -382,3 +382,20 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Loud actions (dance, karaoke, bowling, arcade) keep sleepers up in the room and through a wall, like a snorer. "Heard them through the wall": −1 for six hours, and they know about it.
 - [ ] Passing: on entering a corridor or the common room where someone is, 0.5 × their usual chance of chitchat, kind words, a flirt, a slight or an insult. About 57 to 69 a week.
 - [ ] The morning drinking isn't the layout: tripling walking times leaves 50–52% of drinks before noon. The evening is: 41–58% of contestants nap between 17:00 and 21:00, because fun and social sit at 94–99 all day and a nap wins. To look at in its own thread.
+
+**Proposed for naps and the morning drinking (Oct 27).** Written up in DESIGN.md Part two (Needs, Naps; Booze, The morning after). 200 seeds × 30 days: 11 of 11 targets before and after.
+
+- [ ] Naps only when tired: outside their night, sleep is only a choice under rest 30. Asleep between 17:00 and 21:00 55% → 5%; the lounge in that stretch 28% → 70% of the cast. Raising social and fun drains, halving chitchat's social or draining them overnight didn't move fun and social off 94–99, so it isn't fixed there.
+- [ ] Naps weren't causing the morning drinking: with naps banned outright, drinks between 07:00 and 09:00 didn't change. 86% of drinks before noon were by the hungover. While the hangover lasts (8 hours from the chime), a drink scores × 0.3. Drinks before noon 52% → 28%, 07:00–09:00 24% → 11%; drinks a day 22.3 → 19.9; the peak is now 16:00–19:00.
+- [ ] The ceremony and event chimes wake sleepers above rest 30 (was 40), level with the nap line. Without it, tired evening nappers slept through the ceremony: skipped-ceremony fines 0.01 → 0.41 a day; with it, 0.03.
+- [ ] Side effects: hookups 3.16 → 2.88 a week (fewer trips to bed by day; target is 2+), deaths 2.46 → 2.16 a week, breaks 2.26 → 2.48 a day, average stay 2.71 → 3.10 weeks.
+
+**Proposed for fun and social (Oct 27; john chose the full rework).** Written up in DESIGN.md Part two, Needs (Fun and social, as built). Social was offered ~6× what it drained and fun ~3.5×, and both sat at 90+ 95% of waking time.
+
+- [ ] Chitchat +2 social (was 8), deep talk +8 (was 12), social drain 8 an hour (was 5). How often people talk is unchanged.
+- [ ] Recreation wears thin: +0.3 tolerance per go at an action that gives fun, its fun × max(0.4, 1 − tolerance), recovering 0.04 an hour. Not drinks.
+- [ ] Bad moments cost fun and social (thought rows carry `needs`): rejections and insults cost social, losing, grief and hangovers cost fun, from −3 to −30. Not sentences, the fishbowl or a rank drop (their mood hit is already heavy).
+- [ ] Faster drain in the wrong places: social × 1.5 alone, fun × 2 idle or queueing; both drain 0.3 asleep (was 0).
+- [ ] The lonely seek company: a room with anyone awake pulls 1.5 × social urgency.
+- [ ] Good company and having a good time: above 45 (was 80), +9 (was +6). Lonely and bored −2 (were −4).
+- [ ] Result: social 97 → 75 and fun 95 → 79 at day's end; wake around 60, evenings around 85. 11 of 11 targets. Extreme breaks 4.4 → 5.7 a week (27% → 32% of breaks), catatonia 0.48 → 0.67 a week, deaths 2.46 → 2.29 a week. A first cut (lines at 60, sentences and the fishbowl hitting the sliders too) had extreme breaks at 7.9: the miserable lost the free mood full sliders gave them.

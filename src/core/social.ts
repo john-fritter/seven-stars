@@ -9,7 +9,7 @@ import { boldness, chanceBoost, interactionBoost } from './ratings.js';
 import { witnessesOf } from './scoring.js';
 import { infraction } from './show.js';
 import { feel, meet, rel, relation, warm } from './ledger.js';
-import { addNeed, axisFactor } from './needs.js';
+import { addNeed, axisFactor, needUrgency } from './needs.js';
 import { between, chance, next, weightedIndex } from './rng.js';
 import { friction } from './people.js';
 import { canSee } from './station.js';
@@ -440,13 +440,17 @@ export function companyPull(ctx: Ctx, c: Contestant, roomId: string): number {
   const clingy = traitFx(ctx.data, c).partnerPull;
   const partners = ctx.data.needs.sleep.share.partners;
   let p = 0;
+  let anyone = false;
   for (const o of ctx.w.contestants) {
     if (o === c || (o.activity?.room ?? o.room) !== roomId) continue;
+    if (!o.asleep) anyone = true;
     const r = c.ledger[o.id];
     if (!r) continue;
     const up = r.attraction >= fancy ? 1 + k.private * privacy : 1; // up to something
     const x = (r.affection / 100) * k.affection + (r.attraction / 10) * k.attraction * up;
     p += (clingy !== 1 && partners.includes(r.label) ? x * clingy : x) + (r.fear / 100) * k.fear;
   }
+  // The lonely go where people are, whoever they are (proposal, fun and social).
+  if (anyone) p += k.lonely * needUrgency(ctx.data, c, 'social');
   return p;
 }

@@ -73,6 +73,12 @@ export function soberFactor(ctx: Ctx, c: Contestant): number {
   return Math.max(0, 1 - c.intox / drinkLimit(ctx, c));
 }
 
+/** The morning after: while the hangover lasts, a drink scores × hangover.drinkMult. */
+export function hungoverFactor(ctx: Ctx, c: Contestant): number {
+  const h = ctx.data.booze.hangover;
+  return c.thoughts.some((x) => x.id === h.thought) ? h.drinkMult : 1;
+}
+
 export function drinkLimit(ctx: Ctx, c: Contestant): number {
   const p = ctx.data.booze.pull;
   const misery = c.mood < p.lowMood ? (p.lowMood - c.mood) / p.lowMood : 0;

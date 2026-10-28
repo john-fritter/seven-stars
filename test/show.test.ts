@@ -138,7 +138,9 @@ describe('sentences', () => {
     step(w, 61);
     expect(a.room).toBe('fishbowl');
     expect(a.needs.hygiene).toBeGreaterThan(0); // doused
-    const events = step(w, until - w.t + 1);
+    step(w, until - w.t - 1);
+    a.thoughts = []; // a happy night, so no break sends them off the moment they're out
+    const events = step(w, 2);
     expect(a.confined).toBeNull();
     expect(a.activity?.from ?? a.room).toBe('common'); // let out into the common room (and maybe off already)
     expect(events.find((e) => e.type === 'fishbowl_night')?.actors).toEqual([a.id]);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bedmateFeeling, begin, endActivity, runActivity } from '../src/core/actions.js';
+import { actionDef, bedmateFeeling, begin, decide, endActivity, runActivity } from '../src/core/actions.js';
 import { isNightFor } from '../src/core/context.js';
 import { createWorld, step } from '../src/core/index.js';
 import { meet, rel } from '../src/core/ledger.js';
@@ -21,6 +21,29 @@ function ready(t = at(14)) {
   });
   return { w, ctx, cast };
 }
+
+describe('naps', () => {
+  /** How many of `n` fresh choices at 14:00, alone with every other need met, are a sleep. */
+  function sleeps(rest: number, n = 40) {
+    const { w, ctx, cast } = ready();
+    const c = cast[0]!;
+    alone(w, c);
+    let k = 0;
+    for (let i = 0; i < n; i++) {
+      endActivity(ctx, c, 'interrupted');
+      Object.assign(c.needs, { hunger: 100, hygiene: 100, bladder: 100, social: 100, fun: 100, rest });
+      c.mood = 60;
+      decide(ctx, c);
+      if (c.activity && actionDef(ctx, c.activity)?.kind === 'sleep') k++;
+    }
+    return k;
+  }
+
+  it('only happen by day once someone is actually tired', () => {
+    expect(sleeps(data.needs.sleep.napBelow + 5)).toBe(0);
+    expect(sleeps(5)).toBeGreaterThan(0);
+  });
+});
 
 describe('sharing a bed', () => {
   it('is welcome with someone they fancy and unwelcome otherwise', () => {
