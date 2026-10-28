@@ -49,8 +49,8 @@ needs:
   - { need: fun,     below: 20, thought: bored }
 # Tuning proposal (M8): well-met needs lift mood too, as in RimWorld and The Sims. Without them
 # almost nothing good reached mood and it sat near the break lines.
-  - { need: social,  above: 60, thought: good_company }   # fun and social (Oct 27): was above 80
-  - { need: fun,     above: 60, thought: good_time }
+  - { need: social,  above: 45, thought: good_company }   # fun and social (Oct 27): was above 80
+  - { need: fun,     above: 45, thought: good_time }
   - { need: comfort, above: 70, thought: comfortable }
 
 # Too cold / too hot: −perDegrees per degree felt outside your range, up to −max, refreshed every
@@ -71,8 +71,9 @@ moments:
   breakdown: { thought: saw_breakdown }                                        # in the room when someone breaks (kind)
 
 # `needs` (proposal, Oct 27: fun and social): what the moment does to their needs when it happens,
-# so the show's cruelty shows in the sliders too. Rejection and insults cost social; humiliation,
-# losing, grief and the morning after cost fun.
+# so the show's cruelty shows in the sliders too. Rejection and insults cost social; losing, grief
+# and the morning after cost fun. Not the sentence, the fishbowl or a rank drop: their mood hit is
+# already heavy, and hitting the sliders as well pinned the bottom ranks near mood 0.
 thoughts:
   trapped:     { label: "Trapped here", value: -5, hours: 100000, stack: 1, source: fear }   # value set by `trapped` above
 
@@ -97,8 +98,8 @@ thoughts:
   hungry:      { label: "Hungry", value: -4, hours: 0.5, stack: 1, source: hunger }            # proposal
   exhausted:   { label: "Exhausted", value: -6, hours: 0.5, stack: 1, source: discomfort }     # proposal
   filthy:      { label: "Couldn't wash", value: -6, hours: 0.5, stack: 1, source: discomfort } # "couldn't wash −6"
-  lonely:      { label: "Lonely", value: -4, hours: 0.5, stack: 1, source: rejection }         # proposal
-  bored:       { label: "Bored stiff", value: -4, hours: 0.5, stack: 1, source: discomfort,    # proposal
+  lonely:      { label: "Lonely", value: -2, hours: 0.5, stack: 1, source: rejection }         # proposal (mood slide, Oct 27: was −4)
+  bored:       { label: "Bored stiff", value: -2, hours: 0.5, stack: 1, source: discomfort,    # proposal (Oct 27: was −4)
                  scale: [{ axis: playful }] }
   good_company: { label: "Good company", value: 9, hours: 0.5, stack: 1, source: person }        # proposal (M8); fun and social (Oct 27): was 6
   good_time:   { label: "Having a good time", value: 9, hours: 0.5, stack: 1, source: discomfort, # proposal (M8); Oct 27: was 6
@@ -176,10 +177,10 @@ thoughts:
 
   # The show
   doomed:        { label: "The show is going to kill me", value: -4, hours: 1.5, stack: 1, source: fear }  # value set by meter.yaml doomed
-  sentenced:     { label: "Sentenced in public", value: -10, hours: 24, stack: 1, source: humiliation, needs: { fun: -20 } }
-  fishbowl_night: { label: "A night in the fishbowl", value: -12, species: { aquatic: -4 }, hours: 24, stack: 1, source: humiliation, needs: { social: -20, fun: -20 } }
+  sentenced:     { label: "Sentenced in public", value: -10, hours: 24, stack: 1, source: humiliation }
+  fishbowl_night: { label: "A night in the fishbowl", value: -12, species: { aquatic: -4 }, hours: 24, stack: 1, source: humiliation }
   rank_up:       { label: "Rank went up", value: 5, hours: 24, stack: 1, source: status }
-  rank_down:     { label: "Rank went down", value: -8, hours: 24, stack: 1, source: status, needs: { fun: -10 } }
+  rank_down:     { label: "Rank went down", value: -8, hours: 24, stack: 1, source: status }
   mocked:        { label: "Mocked through the glass by {who}", value: -4, hours: 12, stack: 2, source: humiliation, needs: { social: -5 } } # proposal
   fed:           { label: "{who} passed food through the slot", value: 4, hours: 12, stack: 1, source: person }     # proposal
 

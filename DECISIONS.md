@@ -394,8 +394,8 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 
 - [ ] Chitchat +2 social (was 8), deep talk +8 (was 12), social drain 8 an hour (was 5). How often people talk is unchanged.
 - [ ] Recreation wears thin: +0.3 tolerance per go at an action that gives fun, its fun × max(0.4, 1 − tolerance), recovering 0.04 an hour. Not drinks.
-- [ ] Bad moments cost fun and social (thought rows carry `needs`): rejections and insults cost social, humiliation, losing, grief and hangovers cost fun, from −3 to −30.
-- [ ] Faster drain in the wrong places: social × 1.5 alone, fun × 2 idle or queueing, both × 1.5 in the fishbowl; both drain 0.3 asleep (was 0).
+- [ ] Bad moments cost fun and social (thought rows carry `needs`): rejections and insults cost social, losing, grief and hangovers cost fun, from −3 to −30. Not sentences, the fishbowl or a rank drop (their mood hit is already heavy).
+- [ ] Faster drain in the wrong places: social × 1.5 alone, fun × 2 idle or queueing; both drain 0.3 asleep (was 0).
 - [ ] The lonely seek company: a room with anyone awake pulls 1.5 × social urgency.
-- [ ] Good company and having a good time: above 60 (was 80), +9 (was +6).
-- [ ] Result: social 97 → 73 and fun 95 → 68 at day's end; wake around 55, evenings around 80. 11 of 11 targets. Cost: extreme breaks 4.9 → 7.9 a week (28% → 38% of breaks), catatonia 0.5 → 0.9 a week, deaths 2.16 → 2.50 a week, murders a little up. The miserable lose the free +12 full sliders used to give everyone.
+- [ ] Good company and having a good time: above 45 (was 80), +9 (was +6). Lonely and bored −2 (were −4).
+- [ ] Result: social 97 → 75 and fun 95 → 79 at day's end; wake around 60, evenings around 85. 11 of 11 targets. Extreme breaks 4.4 → 5.7 a week (27% → 32% of breaks), catatonia 0.48 → 0.67 a week, deaths 2.46 → 2.29 a week. A first cut (lines at 60, sentences and the fishbowl hitting the sliders too) had extreme breaks at 7.9: the miserable lost the free mood full sliders gave them.

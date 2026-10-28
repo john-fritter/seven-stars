@@ -55,11 +55,9 @@ bladder:
 # Drain multipliers in the wrong places, awake only:
 #   alone:    nobody else awake in the room
 #   idle:     killing time (nothing worth doing, queueing for a toilet, turned away at a door)
-#   confined: serving a fishbowl sentence (on top of alone)
 situational:
   alone: { social: 1.5 }
   idle: { actions: [idle, wait, at_door], drain: { fun: 2 } }
-  confined: { social: 1.5, fun: 1.5 }
 # Recreation wears thin: each action's gains of these needs × max(floor, 1 − tolerance), where
 # tolerance rises by perUse over one go (spread over its minutes, to at most 1) and falls
 # recoverPerHour. Window-staring and dancing on repeat give less and less.
