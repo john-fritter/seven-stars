@@ -32,6 +32,8 @@ export const scheduleSchema = z.object({
     }),
   ),
   mealMinutes: z.number().int().positive(),
+  // A meal opening wakes sleepers who haven't eaten it and are hungrier than this (proposal, Oct 29).
+  dinnerBell: z.object({ hungerBelow: num }).optional(),
   ceremony: z.object({
     at: clock,
     minutes: z.number().int().positive(),
@@ -132,7 +134,16 @@ export const needsSchema = z.object({
   asleepDrain: z.record(needEnum, num),
   sleep: z.object({
     restPerHour: num,
-    napBelow: num.min(0).max(100),
+    // The body clock (proposal, Oct 29): through the day, the rest below which they can fall asleep,
+    // as points on the clock, straight lines between them. They wake once rest is `margin` above it.
+    clock: z.object({
+      sleepLine: z.array(z.object({ at: clock, rest: num.min(0).max(100) })).min(2),
+      margin: num.min(0),
+      // From this line up, a bed of their own pulls like at night (their real bedtime).
+      bedtime: num,
+      // Sleeping somewhere uncomfortable (a spot's comfort under `below`): a chance an hour of waking.
+      restless: z.object({ below: num, perHour: unit }),
+    }),
     // Sharing a bed: how a contestant feels about a bedmate, and the thoughts it leaves.
     share: z.object({ neutral: num, pull: num, partners: z.array(z.string()).default([]), reluctant: unit, refused: z.string(), labels: z.record(z.string(), num).default({}), good: z.string(), bad: z.string() }),
     // Noisy people (traits with `noise`) disturb sleepers in the same room.
@@ -146,7 +157,14 @@ export const needsSchema = z.object({
     idle: z.object({ actions: z.array(z.string()), drain: z.partialRecord(needEnum, num.min(0)) }),
     confined: z.partialRecord(needEnum, num.min(0)).default({}),
   }),
-  tolerance: z.object({ needs: z.array(needEnum), perUse: num.min(0), recoverPerHour: num.min(0), floor: unit }),
+  tolerance: z.object({ needs: z.array(needEnum), perUse: num.min(0), recoverPerHour: num.min(0), floor: unit, appealFloor: unit.default(1) }),
+  // Proposal (boredom, Oct 29): the bored stir things up. b = (below − fun) ÷ below, 0..1.
+  boredom: z.object({
+    below: num.positive(),
+    chance: num.min(0),                          // interaction chance × 1 + chance × b
+    interactions: z.record(z.string(), num),     // an interaction's weight × 1 + this × b
+    tags: z.record(z.string(), num),             // an action with this tag scores × 1 + this × b
+  }).optional(),
   comfortFollowPerHour: num,
   // Proposal (need sliders, Oct 28): what people do wears on them. By action id: extra drain an
   // hour while doing it (negative eases it), and a cost once it's done.
@@ -228,6 +246,9 @@ export const actionsSchema = z.object({
   noise: range,
   topChoices: z.number().int().positive(),
   walkCostPerMinute: num,
+  // Actions with this tag are done for themselves: the people in the room add no pull (proposal, Oct 29).
+  choreTag: z.string().default('chore'),
+  withinOfBest: unit.default(0),
   modestyCost: num,
   modestyThought: z.string(), // finishing an exposed action with someone watching
   recreationTaste: z.object({ favorite: num, other: num }),
@@ -445,6 +466,27 @@ export const socialSchema = z.object({
     approach: unit,
   }),
   companyPull: z.object({ affection: num, attraction: num, fear: num, private: num.default(0), lonely: num }),
+  // Company (proposal, Oct 29): how much company feels right is personal. `company` is how much
+  // they've had lately; their social need is how close that is to their own comfortable point.
+  company: z.object({
+    point: z.tuple([num, num]),             // their comfortable level at outgoing 0 and at 10
+    width: num.positive(),                  // social = 100 − |company − point| × 100 ÷ width
+    levels: z.array(num).min(2),            // where company heads with 0, 1, 2… others awake in the room (the last for more)
+    talkLevel: num,                         // and this much higher in a conversation
+    followPerHour: num,                     // how fast it moves there
+    asleepPerHour: num,                     // asleep it falls this (they wake wanting company)
+    fit: num,                               // score weight of an option's company fit
+    background: unit,                       // interaction chance × this outside a conversation or a social activity
+    talk: z.object({
+      action: z.string(),                   // the personal action that is a conversation
+      chance: num,                          // interaction chance × this in a conversation (with the partner)
+      pull: num,                            // base appeal of a conversation
+      odds: z.object({ base: unit, affection: num, min: unit, tired: unit }), // their yes: (base + affection ÷ 100 × affection) × (1 − tired × how worn out they are)
+      refused: z.string(),                  // the asker's thought on a no
+      within: z.number().int().nonnegative(), // only people this many minutes' walk away or less
+      weights: z.record(z.string(), num).default({}), // in a conversation, these interactions with the partner × this
+    }),
+  }),
   // People as mood (DESIGN.md Part two, Personality, traits and mood: People as mood, grudges and friction).
   people: z.object({
     friend: z.object({ thought: z.string(), at: num }),
@@ -483,7 +525,8 @@ export const thoughtsSchema = z.object({
   caps: z.record(z.string(), num.min(0)).default({}),
   // "Trapped here" from arrival, easing from `from` to `to` over their first `days` aboard.
   trapped: z.object({ thought: z.string(), from: num, to: num, days: num.positive() }),
-  needs: z.array(z.object({ need: needEnum, below: num.optional(), above: num.optional(), thought: z.string() }).refine((x) => (x.below === undefined) !== (x.above === undefined), 'give exactly one of below or above')),
+  // `side` (social only): the row applies only below (`under`) or above (`over`) their comfortable company point.
+  needs: z.array(z.object({ need: needEnum, below: num.optional(), above: num.optional(), thought: z.string(), side: z.enum(['under', 'over']).optional() }).refine((x) => (x.below === undefined) !== (x.above === undefined), 'give exactly one of below or above')),
   temperature: z.object({ cold: z.string(), hot: z.string(), perDegree: num, max: num }),
   sleepMinutes: num.nonnegative(),
   // Joys and pains from the blend: moments that leave a thought, its scale reading the sliders.
@@ -754,6 +797,8 @@ export const traitSchema = z.object({
   dislikeFade: num.min(0).default(1),
   partnerPull: num.min(0).default(1),
   crowd: z.object({ at: z.number().int().positive(), thought: z.string() }).optional(),
+  // Proposal (company, Oct 29): their comfortable company point moves this much (Loner −20).
+  companyPoint: num.default(0),
   watched: z.object({ events: z.array(z.string()), thought: z.string() }).optional(),
   attraction: num.min(0).default(1),
   datingAfter: z.number().int().positive().optional(),

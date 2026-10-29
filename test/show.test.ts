@@ -36,10 +36,10 @@ describe('scoring', () => {
     Object.assign(b, { room: 'cafe', meter: 50, lifetime: 0 });
     w.show.today = {};
     const e = log(ctx, 'insult', [a.id, b.id], 'cafe');
-    expect(e.data?.awards).toEqual({ [a.id]: 4, [b.id]: 2 });
-    expect(e.points).toBe(6);
-    expect(a.meter).toBe(54);
-    expect(a.lifetime).toBe(4);
+    expect(e.data?.awards).toEqual({ [a.id]: 8, [b.id]: 3 });
+    expect(e.points).toBe(11);
+    expect(a.meter).toBe(58);
+    expect(a.lifetime).toBe(8);
   });
 
   it('multiplies by witnesses, up to ×2', () => {
@@ -61,11 +61,12 @@ describe('scoring', () => {
     const first = log(ctx, 'deep_talk', [a.id, b.id], 'cafe').data!.awards as Record<string, number>;
     const second = log(ctx, 'deep_talk', [b.id, a.id], 'cafe').data!.awards as Record<string, number>;
     const other = log(ctx, 'deep_talk', [a.id, c.id], 'cafe').data!.awards as Record<string, number>;
-    expect(first[a.id]).toBe(4);
+    const d = data.scoring.awards.deep_talk!.each!;
+    expect(first[a.id]).toBe(d);
     // a repeat, the judge's second deep talk today, and a's own second today
-    expect(second[a.id]).toBeCloseTo(4 * 0.5 * 0.9 * 0.7);
-    expect(other[c.id]).toBeCloseTo(4 * 0.81 * 1.15); // a new pair, but the third deep talk today, and b watching
-    expect(other[a.id]).toBeCloseTo(4 * 0.81 * 1.15 * 0.7 ** 2); // a's third today
+    expect(second[a.id]).toBeCloseTo(d * 0.5 * 0.9 * 0.7);
+    expect(other[c.id]).toBeCloseTo(d * 0.81 * 1.15); // a new pair, but the third deep talk today, and b watching
+    expect(other[a.id]).toBeCloseTo(d * 0.81 * 1.15 * 0.7 ** 2); // a's third today
   });
 
   it('only scores fights outside the cage', () => {
@@ -75,7 +76,7 @@ describe('scoring', () => {
     w.show.today = {};
     expect(log(ctx, 'fight', [a.id, b.id], 'cage', { winner: a.id, witnesses: [], outsideCage: false }).points).toBeUndefined();
     const e = log(ctx, 'fight', [a.id, b.id], 'cafe', { winner: a.id, witnesses: [], outsideCage: true });
-    expect(e.data?.awards).toEqual({ [a.id]: 18, [b.id]: 12 }); // the cage fight didn't count toward boredom
+    expect(e.data?.awards).toEqual({ [a.id]: 30, [b.id]: 20 }); // the cage fight didn't count toward boredom
   });
 
   it('caps the meter but not lifetime points, and puts zero on notice', () => {

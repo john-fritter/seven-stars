@@ -176,12 +176,12 @@ describe('romance', () => {
     expect(b.activity?.partner).toBe(a.id);
     const first = ctx.events.find((e) => e.type === 'lovin')!;
     expect(first.data!.first).toBe(true);
-    expect(first.data!.awards).toEqual({ [a.id]: 12, [b.id]: 12 });
+    expect(first.data!.awards).toEqual({ [a.id]: 20, [b.id]: 20 });
     w.show.today = {};
     w.show.pairs = {};
     w.show.mine = {};
     lovin(ctx, a, b);
-    expect(ctx.events.filter((e) => e.type === 'lovin')[1]!.data!.awards).toEqual({ [a.id]: 3, [b.id]: 3 });
+    expect(ctx.events.filter((e) => e.type === 'lovin')[1]!.data!.awards).toEqual({ [a.id]: 4, [b.id]: 4 });
   });
 
   it('only gets a yes from someone who wants it too', () => {

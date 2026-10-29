@@ -1,7 +1,7 @@
 // Social interactions, flirting, fights and knocking. DESIGN.md Part two, Social interactions
 // and romance, and Rank, privileges, rules and punishments (Getting let in).
 import type { InteractionDef } from '../data/schema.js';
-import { actionDef, bedmateFeeling, begin, endActivity, FIGHT } from './actions.js';
+import { actionDef, bedmateFeeling, begin, boredom, endActivity, FIGHT } from './actions.js';
 import { attractionNow, axis, giftDrink, grubbiness, moveMult, stageMult, stageOf } from './booze.js';
 import { shareSnack, swipeSnack } from './pantry.js';
 import { log, type Ctx } from './context.js';
@@ -10,7 +10,7 @@ import { boldness, chanceBoost, interactionBoost } from './ratings.js';
 import { witnessesOf } from './scoring.js';
 import { infraction } from './show.js';
 import { feel, meet, rel, relation, warm } from './ledger.js';
-import { addNeed, axisFactor, needUrgency } from './needs.js';
+import { addNeed, axisFactor, companyWant, needUrgency } from './needs.js';
 import { between, chance, next, weightedIndex } from './rng.js';
 import { friction } from './people.js';
 import { canSee } from './station.js';
@@ -35,8 +35,45 @@ export function available(ctx: Ctx, c: Contestant): boolean {
  * urgency), × 1.5 when tipsy or worse, and more as the meter falls (ratings.ts).
  */
 export function interactionChance(ctx: Ctx, c: Contestant): number {
-  const x = (100 - c.needs.social) / 100;
-  return (boldness(ctx, c) / 10) * (ctx.data.social.base + x * x) * stageMult(ctx, c, 'interaction') * chanceBoost(ctx, c);
+  // Lonely people reach out more; the worn out less (social.yaml company).
+  const want = companyWant(ctx, c);
+  const x = Math.max(0, want);
+  const tired = 1 + Math.min(0, want);
+  const bored = 1 + (ctx.data.needs.boredom?.chance ?? 0) * boredom(ctx, c);
+  return (boldness(ctx, c) / 10) * (ctx.data.social.base + x * x) * tired * bored * stageMult(ctx, c, 'interaction') * chanceBoost(ctx, c);
+}
+
+/** In a conversation with someone here: who it's with. */
+function talkingWith(ctx: Ctx, c: Contestant): Contestant | undefined {
+  const a = c.activity;
+  if (!a || a.action !== ctx.data.social.company.talk.action || a.phase !== 'do') return undefined;
+  const p = ctx.w.contestants.find((o) => o.id === a.partner);
+  return p && p.room === c.room && p.activity?.action === a.action && p.activity.partner === c.id && p.activity.phase === 'do' ? p : undefined;
+}
+
+/** Doing something with people (dancing, the bar, the hot tub, games): talk comes easily. */
+function sociable(ctx: Ctx, c: Contestant): boolean {
+  const def = c.activity ? actionDef(ctx, c.activity) : undefined;
+  return !!def && (def.company || def.tags.includes('social') || def.tags.includes('crowd'));
+}
+
+/** Odds `o` says yes to a conversation with `c`: base + affection, less when they've had enough people. */
+export function talkOdds(ctx: Ctx, o: Contestant, c: Contestant): number {
+  const k = ctx.data.social.company.talk.odds;
+  const aff = o.ledger[c.id]?.affection ?? 0;
+  const tired = 1 + k.tired * Math.min(0, companyWant(ctx, o));
+  return clamp((k.base + (aff / 100) * k.affection) * tired, k.min, 1);
+}
+
+/** The pull of one person: liking, attraction (more somewhere private when they fancy them), fear. */
+export function personPull(ctx: Ctx, c: Contestant, o: Contestant, roomId: string): number {
+  const r = c.ledger[o.id];
+  if (!r) return 0;
+  const k = ctx.data.social.companyPull;
+  const up = r.attraction >= ctx.data.romance.proposition.attraction ? 1 + k.private * ctx.st.room.get(roomId)!.privacy : 1;
+  const x = (r.affection / 100) * k.affection + (r.attraction / 10) * k.attraction * up;
+  const clingy = traitFx(ctx.data, c).partnerPull;
+  return (clingy !== 1 && ctx.data.needs.sleep.share.partners.includes(r.label) ? x * clingy : x) + (r.fear / 100) * k.fear;
 }
 
 /** Every few minutes: people who share a room meet, and each may start an interaction. */
@@ -55,8 +92,12 @@ export function socialRound(ctx: Ctx): void {
     if (!available(ctx, c)) continue;
     const others = cast.filter((o) => o !== c && (o.room === c.room || throughGlass(ctx, c, o)) && available(ctx, o));
     if (others.length === 0) continue;
-    if (!chance(ctx.w.rng, interactionChance(ctx, c))) continue;
-    const o = others[weightedIndex(ctx.w.rng, partnerWeights(ctx, c, others))]!;
+    // In a conversation it's mostly with the partner and comes often; idle chatter elsewhere is rare.
+    const mate = talkingWith(ctx, c);
+    const k = ctx.data.social.company;
+    const often = mate ? k.talk.chance : sociable(ctx, c) ? 1 : k.background;
+    if (!chance(ctx.w.rng, interactionChance(ctx, c) * often)) continue;
+    const o = mate && others.includes(mate) ? mate : others[weightedIndex(ctx.w.rng, partnerWeights(ctx, c, others))]!;
     const defs = interactionsFor(ctx, c, o);
     if (!defs.length) continue;
     const def = defs[weightedIndex(ctx.w.rng, defs.map((d) => interactionWeight(ctx, c, o, d)))]!;
@@ -137,7 +178,9 @@ export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: I
   if ((n.stash && c.snacks <= 0) || (n.theirStash && o.snacks <= 0)) return 0;
   if (!moveAllowed(ctx, c, o, def)) return 0;
   const [lo, hi] = ctx.data.social.factorRange;
-  let w = def.weight * moveMult(ctx, c, def.id) * (traitFx(ctx.data, c).interactions[def.id] ?? 1) * moodInteraction(ctx, c, def.id);
+  const spice = ctx.data.needs.boredom?.interactions[def.id];
+  const deep = talkingWith(ctx, c) === o ? (ctx.data.social.company.talk.weights[def.id] ?? 1) : 1;
+  let w = def.weight * deep * (spice ? 1 + spice * boredom(ctx, c) : 1) * moveMult(ctx, c, def.id) * (traitFx(ctx.data, c).interactions[def.id] ?? 1) * moodInteraction(ctx, c, def.id);
   // Some traits change what others do around them (a Peacemaker in the room makes insults rarer).
   for (const x of ctx.w.contestants) {
     if (x !== c && x.room === c.room && !x.asleep) w *= traitFx(ctx.data, x).nearby[def.id] ?? 1;

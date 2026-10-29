@@ -156,6 +156,15 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Which NanoGPT models.
 - [ ] A real name.
 
+**Proposed in the choosing rework (Oct 29).** john asked for the decision system to be rethought as a whole (dinner bell and the chore tag approved; nap cap rejected), then to build and measure. All numbers in `data/`; DESIGN.md Part two, How contestants choose: the next pass.
+
+- [ ] The body clock: the sleep line through the day, the 12-point wake margin, bedtime at line 45, restless sleep on a bad spot.
+- [ ] Company as a personal point (25 to 80 by outgoing, Loner −20), with "worn out by people" over it.
+- [ ] Talking as a chosen activity needing a yes; interactions × 3 in a conversation, × 0.5 outside social settings.
+- [ ] Boredom: whole appeal wears with use (floor 0.15); the bored lean to flirts, needling, risk and performing.
+- [ ] Only options at 60% or more of the best are picked.
+- [ ] The ratings rebalance: drama pays more (kiss 10, insult 8, fight 20, betrayal 25, first lovin' 20), deep talk 2, the pull from meter 75.
+
 **Proposed while building slice one (Oct 19).** DESIGN.md was silent on these, so the build picked simple defaults. All are numbers in `data/` and easy to change.
 
 - [ ] Walking times: the common room is the hub (1–3 minutes to each room) and the lounge links to the spa and rec room.

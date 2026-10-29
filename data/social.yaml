@@ -156,7 +156,40 @@ attraction:
 # anyone they fancy past romance.yaml proposition.attraction is × 1 + private × the room's privacy.
 # Proposal (fun and social, Oct 27): `lonely` adds lonely × their social urgency to any room with
 # someone awake in it, so the lonely seek company instead of spiralling alone.
-companyPull: { affection: 0.3, attraction: 0.3, fear: -0.3, private: 2, lonely: 1.5 }
+# Company (proposal, Oct 29): the pull of the people there now only counts for things done with
+# people (social.yaml company), and `lonely` is 0: company fit replaces it.
+companyPull: { affection: 0.3, attraction: 0.3, fear: -0.3, private: 2, lonely: 0 }
+
+# Company (proposal, Oct 29; john: "different people have very different social needs"). Social
+# used to be one bar that everyone filled the same way from chatter. Now `company` is how much
+# company they've had lately: it moves toward the level of their situation (none alone, more with
+# each person in the room, more again in a conversation), about 20 an hour, so it reflects the
+# last few hours. Everyone has their
+# own comfortable point, from 25 for the most reserved to 80 for the most outgoing (Loner −20);
+# their social need is how close they are to it, so too much company wears people out as well as
+# too little. Options score company fit: × fit × (point − company) ÷ 50, + with people, − alone,
+# so the lonely seek a crowd and the worn out go somewhere quiet.
+# Talking is chosen: "talk with X" is an option (anyone within `within` minutes' walk), needing
+# their yes. In a conversation interactions come × chance as often, with the partner; outside one
+# (or a social activity: dancing, the bar, the hot tub, games) only × background.
+company:
+  point: [25, 80]
+  width: 50
+  levels: [0, 40, 55, 65, 75, 85]   # company heads here with 0, 1, 2, 3, 4, 5+ others awake in the room
+  talkLevel: 15                     # higher in a conversation
+  followPerHour: 20                 # so it reflects the last few hours
+  asleepPerHour: 3
+  fit: 2.5
+  background: 0.5
+  talk:
+    action: talk
+    chance: 3
+    pull: 1.2
+    odds: { base: 0.8, affection: 0.6, min: 0.05, tired: 0.5 }
+    refused: brushed_off
+    within: 4
+    # A conversation gets personal, both ways: with the partner, these interactions are × this.
+    weights: { deep_talk: 3, kind_words: 2, flirt: 2.5, kiss: 2.5, proposition: 2, slight: 1.5, insult: 1.5 }
 
 # People as mood (DESIGN.md Part two, Personality, traits and mood: People as mood, grudges and
 # friction). All proposal.

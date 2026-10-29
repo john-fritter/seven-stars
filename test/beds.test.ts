@@ -3,6 +3,7 @@ import { actionDef, bedmateFeeling, begin, decide, endActivity, runActivity } fr
 import { isNightFor } from '../src/core/context.js';
 import { createWorld, step } from '../src/core/index.js';
 import { meet, rel } from '../src/core/ledger.js';
+import { sleepLine } from '../src/core/needs.js';
 import { bedFor, boldness, hereOdds, invite, lovin, moveAllowed, proposition } from '../src/core/romance.js';
 import { shareOdds } from '../src/core/social.js';
 import type { Contestant } from '../src/core/types.js';
@@ -39,8 +40,9 @@ describe('naps', () => {
     return k;
   }
 
-  it('only happen by day once someone is actually tired', () => {
-    expect(sleeps(data.needs.sleep.napBelow + 5)).toBe(0);
+  it('only happen by day once someone is tired enough for the time of day', () => {
+    const { w, ctx, cast } = ready();
+    expect(sleeps(sleepLine(ctx, cast[0]!, w.t) + 5)).toBe(0);
     expect(sleeps(5)).toBeGreaterThan(0);
   });
 });
@@ -316,3 +318,16 @@ describe('bedtime', () => {
   });
 });
 
+
+describe('the body clock', () => {
+  it('is easy to sleep at night, hard in the early evening, with a dip after lunch', () => {
+    const { ctx, cast } = ready();
+    const c = cast[0]!;
+    c.traits = [];
+    const at = (h: number, m = 0) => sleepLine(ctx, c, h * 60 + m);
+    expect(at(2)).toBeGreaterThan(80);
+    expect(at(19)).toBeLessThan(at(14, 30));
+    expect(at(14, 30)).toBeGreaterThan(at(12));
+    expect(at(23, 30)).toBeGreaterThan(at(22));
+  });
+});

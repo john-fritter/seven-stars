@@ -83,6 +83,10 @@ export function conditions(ctx: Ctx, c: Contestant): void {
     condition(ctx, c, crowd.thought, n >= crowd.at ? th.thoughts[crowd.thought]!.value : null);
   }
   for (const n of th.needs) {
+    if (n.side && (c.company < c.companyPoint) !== (n.side === 'under')) {
+      condition(ctx, c, n.thought, null);
+      continue;
+    }
     const v = c.needs[n.need];
     const on = n.below !== undefined ? v < n.below : v > n.above!;
     condition(ctx, c, n.thought, on ? th.thoughts[n.thought]!.value : null);

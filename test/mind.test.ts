@@ -127,7 +127,7 @@ describe('breaks', () => {
     startBreak(ctx, a, 'extreme', 'fear', 'lash_out', b.id);
     expect(a.breakdown?.kind).toBe('catatonic');
     const e = ctx.events.find((x) => x.type === 'break')!;
-    expect(e.data!.awards).toEqual({ [a.id]: 15 * 1.15 }); // b watched
+    expect((e.data!.awards as Record<string, number>)[a.id]).toBeCloseTo(data.scoring.awards.break!.cases!.extreme!.actor! * 1.15); // b watched
     step(w, 121);
     expect(a.breakdown).toBeNull();
     expect(a.thoughts.some((x) => x.id === 'catharsis')).toBe(true);

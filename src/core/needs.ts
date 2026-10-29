@@ -1,7 +1,7 @@
 // Needs drain over time; urgency turns a need's level into how much it matters.
 // DESIGN.md Part two, Needs and Choosing actions.
 import type { GameData, Need } from '../data/schema.js';
-import type { Ctx } from './context.js';
+import { nightShift, timeOfDay, type Ctx } from './context.js';
 import { derived } from './derived.js';
 import type { Contestant } from './types.js';
 
@@ -31,7 +31,7 @@ export function drainNeeds(ctx: Ctx, c: Contestant): void {
   n.rest = Math.max(0, n.rest - r[1]!);
   n.hygiene = Math.max(0, n.hygiene - r[2]!);
   n.bladder = Math.max(0, n.bladder - r[3]!);
-  n.social = Math.max(0, n.social - r[4]! * social);
+  companyMinute(ctx, c);
   n.fun = Math.max(0, n.fun - r[5]! * fun);
   // Exertion (needs.yaml): dancing works up a sweat, sitting still is restful.
   const a = c.activity;
@@ -85,5 +85,53 @@ export function recover(ctx: Ctx, c: Contestant): void {
 }
 
 export function addNeed(c: Contestant, n: Need, amount: number): void {
-  c.needs[n] = Math.min(100, Math.max(0, c.needs[n] + amount));
+  // Social gains and losses are company: how much they've had (its need follows each minute).
+  if (n === 'social') c.company = Math.min(100, Math.max(0, c.company + amount));
+  else c.needs[n] = Math.min(100, Math.max(0, c.needs[n] + amount));
+}
+
+/**
+ * A minute of company (social.yaml company): it moves toward the level of their situation (alone,
+ * a few people, a crowd, a conversation), and falls asleep. Their social
+ * need is how close it sits to their own comfortable point.
+ */
+function companyMinute(ctx: Ctx, c: Contestant): void {
+  const k = ctx.data.social.company;
+  if (c.asleep) c.company = Math.max(0, c.company - k.asleepPerHour / 60);
+  else {
+    let n = 0;
+    for (const o of ctx.w.contestants) if (o !== c && o.room === c.room && !o.asleep) n++;
+    let level = k.levels[Math.min(n, k.levels.length - 1)]!;
+    if (n > 0 && c.activity?.action === k.talk.action && c.activity.phase === 'do') level += k.talkLevel;
+    // It moves toward the level of their situation, a few hours' memory.
+    const rate = k.followPerHour / 60;
+    const diff = Math.min(100, level) - c.company;
+    c.company += Math.max(-rate, Math.min(rate, diff));
+  }
+  c.needs.social = Math.max(0, 100 - (Math.abs(c.company - c.companyPoint) * 100) / k.width);
+}
+
+/** Loneliness (+) or being worn out by people (−), −1 to 1: how far company is from their point. */
+export function companyWant(ctx: Ctx, c: Contestant): number {
+  return Math.max(-1, Math.min(1, (c.companyPoint - c.company) / ctx.data.social.company.width));
+}
+
+/**
+ * The body clock (needs.yaml sleep.clock): the rest below which they can fall asleep at this time
+ * of their day, straight lines between the points, shifted by their night (owls, early birds).
+ */
+export function sleepLine(ctx: Ctx, c: Contestant, t: number): number {
+  const pts = ctx.data.needs.sleep.clock.sleepLine;
+  const m = timeOfDay(t - nightShift(ctx, c));
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i]!;
+    const b = pts[(i + 1) % pts.length]!;
+    const end = i + 1 < pts.length ? b.at : b.at + 1440;
+    if (m >= a.at && m < end) return a.rest + ((b.rest - a.rest) * (m - a.at)) / (end - a.at);
+  }
+  // Before the first point: between the last one (yesterday) and the first.
+  const a = pts[pts.length - 1]!;
+  const b = pts[0]!;
+  const span = b.at + 1440 - a.at;
+  return a.rest + ((b.rest - a.rest) * (m + 1440 - a.at)) / span;
 }

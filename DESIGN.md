@@ -153,6 +153,45 @@ Clothing is decided as a feature, kept simple: clothes are a look, not inventory
 
 The diary room is open at any time. Contestants go on their own, which is likelier when mood is low or after a big event, and the operator summons people after major moments ("Sola to the confessional, please"), a couple of times a day at most. Without AI a confession is a mood vent and an icon; with AI it becomes a monologue to camera, the audience's best window into motives. Confessions can be played at dinner as punishment.
 
+## How contestants choose: the next pass
+
+*Built Oct 29 (proposals, all numbers in data; john asked for the whole decision system to be rethought together rather than one piece at a time, with personality central to the social need). Design doc: https://claude.ai/artifact/GAjSenhV7L4quYqhP7Mpp4. Day traces that prompted it: https://claude.ai/artifact/F14v929jBoZnUCYsayy2gF.*
+
+**Why.** Full-day traces of single contestants (Oct 28) showed hours at the window (a quarter of all waking time), washing in loops, five-hour afternoon naps, rank 7 sleeping through the leftovers on half their days, and ranks 1 to 6 sleeping the night on a couch. Taking every choice apart showed the cause: once nothing was low, the needs part of a score was near zero (urgency is squared), and the pull of the people in the room, added to every option, decided everything (0.83 against 0.16 for the window). Social came 77% from chatter that happened to anyone in a room, and fun refilled faster than it drained. The recreation wear-out only trimmed fun, which was never why people sat there.
+
+The scoring stays a utility score with noise and a weighted pick among the best few. What goes into it changed:
+
+```math
+\text{score} = \big((\text{body needs} + \text{comfort} + \text{company fit} + \text{the people there} + \text{extras}) \times \text{freshness} - \text{costs}\big) \times \text{spice} \times \text{personality} \times \text{mood} + \text{ratings}
+```
+
+**The pick.** Only options scoring at least 60% of the best are in the weighted pick (`actions.yaml withinOfBest`; was 0, so a rank 1 with their suite bed at 4.8 still took the couch at 0.8 one time in ten).
+
+**Body needs.** As before, plus:
+
+- **Chores** (`chore` tag: washing, grooming, the snack machine, the thermostat; sleep and the toilet as before) get no pull from the people in the room, and their comfort counts only as far as they need what they're for, so the clean don't take a hot shower to feel better. Hot showers started at hygiene 90+ went 0.38 → 0.01 a contestant-day; washing up six or more times in a row 5.4% → 0.6% of days.
+- **The body clock** replaces the nap rule (`needs.yaml sleep.clock`). A sleep line, the rest below which they can drop off, runs through their day: 90 through the night, 30 by 08:00, a post-lunch dip to 35 at 14:30, 12 from 18:00 to 20:30 (the early-evening peak of alertness), 30 at 22:00 and 80 at 23:00, shifted with a night owl's or early bird's night. Asleep by day, they wake once rest is 12 above the line, so a doze ends as the curve climbs; by night they sleep until rested and the chime. From line 45 (about 22:20) it's bedtime: a bed of their own pulls as at night. A spot with comfort under 45 (the couch, the fishbowl floor) wakes them 0.25 times an hour. Minutes asleep at the 15:00 and 21:00 chimes went 68 → 7 a contestant-day; ranks 1–6 asleep on a couch at 03:00, 14% → 5% of nights.
+- **The dinner bell** (`schedule.yaml dinnerBell`): a meal opening wakes sleepers who haven't eaten it and are under hunger 50. Rank 7 asleep at 20:45 without dinner went 49% → 15% of their days.
+
+**Company replaces the social bar** (`social.yaml company`).
+
+- **Company** (0–100) is how much company they've had lately. It moves 20 an hour toward the level of their situation: 0 alone, then 40, 55, 65, 75, 85 with one to five or more others awake in the room, +15 in a conversation; asleep it falls 3 an hour. Interactions and the thoughts that cost social add to or take from it.
+- **Everyone has a comfortable point**, from 25 at outgoing 0 to 80 at 10, Loner −20. Their social need is how close company sits to it: 100 − |company − point| × 2. So too much company wears people out as well as too little: "Lonely" (−2) under the point, "Worn out by people" (−3) over it.
+- **Company fit** scores every non-chore option: 2.5 × (point − company) ÷ 50, × +1 for something done with people where people are, +0.6 for something else where people are, −1 alone, × 1.5 for a conversation. The lonely seek a crowd and the worn out somewhere quiet.
+- **The people there** (liking, attraction, fear) pull only on things done with people (dancing, the bar, the hot tub, games, a conversation), never on washing your hands or the window. The old "lonely" pull is gone.
+- **Talking is chosen.** "Talk with X" is an option for anyone free within four minutes' walk, in a room they can go into: 1.2 × how fresh time with them still is, + the pull of that person, + company fit, − walking, × the social tag's personality and mood multipliers, × the odds they say yes. Yes: (0.8 + affection ÷ 100 × 0.6) × (1 − 0.5 × how worn out they are), never under 0.05. A no leaves "Brushed off by X" (−2, 6 hours) and a couple of minutes standing there. A conversation lasts 30 minutes, or until either leaves; time with the same person wears like a pastime.
+- **In a conversation** interactions come × 3 as often, with the partner, and get personal: deep talk × 3, kind words × 2, flirt and kiss × 2.5, proposition × 2, slight and insult × 1.5. Doing something with people (dancing, the bar, the hot tub, games) chat comes as before; anywhere else, × 0.5. Lonely people start interactions more, the worn out less.
+
+**Boredom** (`needs.yaml tolerance` and `boredom`). Any pastime (not a chore, sleep, a drink, a meal or a conversation) wears with use, and its whole appeal is × the larger of 0.15 and 1 − tolerance, so the window is lovely for half an hour and dull by the third time. The fun bar stays as stimulation; the bored (b = (60 − fun) ÷ 60) start interactions × 1 + 0.5b, flirt × 1 + 1.5b, kiss and proposition × 1 + b, slight and insult × 1 + 1.5b (still scaled by their taste, so the kind rarely insult), and actions tagged risky × 1 + 1.5b, illicit × 1 + b, performing × 1 + b, drinking or a game × 1 + 0.5b. Sneaking into the spa for a soak went 0.02 → 0.17 a contestant-day.
+
+**The ratings rebalance** (`scoring.yaml`; john: drama should pay more and the pull should get people doing things). Talk is everywhere now, so small talk pays less and drama more: deep talk 4 → 2 each; insult 4/2 → 8/3; fight outside the cage 12 + 6 → 20 + 10; kiss 6 → 10; lovin' 3, first time 12 → 4, 20; betrayal 10 → 25; breakup 8 → 15; major and extreme breaks 10/15 → 15/25; confession 10 → 20; scene 6 → 12. The ratings pull starts at meter 75 (was 50), so people play to the cameras sooner. The meter drain stays 1.2: 1.1 to 1.3 all hit the targets, 1.4 kills too fast, because what pays is what happens, not how hard they try.
+
+**Result** (200 seeds × 30 days, main after PR #20 → this pass): all 11 targets pass both times. Deaths 2.52 → 2.73 a week, stay 2.64 → 2.42 weeks, breaks 2.39 → 2.88 a day (extreme 5.9 → 7.4 a week), fights 4.65 → 4.79, brawls per hookup 0.76 → 0.47, hookups 2.94 → 5.06 a week, couple nights 0.59 → 0.76, hookups within a couple 0.60 → 0.70. Waking time: talking 19%, the window 15.3% → 2.5% of all time, dancing 8.4% → 1.9%; no contestant-day has three hours at the window (was 54%). Friends 32% → 43% of directed pairs, rivals 9.5% → 7.1%. Points 36.6 → 46.1 a contestant-day, meter at night 49.5 → 54.5. Mood while awake 48.7 → 45.6. **Outgoing is no longer a survival stat:** stay by outgoing band 0–3 / 4–6 / 7–10 went 2.13 / 2.76 / 3.01 → 2.30 / 2.46 / 2.54 weeks. Company: the reserved spend 73% of waking time over their point (15% worn out), the outgoing 32% (1%), and talk 25% vs 38% of it. Speed: 200 seeds × 30 days in about 130 s on this machine with other work running (was about 66 s for 100).
+
+**Still open:** extreme breaks rose to 7.4 a week; rank 7 still spends 10% of waking time under hunger 10; activities started a few minutes before a meal or summons are dropped when it comes (about one a contestant-day, only visible in the debug view). Wants beyond the ratings pull (a booked match, a friend in trouble, status) and new things to do (gym, cards, getting ready) are designed but not built.
+
+**Tooling.** `sim day --seed N --day D [--who Name]` prints every choice each contestant makes in a day with their needs, company, mood, meter and rank, and what happened during it.
+
 ## Booze
 
 Booze is something contestants genuinely enjoy and something that reliably makes trouble (decided goal; the model below is proposed).
@@ -624,7 +663,7 @@ Needs run 0 (desperate) to 100 (satisfied).
 | Rest | 4 while awake (reptilian 5) | 1.0 | Sleep +9 an hour × bed quality: suite 1.2, good 1.0, dorm 0.8, couch 0.6 (was 12; Oct 28) |
 | Hygiene | 3 (aquatic 6), more when sweating (Exertion) | 0.6 | Hot shower +60; cold +40; sink bath +15; feline grooming +20. The bottom rank can't shower |
 | Bladder | 15; +15 per drink | 1.5 | Toilet to 100. Near zero it overrides everything and they go to the nearest toilet they can use. No accidents |
-| Social | 8 × outgoing factor (was 5; Oct 27) | 0.8 | Conversation: chitchat +2, deep talk +8, the rest +4 |
+| Social | How close company sits to their own point (Oct 29: How contestants choose) | 0.8 | Company follows their situation; conversations, a chosen activity, add more |
 | Fun | 4 × playful factor (feline ×1.5) | 0.7 | Activities +10 to +20 per 30 minutes × taste |
 | Comfort | No drain; set by surroundings | 0.5 | Good furniture, quiet, the right temperature |
 
@@ -661,7 +700,7 @@ Result (200 seeds × 30 days, against main after PR #19): all 11 targets pass. R
 - **Noise:** a snorer asleep or a hummer awake in the room cuts other sleepers' rest gain to 70% and wakes them with a 0.3% chance a minute. A bed in a room with someone noisy in it right now costs 1 in scoring. Waking leaves "they kept me up" (−4) and affection −3 toward the culprit. Woken in the night, they lie awake 15 minutes before they can drop off again (proposed, Oct 28), unless whoever's beside them has other ideas.
 - **Night owls** (a trait, about one contestant in forty) have a night 2.5 hours later than everyone's, 01:30 to 09:30: their sleep pull, when they stop sleeping, and the wake chime, which doesn't wake them. Summonses still do. **Early birds** are the opposite: their night runs 21:30 to 05:30 and their own chime wakes them at 05:30.
 - **Sleepwalkers** (a trait) have a 4% chance each hour asleep of getting up and wandering for 20 minutes to another room they're allowed in (about one night in four), logged as "sleepwalk". Then they find their way back to bed like anyone else.
-- **Naps** (proposed, Oct 27): outside their night, sleep is only a choice once rest is under 30 (`napBelow`). Before this, fun and social sat at 94 to 99 all day (interactions and recreation fill them far faster than they drain, so no tuning of drains or gains moved them), so by late afternoon a nap at rest about 65 was the one choice that scored, and 55% of the cast was asleep between 17:00 and 21:00. Now 5% are, the lounge holds 70% of the cast in that stretch (was 28%), and people go to bed tired (rest about 38 at lights-dim, was 84). Naps weren't what drove the morning drinking: banning them outright left the drinks between 07:00 and 09:00 unchanged (see Booze, the morning after).
+- **Naps** (superseded Oct 29 by the body clock, How contestants choose: the next pass): outside their night, sleep is only a choice once rest is under 30 (`napBelow`). Before this, fun and social sat at 94 to 99 all day (interactions and recreation fill them far faster than they drain, so no tuning of drains or gains moved them), so by late afternoon a nap at rest about 65 was the one choice that scored, and 55% of the cast was asleep between 17:00 and 21:00. Now 5% are, the lounge holds 70% of the cast in that stretch (was 28%), and people go to bed tired (rest about 38 at lights-dim, was 84). Naps weren't what drove the morning drinking: banning them outright left the drinks between 07:00 and 09:00 unchanged (see Booze, the morning after).
 
 ## Temperature
 
@@ -710,6 +749,8 @@ Personality has to touch everything, so every axis scales needs, pulls toward ac
 A sober loner, a party animal and an unhappy hothead all reach for the bar for different reasons, at different times.
 
 ## Choosing actions
+
+*Reworked Oct 29: see How contestants choose: the next pass, below, for company, chosen conversations, boredom, the body clock and the pick among options close to the best.*
 
 A contestant re-decides when an action ends, every 30 minutes during long ones, or when interrupted (spoken to, a schedule event, a need going critical).
 
@@ -1036,16 +1077,16 @@ The enjoyment thought lasts 3 hours and stacks to three drinks. Drinks can be ca
 
 | Event | Points |
 | --- | --- |
-| Deep talk | 4 each (was 2; personality step 2) |
+| Deep talk | 2 each (was 4, then 2 before personality step 2; Oct 29) |
 | Gift; kind words | 2 giver; 1 |
-| Slight; insult | 2 each; 4 instigator, 2 target |
-| Fight outside the cage | 12 each, +6 winner |
+| Slight; insult | 2 each; 8 instigator, 3 target (was 4, 2) |
+| Fight outside the cage | 20 each, +10 winner (was 12, 6) |
 | Flirt succeeds; rebuffed | 4 each; 3 flirter |
-| Kiss | 6 each |
-| Lovin', first time with that person; again | 12 each; 3 each |
-| Betrayal discovered | 10 to everyone involved |
-| Breakup | 8 each |
-| Mental break: minor, major, extreme | 5, 10, 15 |
+| Kiss | 10 each (was 6) |
+| Lovin', first time with that person; again | 20 each; 4 each (was 12, 3) |
+| Betrayal discovered | 25 to everyone involved (was 10) |
+| Breakup | 15 each (was 8) |
+| Mental break: minor, major, extreme | 5, 15, 25 (were 5, 10, 15) |
 | Hammered antics | 4 |
 | Infraction; sentenced | 4; 6 |
 | Fishbowl night | 8 |

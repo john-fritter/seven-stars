@@ -3,7 +3,7 @@
 # contestant is on notice; still at zero at the ceremony, they're spaced (rules.yaml spacing).
 start: 60          # proposal (DECISIONS Open): newcomers start here
 max: 100
-drainPerHour: 1.2  # proposal (DECISIONS Open). Dread tuning (Oct 22): 1 → 0.95, since calmer contestants earn fewer break points.
+drainPerHour: 1.2  # proposal (DECISIONS Open). Choosing rework (Oct 29): unchanged at 1.2, but what refills it changed: chatter is no longer free and drama pays more (scoring.yaml); 1.1–1.3 all hit the targets, 1.4 kills too fast. Dread tuning (Oct 22): 1 → 0.95, since calmer contestants earn fewer break points.
                    # Traits and fear tuning (Oct 22): 0.95 → 0.9, the same again: less fear, fewer breaks
                    # Ratings pull (Oct 22): 0.9 → 1.15. Everyone earns more and the desperate climb back, so it takes more drain to keep two or three deaths a week
                    # Season logs (Oct 23): 1.15 → 1.4. Sneaking now weighs the fine (rules.yaml sneak.peril), so far fewer die of fines

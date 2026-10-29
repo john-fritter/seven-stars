@@ -1,3 +1,4 @@
+import { traitFx } from './traits.js';
 // Rolling contestants and casting them. DESIGN.md Part two, Contestants, species and the generator.
 import { AXES, NEEDS, type GameData } from '../data/schema.js';
 import { between, chance, normal, pick, shuffle, weightedIndex, type Rng } from './rng.js';
@@ -58,6 +59,8 @@ export function rollContestant(data: GameData, rng: Rng, id: string, t: number, 
     rank: null,
     bed: null,
     needs,
+    company: 50,
+    companyPoint: 50,
     mood: data.personality.mood.base,
     health: 100,
     meter: data.meter.start,
@@ -83,6 +86,11 @@ export function rollContestant(data: GameData, rng: Rng, id: string, t: number, 
     seen: [],
   };
   c.traits = rollTraits(data, rng, c);
+  // How much company feels right: from outgoing, moved by traits (Loner).
+  const cp = data.social.company;
+  c.companyPoint = Math.min(95, Math.max(5, cp.point[0] + ((cp.point[1] - cp.point[0]) * c.personality.outgoing) / 10 + traitFx(data, c).companyPoint));
+  c.company = c.companyPoint;
+  c.needs.social = 100;
   // Prude and Exhibitionist: modesty acts as theirs, whatever they rolled.
   for (const id of c.traits) {
     const m = data.traits.traits[id]!.modesty;

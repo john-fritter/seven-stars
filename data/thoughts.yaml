@@ -45,7 +45,8 @@ needs:
   - { need: hunger,  below: 20, thought: hungry }
   - { need: rest,    below: 15, thought: exhausted }
   - { need: hygiene, below: 20, thought: filthy }
-  - { need: social,  below: 20, thought: lonely }
+  - { need: social,  below: 20, thought: lonely, side: under }
+  - { need: social,  below: 30, thought: worn_out, side: over }     # proposal (company, Oct 29): too much company
   - { need: fun,     below: 20, thought: bored }
 # Proposal (need sliders, Oct 27): running low stings before it's desperate. Hunger, rest, hygiene
 # and comfort almost never reached mood (exhausted never fired in 8,000 contestant-days).
@@ -121,6 +122,8 @@ thoughts:
   snack_swiped: { label: "{who} pinched my snack", value: -3, hours: 12, stack: 2, source: person }  # proposal (need sliders)
   filthy:      { label: "Couldn't wash", value: -6, hours: 0.5, stack: 1, source: discomfort } # "couldn't wash −6"
   lonely:      { label: "Lonely", value: -2, hours: 0.5, stack: 1, source: rejection }         # proposal (mood slide, Oct 27: was −4)
+  worn_out:    { label: "Worn out by people", value: -3, hours: 0.5, stack: 1, source: discomfort } # proposal (company, Oct 29)
+  brushed_off: { label: "Brushed off by {who}", value: -2, hours: 6, stack: 2, source: rejection, needs: { social: -3 } } # proposal (company, Oct 29)
   bored:       { label: "Bored stiff", value: -2, hours: 0.5, stack: 1, source: discomfort,    # proposal (Oct 27: was −4)
                  scale: [{ axis: playful }] }
   good_company: { label: "Good company", value: 9, hours: 0.5, stack: 1, source: person }        # proposal (M8); fun and social (Oct 27): was 6
