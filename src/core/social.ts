@@ -17,6 +17,7 @@ import { canSee } from './station.js';
 import { think } from './thoughts.js';
 import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
+import { inTrouble, trainedEdge } from './wants.js';
 
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 
@@ -179,7 +180,8 @@ export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: I
   if (!moveAllowed(ctx, c, o, def)) return 0;
   const [lo, hi] = ctx.data.social.factorRange;
   const spice = ctx.data.needs.boredom?.interactions[def.id];
-  const deep = talkingWith(ctx, c) === o ? (ctx.data.social.company.talk.weights[def.id] ?? 1) : 1;
+  const mate = talkingWith(ctx, c) === o;
+  const deep = mate ? (ctx.data.social.company.talk.weights[def.id] ?? 1) * comforting(ctx, c, o, def.id) : 1;
   let w = def.weight * deep * (spice ? 1 + spice * boredom(ctx, c) : 1) * moveMult(ctx, c, def.id) * (traitFx(ctx.data, c).interactions[def.id] ?? 1) * moodInteraction(ctx, c, def.id);
   // Some traits change what others do around them (a Peacemaker in the room makes insults rarer).
   for (const x of ctx.w.contestants) {
@@ -220,6 +222,13 @@ export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: I
   return w;
 }
 
+/** With a friend in trouble, the comforting things come easily (wants.yaml friend.comfort). */
+function comforting(ctx: Ctx, c: Contestant, o: Contestant, id: string): number {
+  const f = ctx.data.wants.friend;
+  const k = f.comfort[id];
+  return k && (c.ledger[o.id]?.affection ?? 0) >= f.friendAt && inTrouble(ctx, o) ? k : 1;
+}
+
 /** Mood changes how they treat people, both ways: kinder in a good mood, pettier in a bad one. */
 export function moodInteraction(ctx: Ctx, c: Contestant, id: string): number {
   const m = ctx.data.personality.mood;
@@ -246,6 +255,9 @@ export function interact(ctx: Ctx, c: Contestant, o: Contestant, def: Interactio
   // Helping someone feels good, to the kind and the loyal.
   const helped = ctx.data.thoughts.moments.helped;
   if (helped.interactions.includes(def.id)) think(ctx, c, helped.thought, o.id);
+  // Someone in trouble, comforted by someone they don't dislike (wants.yaml friend.consoled).
+  const fr = ctx.data.wants.friend;
+  if (fr.consoledBy.includes(def.id) && (o.ledger[c.id]?.affection ?? 0) >= 0 && inTrouble(ctx, o)) think(ctx, o, fr.consoled, c.id);
 
   switch (def.move) {
     case 'flirt':
@@ -332,7 +344,7 @@ export function fightChance(ctx: Ctx, insulted: Contestant, insulter?: Contestan
 /** Fighting power without the die: strength and stamina. */
 export function fightPower(ctx: Ctx, c: Contestant): number {
   const p = ctx.data.social.fight.power;
-  return c.strength * p.strength + c.stamina * p.stamina;
+  return c.strength * p.strength + c.stamina * p.stamina + trainedEdge(ctx, c, 'fight');
 }
 
 /** The insulted one swings. Strength, stamina and a die roll decide who gets hurt. */

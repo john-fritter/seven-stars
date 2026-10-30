@@ -19,6 +19,7 @@ tags:
   game:       [{ axis: playful }]
   status:     [{ axis: vain }]
   risky:      [{ axis: brave }]
+  fitness:    [{ axis: vain }, { axis: brave, k: 0.3 }]   # proposal (Oct 30): the gym
 
 # Mood below lowBelow scales these tags (DESIGN.md Part two, Choosing actions).
 mood:

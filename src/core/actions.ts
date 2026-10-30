@@ -17,11 +17,12 @@ import { bedtime, labelOf, lovinArrive, morning } from './romance.js';
 import { along, canSee, nextDoor, walkMinutes, type ObjectInstance } from './station.js';
 import { actionPull, desperateEase, ownRepeats } from './ratings.js';
 import { caughtIn, infraction, sneakCost } from './show.js';
-import { askToShare, available, companyPull, expectedKnockOdds, guestOf, inPassing, knock, occupants, personPull, talkOdds } from './social.js';
+import { askToShare, available, companyPull, expectedKnockOdds, guestOf, inPassing, interact, knock, occupants, personPull, talkOdds } from './social.js';
 import { discomfortAt, preferredSetting, setThermostat, situationComfort } from './temperature.js';
 import { think } from './thoughts.js';
 import { traitFx } from './traits.js';
 import type { Activity, Contestant } from './types.js';
+import { bookedFor, primp, train, wantPull, wantsOf, type Wants } from './wants.js';
 
 /** Scheduled actions that aren't advertised by objects. */
 export const MEAL = 'meal';
@@ -76,6 +77,9 @@ interface Candidate {
   meal?: MealDef;
   knock?: string; // host to knock on first
   talkTo?: string; // someone to ask for a conversation
+  confront?: string; // a rival to have it out with
+  dealIn?: string; // someone to ask to a game (cards)
+  why?: string; // the want that pulled hardest (wants.ts)
   score: number;
 }
 
@@ -96,7 +100,7 @@ function scoreAction(ctx: Ctx, c: Contestant, def: ActionDef, room: string, othe
   if (critical) return def.kind === 'toilet' ? 100 - walk : 0; // nearest toilet wins
 
   let needs = 0;
-  const chore = def.kind === 'sleep' || def.kind === 'toilet' || def.tags.includes(a.choreTag);
+  const chore = isChore(ctx, def);
   // The people there pull only on things done with people; company fit on everything but chores.
   let pulls = (!chore && withPeople(def) ? pull : 0) + extra;
   if (!chore) pulls += companyFit(ctx, c, room, def);
@@ -132,6 +136,16 @@ function scoreAction(ctx: Ctx, c: Contestant, def: ActionDef, room: string, othe
   const fresh = pastime(ctx, def) ? Math.max(ctx.data.needs.tolerance.appealFloor, 1 - (c.tolerance[def.id] ?? 0)) : 1;
   // Playing for the cameras: whatever scores pulls harder as the meter falls (ratings.ts).
   return ((needs + pulls) * fresh - costs) * spice(ctx, c, def.tags) * personalityOf(ctx.data, c, def) * after * desperateEase(ctx, c, def) * moodMult(ctx, c, def.tags) * enough * encore + actionPull(ctx, c, def);
+}
+
+/** A chore: done for itself, with no pull from the people around (sleep, the toilet, washing). */
+function isChore(ctx: Ctx, def: ActionDef): boolean {
+  return def.kind === 'sleep' || def.kind === 'toilet' || def.tags.includes(ctx.data.actions.choreTag);
+}
+
+/** What their wants add to an option (wants.ts). */
+function wanted(ctx: Ctx, c: Contestant, w: Wants, def: ActionDef, room: string, talkTo?: string): { pull: number; why?: string } {
+  return wantPull(ctx, c, w, def, room, withPeople(def), isChore(ctx, def), talkTo);
 }
 
 /** How much of what an action gives they actually need, 0..1 (1 if it gives nothing). */
@@ -209,7 +223,14 @@ export function usable(ctx: Ctx, c: Contestant, def: ActionDef): boolean {
   if (def.notSpecies?.includes(c.species)) return false;
   if ((def.when && !effectOn(ctx, def.when)) || (def.unless && effectOn(ctx, def.unless))) return false;
   if (def.takes && !snackThere(ctx, c, def.takes)) return false;
+  if (def.window && !inWindow(timeOfDay(ctx.w.t), def.window)) return false;
+  if (def.forEvent && bookedFor(ctx, c)?.format !== def.forEvent) return false;
+  if (def.primps && ctx.w.t < c.primped) return false; // already looking their best
   return inRanks(accessRank(ctx, c), def.ranks);
+}
+
+function inWindow(m: number, [from, to]: readonly [number, number]): boolean {
+  return from <= to ? m >= from && m < to : m >= from || m < to;
 }
 
 /** Bedtime: their night, or the body clock saying it's nearly time (needs.yaml sleep.clock.bedtime). */
@@ -278,6 +299,8 @@ function candidates(ctx: Ctx, c: Contestant): Candidate[] {
   const critical = c.needs.bladder < ctx.data.needs.bladder.criticalBelow;
   const night = bedtimeFor(ctx, c);
   const host = hostOf(ctx, c);
+  const w = wantsOf(ctx, c);
+  const alone = ctx.data.activities.cards.alone;
   for (const room of ctx.st.rooms) {
     // Rooms above their rank are a choice too, at the risk of an infraction; never when the
     // bladder is critical, never the robots' rooms, and never out of the fishbowl.
@@ -296,8 +319,11 @@ function candidates(ctx: Ctx, c: Contestant): Candidate[] {
         if (!usable(ctx, c, def) || !napOk(ctx, c, def)) continue;
         // The night pull is for a bed of their own (or their host's), not the nearest couch.
         const bedtime = night && (def.assigned || o.id === c.bed);
-        const score = scoreAction(ctx, c, def, room.id, others, critical, bedtime, pull, bedExtra(ctx, c, o, def, night)) - risk;
-        out.push({ def, object: o, room: room.id, score });
+        const want = critical ? { pull: 0 } : wanted(ctx, c, w, def, room.id);
+        let score = scoreAction(ctx, c, def, room.id, others, critical, bedtime, pull, bedExtra(ctx, c, o, def, night) + want.pull) - risk;
+        // A game that needs more players: alone at the table they just shuffle and wait.
+        if (def.players && users.filter((id) => id !== c.id).length + 1 < def.players) score *= alone;
+        out.push({ def, object: o, room: room.id, score, ...(want.why ? { why: want.why } : {}) });
       }
     }
   }
@@ -305,10 +331,14 @@ function candidates(ctx: Ctx, c: Contestant): Candidate[] {
   // One invitation at a time: a guest leaves before knocking anywhere else.
   if (!c.confined && !(c.guest && c.room === c.guest.room)) knockCandidates(ctx, c, others, night, out);
   if (!c.confined && !c.guest) shareCandidates(ctx, c, others, night, out);
-  if (!c.confined) talkCandidates(ctx, c, out);
+  if (!c.confined) talkCandidates(ctx, c, w, out);
+  if (!c.confined && w.rival) confrontCandidate(ctx, c, w.rival, out);
+  if (!c.confined) gameCandidates(ctx, c, w, others, out);
   for (const def of ctx.st.personal) {
-    if (def.id === ctx.data.social.company.talk.action) continue;
-    if (usable(ctx, c, def)) out.push({ def, object: null, room: c.room, score: scoreAction(ctx, c, def, c.room, others, false, night, companyPull(ctx, c, c.room)) });
+    if (def.id === ctx.data.social.company.talk.action || def.id === ctx.data.wants.rival.confront.action) continue;
+    if (!usable(ctx, c, def)) continue;
+    const want = wanted(ctx, c, w, def, c.room);
+    out.push({ def, object: null, room: c.room, score: scoreAction(ctx, c, def, c.room, others, false, night, companyPull(ctx, c, c.room), want.pull), ...(want.why ? { why: want.why } : {}) });
   }
   for (const meal of openMeals(ctx, c)) out.push({ def: null, object: null, room: meal.room, meal, score: mealScore(ctx, c, meal) });
   return out;
@@ -319,7 +349,7 @@ function candidates(ctx: Ctx, c: Contestant): Candidate[] {
  * room they can go into. Scored for the company it gives, the pull of that person and how fresh
  * time with them still is, × the odds they say yes.
  */
-function talkCandidates(ctx: Ctx, c: Contestant, out: Candidate[]): void {
+function talkCandidates(ctx: Ctx, c: Contestant, w: Wants, out: Candidate[]): void {
   const k = ctx.data.social.company.talk;
   const def = ctx.st.personal.find((d) => d.id === k.action);
   if (!def) return;
@@ -330,25 +360,73 @@ function talkCandidates(ctx: Ctx, c: Contestant, out: Candidate[]): void {
     const walk = walkMinutes(ctx.st, c.room, o.room);
     if (walk > k.within) continue;
     const fresh = Math.max(0.1, 1 - (c.tolerance[talkKey(o.id)] ?? 0));
-    const score = (k.pull * fresh + personPull(ctx, c, o, o.room) + companyFit(ctx, c, o.room, def, true) - walk * ctx.data.actions.walkCostPerMinute) * pm * talkOdds(ctx, o, c);
-    if (score > 0) out.push({ def, object: null, room: o.room, talkTo: o.id, score });
+    const want = wanted(ctx, c, w, def, o.room, o.id);
+    const score = ((k.pull + want.pull) * fresh + personPull(ctx, c, o, o.room) + companyFit(ctx, c, o.room, def, true) - walk * ctx.data.actions.walkCostPerMinute) * pm * talkOdds(ctx, o, c);
+    if (score > 0) out.push({ def, object: null, room: o.room, talkTo: o.id, score, ...(want.why ? { why: want.why } : {}) });
   }
 }
 
+/**
+ * Starting a game (cards): an empty table, and someone nearby to deal in, asked like a
+ * conversation. Scored as the game itself with them at the table, × the odds they say yes
+ * (talking odds × their taste for games, at most 1). Only the most promising person is asked.
+ */
+function gameCandidates(ctx: Ctx, c: Contestant, w: Wants, others: Map<string, number>, out: Candidate[]): void {
+  const k = ctx.data.social.company.talk;
+  for (const o of ctx.st.objects) {
+    const def = o.actions.find((d) => d.players);
+    if (!def || ctx.w.objects[o.id]!.length > 0 || o.capacity < def.players! || !usable(ctx, c, def) || !canEnter(ctx, c, o.room)) continue;
+    const want = wanted(ctx, c, w, def, o.room);
+    const base = scoreAction(ctx, c, def, o.room, others, false, false, 0, want.pull);
+    let best: Candidate | null = null;
+    for (const p of ctx.w.contestants) {
+      if (p === c || !available(ctx, p) || p.confined || !c.ledger[p.id] || !canEnter(ctx, p, o.room) || !usable(ctx, p, def)) continue;
+      if (p.activity!.action === k.action || isGathering(p.activity!.action) || walkMinutes(ctx.st, c.room, p.room) > k.within) continue;
+      const odds = dealOdds(ctx, p, c, def);
+      const score = (base + personPull(ctx, c, p, o.room) * personalityOf(ctx.data, c, def)) * odds;
+      if (score > 0 && (!best || score > best.score)) best = { def, object: o, room: o.room, dealIn: p.id, score, ...(want.why ? { why: want.why } : {}) };
+    }
+    if (best) out.push(best);
+  }
+}
+
+/** Odds `p` takes a seat at the game `c` is starting. */
+function dealOdds(ctx: Ctx, p: Contestant, c: Contestant, def: ActionDef): number {
+  return talkOdds(ctx, p, c) * Math.min(1, personalityOf(ctx.data, p, def));
+}
+
 const talkKey = (id: string) => `talk:${id}`;
+const confrontKey = (id: string) => `confront:${id}`;
+
+/**
+ * Having it out with a rival (wants.yaml rival.confront): walk over to them, if they're up and
+ * about within a few minutes' walk. Scored on how much they want to confront them, wearing like
+ * a pastime, × the bored's lean toward stirring things up.
+ */
+function confrontCandidate(ctx: Ctx, c: Contestant, rival: NonNullable<Wants['rival']>, out: Candidate[]): void {
+  const k = ctx.data.wants.rival.confront;
+  const def = ctx.st.personal.find((d) => d.id === k.action);
+  const o = ctx.w.contestants.find((x) => x.id === rival.id);
+  if (!def || !o || o.asleep || o.confined || o.breakdown || !o.activity || isGathering(o.activity.action) || !canEnter(ctx, c, o.room)) return;
+  const walk = walkMinutes(ctx.st, c.room, o.room);
+  if (walk > k.within) return;
+  const fresh = Math.max(0, 1 - (c.tolerance[confrontKey(o.id)] ?? 0));
+  const score = (rival.confront * fresh - walk * ctx.data.actions.walkCostPerMinute) * spice(ctx, c, def.tags) * moodMult(ctx, c, def.tags);
+  if (score > 0) out.push({ def, object: null, room: o.room, confront: o.id, score, why: 'rival' });
+}
 
 function isGathering(action: string): boolean {
   return action === MEAL || action === CEREMONY || action === EVENT || action === TRIAL;
 }
 
 /** They said yes: both talk where the other one is, for the action's minutes. */
-function beginTalk(ctx: Ctx, c: Contestant, o: Contestant, def: ActionDef): void {
+function beginTalk(ctx: Ctx, c: Contestant, o: Contestant, def: ActionDef, why?: string): void {
   const room = o.room;
   endActivity(ctx, o, 'interrupted');
   const walk = walkMinutes(ctx.st, c.room, room);
   begin(ctx, o, { action: def.id, object: null, room, minutes: walk + def.minutes!, partner: c.id });
-  begin(ctx, c, { action: def.id, object: null, room, minutes: def.minutes!, partner: o.id });
-  log(ctx, 'talk', [c.id, o.id], room);
+  begin(ctx, c, { action: def.id, object: null, room, minutes: def.minutes!, partner: o.id, why });
+  log(ctx, 'talk', [c.id, o.id], room, why ? { for: why } : undefined);
 }
 
 /**
@@ -436,9 +514,27 @@ export function decide(ctx: Ctx, c: Contestant): void {
     begin(ctx, c, { action: MEAL, object: null, room: choice.room, minutes: ctx.data.schedule.mealMinutes, meal: choice.meal, food: foodFor(ctx, c) });
   } else {
     const def = choice.def!;
+    if (choice.confront) {
+      begin(ctx, c, { action: def.id, object: null, room: choice.room, minutes: def.minutes, partner: choice.confront, why: choice.why });
+      return;
+    }
+    if (choice.dealIn) {
+      const p = ctx.w.contestants.find((x) => x.id === choice.dealIn)!;
+      if (chance(ctx.w.rng, dealOdds(ctx, p, c, def))) {
+        endActivity(ctx, p, 'interrupted');
+        log(ctx, 'deal_in', [c.id, p.id], choice.room, { game: def.id });
+        begin(ctx, p, { action: def.id, object: choice.object!.id, room: choice.room, minutes: def.minutes });
+        begin(ctx, c, { action: def.id, object: choice.object!.id, room: choice.room, minutes: def.minutes, why: choice.why });
+      } else {
+        think(ctx, c, ctx.data.social.company.talk.refused, p.id);
+        log(ctx, 'brush_off', [c.id, p.id], p.room, { game: def.id });
+        begin(ctx, c, { action: BRUSHED_OFF, object: null, room: c.room, minutes: ctx.data.social.knock.waitMinutes });
+      }
+      return;
+    }
     if (choice.talkTo) {
       const o = ctx.w.contestants.find((x) => x.id === choice.talkTo)!;
-      if (chance(ctx.w.rng, talkOdds(ctx, o, c))) beginTalk(ctx, c, o, def);
+      if (chance(ctx.w.rng, talkOdds(ctx, o, c))) beginTalk(ctx, c, o, def, choice.why);
       else {
         think(ctx, c, ctx.data.social.company.talk.refused, o.id);
         log(ctx, 'brush_off', [c.id, o.id], o.room);
@@ -454,7 +550,7 @@ export function decide(ctx: Ctx, c: Contestant): void {
         return;
       }
     }
-    begin(ctx, c, { action: def.id, object: choice.object?.id ?? null, room: choice.room, minutes: def.minutes });
+    begin(ctx, c, { action: def.id, object: choice.object?.id ?? null, room: choice.room, minutes: def.minutes, why: choice.why });
   }
 }
 
@@ -468,6 +564,7 @@ export interface Plan {
   food?: string;
   partner?: string;
   length?: number;
+  why?: string; // the want that pulled them to it (wants.ts), for the log
 }
 
 export function begin(ctx: Ctx, c: Contestant, p: Plan): void {
@@ -492,7 +589,7 @@ export function begin(ctx: Ctx, c: Contestant, p: Plan): void {
   if (def?.kind === 'drink') a.booze = qualityFor(ctx, c, def.booze!);
   if (p.object) ctx.w.objects[p.object]!.push(c.id);
   c.activity = a;
-  log(ctx, 'act.start', [c.id], p.room, { action: p.action, ...(p.object ? { object: p.object } : {}), walk });
+  log(ctx, 'act.start', [c.id], p.room, { action: p.action, ...(p.object ? { object: p.object } : {}), walk, ...(p.why ? { for: p.why } : {}) });
   if (walk === 0) arrive(ctx, c);
 }
 
@@ -526,6 +623,21 @@ function arrive(ctx: Ctx, c: Contestant): void {
   if (a.action === LOVIN) lovinArrive(ctx, c);
   if (c.breakdown && a.action === c.breakdown.kind) breakArrive(ctx, c);
   if (def?.kind === 'sleep' && def.assigned) bedtime(ctx, c);
+  if (a.action === ctx.data.wants.rival.confront.action) haveItOut(ctx, c, a);
+}
+
+/**
+ * They've walked over to a rival (wants.yaml rival.confront): if the rival's still here and
+ * awake, they have it out, a slight or an insult, which can come to blows like any insult.
+ */
+function haveItOut(ctx: Ctx, c: Contestant, a: Activity): void {
+  const k = ctx.data.wants.rival.confront;
+  const o = ctx.w.contestants.find((x) => x.id === a.partner);
+  c.tolerance[confrontKey(a.partner!)] = Math.min(1, (c.tolerance[confrontKey(a.partner!)] ?? 0) + k.again);
+  if (!o || o.room !== c.room || o.asleep || o.breakdown) return;
+  const id = chance(ctx.w.rng, k.insult) ? 'insult' : 'slight';
+  log(ctx, 'confront', [c.id, o.id], c.room, { with: id });
+  interact(ctx, c, o, ctx.data.social.interactions.find((d) => d.id === id)!);
 }
 
 /** Ends the current activity. Completion effects only apply when it finished properly. */
@@ -546,6 +658,9 @@ export function endActivity(ctx: Ctx, c: Contestant, how: 'done' | 'interrupted'
     const cost = ctx.data.needs.exertion[a.action]?.cost;
     if (cost) for (const n in cost) addNeed(c, n as Need, cost[n as Need]!);
     if (def?.logs) log(ctx, def.logs, [c.id], a.room);
+    if (def?.primps) primp(ctx, c);
+    // Training for a booked match: the cameras love a montage (scoring.yaml training).
+    if (def?.trains && ctx.data.wants.match.skills[bookedFor(ctx, c)?.format ?? ''] === def.trains) log(ctx, 'training', [c.id], a.room, { for: bookedFor(ctx, c)!.format });
     if (def?.thought && def.kind !== 'sleep') think(ctx, c, def.thought);
     // Got away with something risky: the brave get a rush.
     const risky = ctx.data.thoughts.moments.risky;
@@ -681,6 +796,7 @@ export function runActivity(ctx: Ctx, c: Contestant): void {
       // By day the body clock wakes them once they're past the line; by night, only rested and the chime do.
       if (!isNightFor(ctx, c, t) && c.needs.rest >= Math.min(100, sleepLine(ctx, c, t) + ctx.data.needs.sleep.clock.margin)) endActivity(ctx, c, 'done');
     } else if (def.minutes) {
+      if (def.trains && a.phase === 'do') train(ctx, c, def.trains);
       const gains = gainsOf(ctx.data, c, def);
       if (gains.length === 0) {
         if (pastime(ctx, def)) wearThin(ctx, c, def.id, def.minutes);

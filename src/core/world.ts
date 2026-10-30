@@ -14,6 +14,8 @@ import { drainMeter, fearTheMeter } from './scoring.js';
 import { runSchedule } from './schedule.js';
 import { station } from './station.js';
 import { clampTemp, driftRooms } from './temperature.js';
+import { cardsRound } from './cards.js';
+import { fadeTraining } from './wants.js';
 import type { SimEvent, World } from './types.js';
 
 // The world stays plain data; the game data it runs on is attached here, outside it.
@@ -87,11 +89,13 @@ function tick(ctx: Ctx): void {
         hammeredHour(ctx, c);
         sleepwalk(ctx, c);
         recover(ctx, c);
+        fadeTraining(ctx, c);
       }
       c.health = Math.min(100, c.health + ctx.data.social.health.recoverPerHour / 6);
     }
   }
   if (ctx.w.t % ctx.data.social.every === 0) socialRound(ctx);
+  cardsRound(ctx);
 }
 
 export function save(world: World): string {

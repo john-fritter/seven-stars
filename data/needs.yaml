@@ -125,6 +125,8 @@ exertion:
   gaze:     { perHour: { rest: -2 } }
   bench:    { perHour: { rest: -2 } }
   soak:     { perHour: { rest: -3 } }
+  workout:  { perHour: { rest: 6, hunger: 4, hygiene: 14 } }    # proposal (Oct 30): the heavy bag
+  rehearse: { perHour: { rest: 4, hunger: 2, hygiene: 6 } }     # proposal (Oct 30)
 
 # Proposal (need sliders): short of sleep, short of temper. Under rest `restBelow` their break
 # lines sit `breakLines` higher and an insult starts a fight × `fight` as often.

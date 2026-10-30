@@ -2,7 +2,7 @@
 // ceremony. DESIGN.md Part two, Clock and daily schedule.
 import { actionDef, CEREMONY, endActivity, EVENT, onToilet, openMeals, PASSED_OUT, TRIAL, type Plan } from './actions.js';
 import { canEnter, dayOf, isNightFor, log, nightShift, timeOfDay, type Ctx } from './context.js';
-import { eventToday, openEvent, resolveEvent, revealButton } from './events.js';
+import { announceBill, eventToday, openEvent, resolveEvent, revealButton } from './events.js';
 import { announceBodies, findBodies, holdTrials, trialsToday } from './trials.js';
 import { spinWheel, unswapBeds } from './wheel.js';
 import { fadeLedger } from './ledger.js';
@@ -205,6 +205,8 @@ function ceremony(ctx: Ctx): void {
   if (spinner) fishbowl.push(...spinWheel(ctx, spinner, order));
 
   for (const { c, kind } of fishbowl) if (w.contestants.includes(c)) confine(ctx, c, kind);
+  // Tomorrow's bill, unless the Wheel already booked it.
+  if (ctx.data.activities.bill) announceBill(ctx);
 
   // Room moves: anyone now in or heading for a bed or room that isn't theirs is moved along.
   for (const c of w.contestants) {

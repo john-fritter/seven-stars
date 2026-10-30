@@ -20,6 +20,11 @@
 #   thought:     a thought when it's finished (for sleep: when they wake, if they slept long enough)
 #   booze:       for drinks, the best quality poured here (booze.yaml); fun comes from the quality
 #   when / unless: only on / never on a day with this station effect (wheel.yaml effects)
+#   trains:      a skill it trains while they do it (activities.yaml training): fight, dance
+#   forEvent:    only for someone booked into this event format (rehearsing for a dance-off)
+#   window:      only between these times of day ([from, to])
+#   players:     a game that needs this many at the object; alone they wait (activities.yaml cards)
+#   primps:      finishing it, they look better for the evening (activities.yaml ready)
 #
 # Numbers marked "proposal" aren't in DESIGN.md yet.
 
@@ -148,9 +153,31 @@ types:
       - { id: tend_plants, label: fusses over the plants, minutes: 20, gains: { fun: 10 }, recreation: nature,
           tags: [quiet, solitary] }
 
+  # Proposals (Oct 30, wants and things to do: activities.yaml).
+  heavy_bag:
+    capacity: 2
+    actions:
+      - { id: workout, label: works out on the heavy bag, loud: true, minutes: 30, gains: { fun: 6 }, recreation: fitness,
+          trains: fight, thought: worked_out, tags: [fitness] }
+  card_table:
+    capacity: 4
+    actions:
+      - { id: cards, label: plays cards, minutes: 30, gains: { fun: 12, social: 4 }, recreation: games, players: 2,
+          company: true, tags: [game] }   # a small table, one or two others: no `social` tag, so the reserved play too
+  mirror:
+    capacity: 1
+    actions:
+      - { id: get_ready, label: gets ready for the evening, minutes: 20, gains: { hygiene: 10 }, window: ["18:30", "21:00"],
+          primps: true, thought: looking_good, tags: [status] }
+
 # Actions that need no object.
 personal:
   - { id: eat_snack, label: eats a stashed snack, minutes: 5, gains: { hunger: 20, fun: 3 }, takes: stash, tags: [chore] }   # proposal (need sliders)
   # Proposal (company, Oct 29): a conversation with someone, chosen like anything else (social.yaml company.talk).
   - { id: talk, label: talks with, minutes: 30, company: true, tags: [social] }
+  # Proposals (Oct 30, wants.yaml and activities.yaml): rehearsing for a booked dance-off, and
+  # walking over to have it out with a rival.
+  - { id: rehearse, label: rehearses dance moves, loud: true, minutes: 30, gains: { fun: 4 }, trains: dance, forEvent: dance_off,
+      tags: [performing] }
+  - { id: confront, label: goes to have it out with, minutes: 10, tags: [confront] }
   - { id: groom, label: grooms, minutes: 15, gains: { hygiene: 20 }, onlySpecies: [feline], tags: [chore, solitary] }

@@ -112,7 +112,7 @@ describe('sentences', () => {
   it('apply the meter penalty after the sentencing award, and waive the gloriously entertaining', () => {
     const always = structuredClone(data);
     always.rules.waiver.chance = 1;
-    const { ctx, cast } = aboard(21, always);
+    const { ctx, cast } = aboard(22, always); // a morning with no infractions of their own yet
     const [a, b] = cast as [Contestant, Contestant];
     Object.assign(a, { meter: 50 });
     infraction(ctx, a, 'above_rank', 'suite');
