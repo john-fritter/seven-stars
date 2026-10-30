@@ -15,6 +15,7 @@ import { runSchedule } from './schedule.js';
 import { station } from './station.js';
 import { clampTemp, driftRooms } from './temperature.js';
 import { cardsRound } from './cards.js';
+import { callSummons, playbackMinute, watchMoments } from './confessionals.js';
 import { fadeTraining } from './wants.js';
 import type { SimEvent, World } from './types.js';
 
@@ -38,7 +39,7 @@ export function createWorld(data: GameData, seed: number): World {
 }
 
 function newShow(): World['show'] {
-  return { day: 1, today: {}, mine: {}, pairs: {}, pending: [], effects: {}, booked: null, event: null, lastFormat: null, button: null, bedSwap: null, bodies: [], trials: [], trialOn: null, seen: {}, names: [], cage: {}, spread: {}, snacks: 0, restocked: 0 };
+  return { day: 1, today: {}, mine: {}, pairs: {}, pending: [], effects: {}, booked: null, event: null, lastFormat: null, button: null, bedSwap: null, bodies: [], trials: [], trialOn: null, seen: {}, names: [], cage: {}, spread: {}, snacks: 0, restocked: 0, tapes: {}, summons: [], called: { day: 0, ids: [] }, playback: [] };
 }
 
 /** Swaps the data a world runs on, for hot-reloading tuned values. */
@@ -60,7 +61,9 @@ export function step(world: World, minutes: number): SimEvent[] {
 }
 
 function tick(ctx: Ctx): void {
+  const from = ctx.events.length;
   runSchedule(ctx);
+  playbackMinute(ctx);
   const tenth = ctx.w.t % 10 === 0;
   if (tenth) driftRooms(ctx);
   const critical = ctx.data.needs.bladder.criticalBelow;
@@ -96,6 +99,9 @@ function tick(ctx: Ctx): void {
   }
   if (ctx.w.t % ctx.data.social.every === 0) socialRound(ctx);
   cardsRound(ctx);
+  // The operator calls people to the diary room after big moments.
+  watchMoments(ctx, from);
+  callSummons(ctx);
 }
 
 export function save(world: World): string {

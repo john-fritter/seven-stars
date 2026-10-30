@@ -6,6 +6,7 @@
 import type { ActionDef, MealDef, Need } from '../data/schema.js';
 import { drinkFun, drinkPull, finishDrink, hungoverFactor, qualityFor, soberFactor, stageMult } from './booze.js';
 import { breakArrive, breakMinute, endBreak } from './breaks.js';
+import { confessionalPull, confide } from './confessionals.js';
 import { accessRank, canEnter, dayOf, effectOn, effectsToday, inRanks, isNightFor, log, noisy, timeOfDay, type Ctx } from './context.js';
 import { gathering } from './schedule.js';
 import { gainsOf, personalityOf, tagMult } from './derived.js';
@@ -320,7 +321,8 @@ function candidates(ctx: Ctx, c: Contestant): Candidate[] {
         // The night pull is for a bed of their own (or their host's), not the nearest couch.
         const bedtime = night && (def.assigned || o.id === c.bed);
         const want = critical ? { pull: 0 } : wanted(ctx, c, w, def, room.id);
-        let score = scoreAction(ctx, c, def, room.id, others, critical, bedtime, pull, bedExtra(ctx, c, o, def, night) + want.pull) - risk;
+        const said = critical ? 0 : confessionalPull(ctx, c, def); // the diary chair: what they have to say
+        let score = scoreAction(ctx, c, def, room.id, others, critical, bedtime, pull, bedExtra(ctx, c, o, def, night) + want.pull + said) - risk;
         // A game that needs more players: alone at the table they just shuffle and wait.
         if (def.players && users.filter((id) => id !== c.id).length + 1 < def.players) score *= alone;
         out.push({ def, object: o, room: room.id, score, ...(want.why ? { why: want.why } : {}) });
@@ -565,6 +567,8 @@ export interface Plan {
   partner?: string;
   length?: number;
   why?: string; // the want that pulled them to it (wants.ts), for the log
+  summoned?: string; // called to the diary room after this moment (confessionals.ts)
+  about?: string;
 }
 
 export function begin(ctx: Ctx, c: Contestant, p: Plan): void {
@@ -585,6 +589,8 @@ export function begin(ctx: Ctx, c: Contestant, p: Plan): void {
   if (p.food) a.food = p.food;
   if (p.partner) a.partner = p.partner;
   if (p.length) a.length = p.length;
+  if (p.summoned) a.summoned = p.summoned;
+  if (p.about) a.about = p.about;
   const def = p.object ? ctx.st.object.get(p.object)!.actions.find((d) => d.id === p.action) : undefined;
   if (def?.kind === 'drink') a.booze = qualityFor(ctx, c, def.booze!);
   if (p.object) ctx.w.objects[p.object]!.push(c.id);
@@ -659,6 +665,7 @@ export function endActivity(ctx: Ctx, c: Contestant, how: 'done' | 'interrupted'
     if (cost) for (const n in cost) addNeed(c, n as Need, cost[n as Need]!);
     if (def?.logs) log(ctx, def.logs, [c.id], a.room);
     if (def?.primps) primp(ctx, c);
+    if (a.action === ctx.data.confessionals.action) confide(ctx, c, a);
     // Training for a booked match: the cameras love a montage (scoring.yaml training).
     if (def?.trains && ctx.data.wants.match.skills[bookedFor(ctx, c)?.format ?? ''] === def.trains) log(ctx, 'training', [c.id], a.room, { for: bookedFor(ctx, c)!.format });
     if (def?.thought && def.kind !== 'sleep') think(ctx, c, def.thought);

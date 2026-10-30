@@ -14,7 +14,7 @@
 // interaction (and, for a romance move while attached, the attached factor).
 import type { ActionDef, GameData, InteractionDef } from '../data/schema.js';
 import { dayOf, type Ctx } from './context.js';
-import { personalityOf } from './derived.js';
+import { personalityOf, tagMult } from './derived.js';
 import { axisFactor } from './needs.js';
 import { attachedMult } from './romance.js';
 import { traitFx } from './traits.js';
@@ -35,9 +35,11 @@ export function ownRepeats(ctx: Ctx, c: Contestant, type: string): number {
   return show.day === dayOf(ctx.w.t) ? (show.mine[c.id]?.[type] ?? 0) : 0;
 }
 
-/** What an event type would pay this contestant as its first actor right now. */
-export function expectedPoints(ctx: Ctx, c: Contestant, type: string): number {
-  const row = ctx.data.scoring.awards[type];
+/** What an event type would pay this contestant as its first actor right now (`kase`: the row's case, for a row picked `by` a field). */
+export function expectedPoints(ctx: Ctx, c: Contestant, type: string, kase?: string): number {
+  const row0 = ctx.data.scoring.awards[type];
+  if (!row0) return 0;
+  const row = kase !== undefined ? row0.cases[kase] : row0;
   if (!row) return 0;
   const base = (row.each ?? 0) + (row.actor ?? 0);
   if (!base) return 0;
@@ -130,9 +132,17 @@ function actOf(ctx: Ctx, type: string): Act {
   return a;
 }
 
+/** The surprise for something loud from someone with this taste for `tags` (scoring.yaml surprise.tags). */
+export function tagSurprise(ctx: Ctx, c: Contestant, tags: readonly string[]): number {
+  return 1 + ctx.data.scoring.surprise.bonus * Math.max(0, 1 - tagMult(ctx.data, c, tags));
+}
+
 /** The actor's surprise multiplier for an event: 1 when it's in character or not an act. */
 export function surpriseOf(ctx: Ctx, c: Contestant, e: SimEvent): number {
   const S = ctx.data.scoring.surprise.bonus;
+  // Judged against a taste for some tags, when it was loud (a confessional that reveals something).
+  const tags = ctx.data.scoring.surprise.tags[e.type];
+  if (tags) return S && e.data?.loud ? tagSurprise(ctx, c, tags) : 1;
   const a = S ? actOf(ctx, e.type) : null;
   if (!a) return 1;
   const o = e.actors[1] !== undefined ? ctx.w.contestants.find((x) => x.id === e.actors[1]) : undefined;
