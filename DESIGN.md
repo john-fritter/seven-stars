@@ -120,7 +120,7 @@ Killing isn't against the rules; getting caught is. The operator enforces select
 - **The fishbowl (decided).** A glass cell in the common room, overnight. The occupant hears every word said about them; others can tap the glass, talk, or pass food through a slot. It's kept slightly too cold and showers the occupant with cold water every hour. Aquatics mind it least.
 - **Meter penalty (decided).** A cut to the meter that drops you down the ranks.
 - **Collective punishment.** Cold water for everyone because of one person, which turns the station against them.
-- **Exposure.** Your latest confessional plays at dinner.
+- **Exposure.** Your latest confessional plays at dinner (built Oct 30 as a chance on any sentence; see How contestants choose: the next pass, Confessionals).
 
 **The daily order (decided).**
 
@@ -152,6 +152,8 @@ Clothing is decided as a feature, kept simple: clothes are a look, not inventory
 ## Confessionals (proposed)
 
 The diary room is open at any time. Contestants go on their own, which is likelier when mood is low or after a big event, and the operator summons people after major moments ("Sola to the confessional, please"), a couple of times a day at most. Without AI a confession is a mood vent and an icon; with AI it becomes a monologue to camera, the audience's best window into motives. Confessions can be played at dinner as punishment.
+
+*Built Oct 30 without AI (john: confessionals are something to do and a way for the reserved to get ratings): what's said is a kind and who it's about, not words. See How contestants choose: the next pass, Confessionals.*
 
 ## How contestants choose: the next pass
 
@@ -218,6 +220,36 @@ The scoring stays a utility score with noise and a weighted pick among the best 
 **Result** (200 seeds × 30 days, main after PR #21 → this pass): all 11 targets pass both times. Breaks 2.88 → 2.50 a day, extreme 7.4 → 6.5 a week; mood while awake 45.6 → 47.3. Deaths 2.73 → 2.46 a week (meter 1.00 → 1.06), stay 2.42 → 2.70 weeks, fights 4.79 → 4.99 a week, hookups 5.06 → 5.16. Rivals 7.1% → 9.2% of directed pairs, friends 43% → 38%. Waking time: cards 3.4% of all time, workouts 1.8%, getting ready 1.2%, rehearsing 0.9%, the window 2.5% → 2.0%. A week on the station: 11 confrontations (35% straight to an insult), 60 hands of cards (6.5 cheats caught), 23 training sessions, 30 evenings getting ready; a friend in trouble is sought out about 10 times a day. Karaoke fell a third (49 → 33 a week), and skipped-ceremony fines rose 0.65 → 0.94 a day (more people dozing off by 20:30). Speed: 200 seeds × 30 days in 102 s (was 85 s).
 
 **Still open:** the reserved die sooner again: stay by outgoing 0–3 / 4–6 / 7–10 went 2.30 / 2.46 / 2.54 → 2.02 / 2.88 / 3.26 weeks. Switching each new piece off in turn (100 seeds each) didn't find one cause: they all lean the same way a little, and the band numbers move ±0.3 between runs. Cooking a treat is designed but not built.
+
+### Confessionals
+
+*Built Oct 30 (proposals, all numbers in `data/confessionals.yaml`, `data/scoring.yaml` and `data/objects.yaml`; john: "another thing for people to do, and another thing that affects ratings", and a chance for the reserved to reveal something). "Confession" in the code is still the drunk cheating confession to a partner; these are confessionals.*
+
+**The diary chair** (one, in the confessional): 20 minutes, tagged solitary, so the reserved like it most (outgoing 0 × 1.5, 10 × 0.5), and a chore: its whole pull is what they have to say, not a place to pass the time or hide from people. (As a pastime it drew 2.5 visits a contestant-day, half of them with nothing to say.) Nobody chats with someone on camera, and a meal opening doesn't pull them out.
+
+**What's said.** Every visit vents: the worst bad thought on their mind that they haven't vented yet loses half its weight (once per thought). Then they say one thing they haven't told the camera in the last week, picked at random weighted by what it would pay:
+
+| Kind | When they have it | Pays |
+| --- | --- | --- |
+| Vent | nothing to reveal | 3 |
+| Take | summoned after a moment: their side of it | 5 |
+| Grudge | someone at affection −30 or worse | 6 |
+| Crush | attraction 6+ for someone they aren't dating | 6 |
+| Spill | a kiss or hookup between two others they know about (the gossip memory) | 10 |
+| Suspicion | someone they believe is a killer | 12 |
+| Cheating | their own fling behind the back of a partner they feel guilty about | 15 |
+
+The camera is the only witness (no witness multiplier); the judge's boredom and their own repeats apply as usual. Everything but a vent is loud, and a loud confessional's surprise is judged against their taste for performing (outgoing, vain, playful, and Stage fright's 0.2): × 1 + max(0, 1 − taste), so a reserved one spilling a secret gets about × 1.5 and a Stage fright contestant nearly × 2, while a show-off gets nothing extra (`scoring.yaml surprise.tags`).
+
+**Going on their own.** Added to the chair's score: 0.5 × the worst unvented bad thought ÷ 10 (if it's −6 or worse), + what the best thing they have would pay ÷ 10, + the ratings pull 5 × desperation × that pay ÷ 10 × their taste for the chair. With an infraction pending (a sentence tonight could air it), that pay counts half.
+
+**Summons.** After an event that paid 25 or more in all, or a body found, an accusation, a betrayal, a breakup or a trial, its first two actors are queued; the operator calls them one at a time once the chair is free and they're awake and not at a meal, a gathering, lovin', a breakdown or the fishbowl, within three hours, two a day at most and nobody twice. Summoned, they can also give their take.
+
+**Playback at dinner (D-043, exposure).** Anyone sentenced at the ceremony has a 50% chance that their latest confessional from the last three days airs at the next day's dinner (19:30), to everyone awake in the lounge or in earshot of it. The speaker gets "My confessional played at dinner" (−8 × vain, humiliation) and 6 points (it's on air). What they said lands: whoever they trashed, gave their take on, named as a killer or spilled about loses 15 affection for them and gets "{who} trashed me in the diary room" (−5, two days); a spill or a cheating confession is heard by everyone listening, which is evidence as usual (betrayal, jealousy), and a cheater's partner always hears; everyone hearing a killer named fears them 10 more; the one they fancy, if they like them at all, gets +5 affection and "{who} fancies me, it said so on air" (+4).
+
+**Result.** 400 seeds × 30 days, before (PR #22) → after, all 11 targets pass both times. A week on the station: 75 confessionals (43% vents, 21% spills, 14% crushes, 10% takes, 6% grudges, 3% cheating, 2% suspicions), 12.7 of them summoned, and 7.5 played back at dinner, heard by 4.6 people each. The reserved go most: about 2 visits a contestant-day at outgoing 0–3, 1 at 7–10. **The reserved live longer:** stay by outgoing 0–3 / 4–6 / 7–10 went 2.08 / 2.72 / 3.10 → 2.44 / 3.00 / 3.15 weeks (the reserved from 67% to 77% of the outgoing). Everyone earns more, so the meter drain went 1.2 → 1.4 an hour: at 1.2 deaths fell to 1.85 a week (a miss). Cutting the pay to a third less instead kept deaths in range at drain 1.3 but helped the reserved less (2.15 against 3.22 weeks, 200 seeds), because what the reserved get from the diary room is the share of points it carries. Deaths 2.56 → 2.34 a week (meter 1.10 → 0.92), stay 2.60 → 2.85 weeks, betrayals 6.5 → 7.8 a week and jealousy 5.6 → 6.2 (playback spreads what was spilled), breaks 2.51 → 2.33 a day, hookups 5.14 → 5.44. Speed: 200 seeds × 30 days in about 130 s (was about 121 s).
+
+**Still open:** playback comes almost daily (sentences are nightly, so half of them airing is a lot); the outgoing have nothing that holds them back from spilling, and the loyal will spill a friend's secret as readily as anyone's.
 
 ## Booze
 
@@ -569,7 +601,7 @@ The station is laid out on a floor plan (below, The floor plan: the next pass): 
 | Garden bench | 2 | Comfort, calm, believed privacy | 30 min |
 | Hidden still | 1 | Rotgut | 20 min |
 | Vending (snacks) | 1 | Hunger +20, fun; 14 a day (Food, exertion and sleep) | 5 min |
-| Diary chair | 1 | Venting: halves one bad thought | 20 min |
+| Diary chair | 1 | Venting: halves one bad thought; what's said pays (Confessionals) | 20 min |
 | Drug shelf | 1 | Sedatives (taken items) | 2 min |
 
 Using an object in a room above your rank is an infraction, whether you walked in or slipped in behind someone, unless an occupant let you in (see Rank, privileges, rules and punishments).
@@ -1096,7 +1128,7 @@ The enjoyment thought lasts 3 hours and stacks to three drinks. Drinks can be ca
 
 ## The meter and scoring
 
-**The meter** runs 0–100. Newcomers start at 60. It drains 1.2 per hour (tuned from 1, then 0.95 and 0.9, then up to 1.15 for the ratings pull, then 1.4 once sneaking stopped killing people, then 1.2 once murders came every two weeks, Oct 23), day and night. Awards refill it, capped at 100. At zero a contestant is on notice; if they're still at zero at the ceremony, they're spaced, unless they hold an immunity, which is spent instead.
+**The meter** runs 0–100. Newcomers start at 60. It drains 1.4 per hour (tuned from 1, then 0.95 and 0.9, then up to 1.15 for the ratings pull, then 1.4 once sneaking stopped killing people, then 1.2 once murders came every two weeks, Oct 23, then 1.4 once confessionals paid, Oct 30), day and night. Awards refill it, capped at 100. At zero a contestant is on notice; if they're still at zero at the ceremony, they're spaced, unless they hold an immunity, which is spent instead.
 
 **Lifetime points** collect every award, uncapped, for the leaderboard and hall of fame. Murder awards are hidden until the killer dies.
 
@@ -1255,7 +1287,7 @@ A killer who accuses an innocent and wins walks free; the engine keeps the truth
 
 The core is a TypeScript library with no I/O, no clock and no global randomness. Everything tunable lives in YAML data files, hot-reloaded by the harness and debug view.
 
-**Data files:** schedule, rooms (including temperatures), plans (the floor plans), objects, species, clothing, generator, traits, needs, personality, actions, social (interactions, the ledger, attraction, fights, knocking), romance, thoughts, breaks, booze, scoring, ranks, rules, wheel, events, trials, wants (what contestants are after), activities (training, cards, getting ready, tomorrow's bill).
+**Data files:** schedule, rooms (including temperatures), plans (the floor plans), objects, species, clothing, generator, traits, needs, personality, actions, social (interactions, the ledger, attraction, fights, knocking), romance, thoughts, breaks, booze, scoring, ranks, rules, wheel, events, trials, wants (what contestants are after), activities (training, cards, getting ready, tomorrow's bill), confessionals (the diary room).
 
 **Core API (sketch):**
 
