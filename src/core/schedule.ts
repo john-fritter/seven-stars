@@ -74,7 +74,8 @@ export function runSchedule(ctx: Ctx): void {
     const bell = s.dinnerBell;
     for (const c of ctx.w.contestants) {
       const open = openMeals(ctx, c).some((x) => x.id === meal.id);
-      if (!c.asleep && !c.breakdown && !onToilet(ctx, c) && open) endActivity(ctx, c, 'interrupted');
+      // Not off the toilet, and not off camera in the diary room.
+      if (!c.asleep && !c.breakdown && !onToilet(ctx, c) && c.activity?.action !== ctx.data.confessionals.action && open) endActivity(ctx, c, 'interrupted');
       // The dinner bell: the hungry get up for it.
       if (bell && open && c.asleep && !c.confined && c.needs.hunger < bell.hungerBelow) {
         endActivity(ctx, c, 'woke');

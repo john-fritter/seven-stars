@@ -212,6 +212,10 @@ thoughts:
   doomed:        { label: "The show is going to kill me", value: -4, hours: 1.5, stack: 1, source: fear }  # value set by meter.yaml doomed
   sentenced:     { label: "Sentenced in public", value: -10, hours: 24, stack: 1, source: humiliation }
   fishbowl_night: { label: "A night in the fishbowl", value: -12, species: { aquatic: -4 }, hours: 24, stack: 1, source: humiliation }
+  # Proposals (Oct 30, confessionals.yaml playback): a confessional aired at dinner.
+  aired_confessional: { label: "My confessional played at dinner", value: -8, hours: 24, stack: 1, source: humiliation, scale: [{ axis: vain }] }
+  trashed_on_air: { label: "{who} trashed me in the diary room", value: -5, hours: 48, stack: 2, source: person }
+  fancied_on_air: { label: "{who} fancies me, it said so on air", value: 4, hours: 24, stack: 1, source: person }
   rank_up:       { label: "Rank went up", value: 5, hours: 24, stack: 1, source: status }
   rank_down:     { label: "Rank went down", value: -8, hours: 24, stack: 1, source: status }
   mocked:        { label: "Mocked through the glass by {who}", value: -4, hours: 12, stack: 2, source: humiliation, needs: { social: -5 } } # proposal

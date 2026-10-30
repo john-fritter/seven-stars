@@ -156,6 +156,16 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Which NanoGPT models.
 - [ ] A real name.
 
+**Proposed for confessionals (Oct 30).** john asked for confessionals as something to do that affects ratings, with a way in for the reserved, and approved the proposal. All numbers in `data/confessionals.yaml`, `data/scoring.yaml` and `data/objects.yaml`; DESIGN.md, How contestants choose: the next pass, Confessionals.
+
+- [ ] The diary chair (20 minutes, solitary, a chore: it pulls only for what they have to say). Every visit eases the worst unvented bad thought by half, then they say one thing, weighted by pay: vent 3, their take when summoned 5, a grudge 6, a crush 6, spilling someone else's romance 10, naming a killer 12, confessing their own cheating 15. Not the same thing twice in a week.
+- [ ] Anything but a vent is loud, and judged against their taste for performing (`scoring.yaml surprise.tags`): about × 1.5 for the reserved, nearly × 2 for Stage fright.
+- [ ] Going on their own: a bad mood, something to say and a low meter pull; a sentence coming tonight halves what they'd reveal.
+- [ ] Summons: the first two actors of an event that paid 25+ (or a body found, an accusation, a betrayal, a breakup, a trial), once free, within three hours, two a day.
+- [ ] Playback (D-043's exposure): each sentence has a 50% chance of airing their latest confessional (last three days) at the next dinner, 19:30. Humiliating for the speaker (−8 × vain, but 6 points); those trashed or spilled about lose 15 affection for them; a spill or cheating confession is evidence to everyone listening; a named killer is feared.
+- [ ] Meter drain 1.2 → 1.4 an hour to keep deaths in range (they fell to 1.85 a week).
+- [ ] Result: the reserved last 2.08 → 2.44 weeks against 3.10 → 3.15 for the most outgoing; deaths 2.56 → 2.34 a week; all 11 targets pass. Playback is nearly daily.
+
 **Proposed for wants and things to do (Oct 30).** The next layer of the choosing design (john: yes to wants and activities). All numbers in `data/wants.yaml`, `data/activities.yaml` and `data/objects.yaml`; DESIGN.md Part two, How contestants choose: the next pass, Wants and things to do.
 
 - [ ] Wants as pulls on particular options: a partner or crush, a rival (avoid or confront, personality picks), a friend in trouble (comforting them consoles them), a booked match (train), status (vain). The meter's want is the ratings pull as built.

@@ -15,6 +15,7 @@ export interface StorySeed {
   sentenceKinds: Record<string, number>; // sentences by their infractions
   deathCauses: Record<string, number>;
   breakKinds: Record<string, number>;
+  diary: Record<string, number>; // confessionals by what was said
   topSinger: number; // the season's busiest karaoke singer, their performances
   karaoke: number;
 }
@@ -30,7 +31,7 @@ function add(m: Record<string, number>, k: string, v = 1): void {
 
 /** Runs one season and counts what a viewer would notice. */
 export function storySeed(data: GameData, seed: number, days: number): StorySeed {
-  const s: StorySeed = { seed, days, n: {}, sneaks: {}, skipped: {}, sentenceKinds: {}, deathCauses: {}, breakKinds: {}, topSinger: 0, karaoke: 0 };
+  const s: StorySeed = { seed, days, n: {}, sneaks: {}, skipped: {}, sentenceKinds: {}, deathCauses: {}, breakKinds: {}, diary: {}, topSinger: 0, karaoke: 0 };
   const n = s.n;
   const world = createWorld(data, seed);
   const kissed = new Set<string>();
@@ -192,6 +193,15 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
           break;
         case 'confession':
           add(n, 'confessions');
+          break;
+        case 'confessional':
+          add(n, 'confessionals');
+          add(s.diary, String(data.kind));
+          if (data.summoned) add(n, 'confessionalsCalled');
+          break;
+        case 'playback':
+          add(n, 'playbacks');
+          add(n, 'playbackHeard', (data.heard as string[]).length);
           break;
         case 'scene':
           add(n, 'scenes');
@@ -370,6 +380,10 @@ export function storyReport(seeds: StorySeed[]): string[] {
   line(`  ${per(n('blabs') * 7, days, 1)} secrets spilled a week (${pct(n('blabsJuicy'), n('blabs'))} to someone involved, ${pct(n('blabsVenting'), n('blabs'))} while venting), ${per(n('confessions') * 7, days)} drunken confessions a week`);
   line(`  ${per(n('scenes') * 7, days)} scenes a week that aired someone's secret, heard by ${per(n('sceneHeard'), n('scenes'), 1)} people each`);
   line();
+  line('The diary room');
+  line(`  ${per(n('confessionals'), days, 1)} confessionals a day (${pct(n('confessionalsCalled'), n('confessionals'))} summoned); ${per(n('playbacks') * 7, days)} played back at dinner a week, heard by ${per(n('playbackHeard'), n('playbacks'), 1)} people each`);
+  top(merge(seeds, (s) => s.diary), n('confessionals'), 7);
+  line();
   line('Murders');
   const mu = n('murders');
   line(`  ${mu} murders (one every ${mu ? Math.round(days / mu) : '—'} days), ${n('trials')} trials, ${n('wrongVerdicts')} wrong verdicts, ${n('trialImmunities')} saved by an immunity`);
@@ -450,6 +464,22 @@ export function seasonLog(data: GameData, seed: number, days: number): string[] 
           break;
         case 'confession':
           s = `${nm(a)} confesses to ${nm(b)}: they were with ${nm(c)} (${x.stage})${at}`;
+          break;
+        case 'confessional': {
+          const about = ((x.about as string[] | undefined) ?? []).map(nm);
+          const said: Record<string, string> = {
+            take: `gives the camera their side of it${about.length ? ` with ${about[0]}` : ''}`,
+            grudge: `trashes ${about[0]} to the camera`,
+            crush: `admits to the camera they fancy ${about[0]}`,
+            spill: `tells the camera about ${about[0]} and ${about[1]}`,
+            suspicion: `tells the camera ${about[0]} is the killer`,
+            cheating: `confesses to the camera they've been with ${about[0]} behind ${about[1]}'s back`,
+          };
+          s = said[x.kind as string] ? `Diary room: ${nm(a)} ${said[x.kind as string]}${x.summoned ? ' (summoned)' : ''}` : null;
+          break;
+        }
+        case 'playback':
+          s = `At dinner the announcer plays ${nm(a)}'s confessional (${x.kind}) to ${(x.heard as string[]).length} people`;
           break;
         case 'scene':
           s = `${nm(a)} makes a scene about ${nm(b)} and ${nm(c)}${(x.heard as string[]).length ? ` in front of ${(x.heard as string[]).map(nm).join(', ')}` : ''}${at}`;
