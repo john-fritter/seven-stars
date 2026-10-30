@@ -170,6 +170,14 @@ types:
       - { id: get_ready, label: gets ready for the evening, minutes: 20, gains: { hygiene: 10 }, window: ["18:30", "21:00"],
           primps: true, thought: looking_good, tags: [status] }
 
+  # Proposal (Oct 30, confessionals.yaml): the diary chair, a stage with only a camera. Its pull is
+  # what they have to say (confessionals.yaml), so it's a chore: not a way to pass the time or get
+  # away from people. Solitary, so the reserved like it best.
+  diary_chair:
+    capacity: 1
+    actions:
+      - { id: confess, label: talks to the camera in the diary room, minutes: 20, tags: [solitary, chore] }
+
 # Actions that need no object.
 personal:
   - { id: eat_snack, label: eats a stashed snack, minutes: 5, gains: { hunger: 20, fun: 3 }, takes: stash, tags: [chore] }   # proposal (need sliders)
