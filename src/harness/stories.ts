@@ -418,149 +418,161 @@ const clock = (t: number) => {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 };
 
-/** One season told day by day: the moments a viewer would notice, with names. */
-export function seasonLog(data: GameData, seed: number, days: number): string[] {
-  const world = createWorld(data, seed);
+/**
+ * Turns events into the lines a viewer would notice, with names. Keeps the state a reader needs
+ * across calls (names, first kisses, tonight's sentences), so feed it every event in order.
+ */
+function narrator(): { line: (e: SimEvent) => string[]; nm: (id: string | undefined) => string } {
   const who = new Map<string, string>();
   const nm = (id: string | undefined) => (id ? (who.get(id) ?? id) : '?');
   const kissed = new Set<string>();
+  let sentences: string[] = [];
+  const line = (e: SimEvent): string[] => {
+    const out: string[] = [];
+    const x = e.data ?? {};
+    const [a, b, c] = e.actors;
+    const at = e.room ? ` (${e.room})` : '';
+    let s: string | null = null;
+    switch (e.type) {
+      case 'arrive':
+        who.set(a!, x.name as string);
+        s = `${x.name} arrives: ${x.species}, ${x.pronouns}${(x.traits as string[]).length ? `, ${(x.traits as string[]).join(', ')}` : ''}`;
+        break;
+      case 'kiss': {
+        const k = pairKey(a!, b!);
+        s = kissed.has(k) ? null : `${nm(a)} and ${nm(b)} kiss for the first time${at}`;
+        kissed.add(k);
+        break;
+      }
+      case 'lovin':
+        s = `${nm(a)} and ${nm(b)} hook up${x.first ? ' for the first time' : ''}${kissed.has(pairKey(a!, b!)) ? '' : ', never having kissed'}${x.where === 'public' ? ', in public' : ''}${at}`;
+        break;
+      case 'exclusive':
+        s = `${nm(a)} and ${nm(b)} go exclusive${x.secretly ? ` (${nm(b)} secretly thinks it's a fling)` : ''}`;
+        break;
+      case 'breakup':
+        s = `${nm(a)} breaks up with ${nm(b)}`;
+        break;
+      case 'betrayal':
+        s = `${nm(a)} catches ${nm(b)} with ${nm(c)} (${x.what})${at}`;
+        break;
+      case 'jealous':
+        s = `${nm(a)} is jealous: ${nm(b)} with ${nm(c)} (${x.what})${at}`;
+        break;
+      case 'blab':
+        s = `${nm(a)} tells ${nm(b)} about ${nm(c)} and ${nm(e.actors[3])}${x.venting ? ' (venting)' : ` (${x.stage})`}${at}`;
+        break;
+      case 'confession':
+        s = `${nm(a)} confesses to ${nm(b)}: they were with ${nm(c)} (${x.stage})${at}`;
+        break;
+      case 'confessional': {
+        const about = ((x.about as string[] | undefined) ?? []).map(nm);
+        const said: Record<string, string> = {
+          take: `gives the camera their side of it${about.length ? ` with ${about[0]}` : ''}`,
+          grudge: `trashes ${about[0]} to the camera`,
+          crush: `admits to the camera they fancy ${about[0]}`,
+          spill: `tells the camera about ${about[0]} and ${about[1]}`,
+          suspicion: `tells the camera ${about[0]} is the killer`,
+          cheating: `confesses to the camera they've been with ${about[0]} behind ${about[1]}'s back`,
+        };
+        s = said[x.kind as string] ? `Diary room: ${nm(a)} ${said[x.kind as string]}${x.summoned ? ' (summoned)' : ''}` : null;
+        break;
+      }
+      case 'playback':
+        s = `At dinner the announcer plays ${nm(a)}'s confessional (${x.kind}) to ${(x.heard as string[]).length} people`;
+        break;
+      case 'scene':
+        s = `${nm(a)} makes a scene about ${nm(b)} and ${nm(c)}${(x.heard as string[]).length ? ` in front of ${(x.heard as string[]).map(nm).join(', ')}` : ''}${at}`;
+        break;
+      case 'puke':
+        s = `${nm(a)} throws up${at}`;
+        break;
+      case 'meal_empty':
+        s = `${nm(a)} turns up for ${x.meal === 'leftovers' ? 'the leftovers' : x.meal} and there's nothing left${at}`;
+        break;
+      case 'swipe_snack':
+        s = `${nm(a)} swipes ${nm(b)}'s snack${x.noticed ? ' and gets caught' : ''}${at}`;
+        break;
+      case 'share_snack':
+        s = `${nm(a)} shares a snack with a hungry ${nm(b)}${at}`;
+        break;
+      case 'sold_out':
+        s = `The snack machine is empty (${nm(a)} took the last one)`;
+        break;
+      case 'passed_out':
+        s = `${nm(a)} passes out${at}`;
+        break;
+      case 'fight':
+        s = `${nm(x.winner as string)} beats ${nm(x.loser as string)} in a brawl${at}`;
+        break;
+      case 'cage_match':
+        s = `cage match: ${nm(x.winner as string)} beats ${nm(x.loser as string)}${x.forfeit ? ' by forfeit' : ''}`;
+        break;
+      case 'dance_off':
+        s = `dance-off${x.sudden ? ' (sudden death)' : ''}: ${nm(x.winner as string)} wins, ${nm(x.loser as string)} loses`;
+        break;
+      case 'bill':
+        s = `tomorrow's bill: ${x.format === 'button' ? 'the Button' : `${x.format === 'cage_match' ? 'cage match' : 'dance-off'}, ${e.actors.map(nm).join(' vs ')}`}`;
+        break;
+      case 'confront':
+        s = `${nm(a)} goes to have it out with ${nm(b)} (${x.with})${at}`;
+        break;
+      case 'caught_cheating':
+        s = `${nm(a)} catches ${nm(b)} cheating at cards${at}`;
+        break;
+      case 'button':
+        s = `the Button: ${(x.pressers as string[]).map(nm).join(', ') || 'nobody'} pressed`;
+        break;
+      case 'break':
+        s = x.level === 'extreme' || x.kind === 'steal_food' ? `${nm(a)} breaks (${x.level} ${x.kind}, over ${x.source})${b ? ` at ${nm(b)}` : ''}${at}` : null;
+        break;
+      case 'murder':
+        s = `MURDER: ${nm(a)} kills ${nm(b)}${at}, ${(x.witnesses as string[]).length ? `seen by ${(x.witnesses as string[]).map(nm).join(', ')}` : 'unseen'}`;
+        break;
+      case 'body_found':
+        s = x.announced ? `the announcer declares ${x.name}'s body` : `${nm(a)} finds ${x.name}'s body${at}`;
+        break;
+      case 'accusation':
+        s = `${nm(a)} accuses ${nm(b)} of killing ${x.name}`;
+        break;
+      case 'trial':
+        s = `trial for ${x.name}: ${nm(x.loser as string)} loses ${x.against}-${Object.keys(x.votes as object).length - (x.against as number)}${x.right ? ' (the killer)' : ' (innocent)'}`;
+        break;
+      case 'killer_known':
+        s = `${e.actors.slice(1).map(nm).join(', ')} now ${e.actors.length > 2 ? 'believe' : 'believes'} ${nm(a)} killed ${x.name} (${x.how})`;
+        break;
+      case 'immunity_spent':
+        s = `${nm(a)} hands over an immunity (${x.cause})`;
+        break;
+      case 'sentence':
+        sentences.push(`${nm(a)} ${(x.infractions as string[]).join('+')}${x.meter ? ` ${x.meter}` : ''}${x.fishbowl ? ` fishbowl ${x.fishbowl}` : ''}`);
+        break;
+      case 'wheel':
+        s = `${nm(a)} spins the Wheel: ${x.segment}`;
+        break;
+      case 'death':
+        s = `${x.name} is spaced (${x.cause}${x.cause === 'meter' && sentences.some((l) => l.startsWith(`${x.name} `)) ? ', after a fine' : ''})`;
+        break;
+      case 'ceremony':
+        if (sentences.length) out.push(`  ${clock(e.t)} sentences: ${sentences.join('; ')}`);
+        sentences = [];
+        s = `ranks: ${(x.ranks as string[]).map(nm).join(', ')}`;
+        break;
+    }
+    if (s) out.push(`  ${clock(e.t)} ${s}`);
+    return out;
+  };
+  return { line, nm };
+}
+
+/** One season told day by day: the moments a viewer would notice, with names. */
+export function seasonLog(data: GameData, seed: number, days: number): string[] {
+  const world = createWorld(data, seed);
+  const { line } = narrator();
   const out: string[] = [];
   for (let d = 1; d <= days; d++) {
     out.push('', `Day ${d}`);
-    let sentences: string[] = [];
-    for (const e of step(world, MINUTES_PER_DAY)) {
-      const x = e.data ?? {};
-      const [a, b, c] = e.actors;
-      const at = e.room ? ` (${e.room})` : '';
-      let s: string | null = null;
-      switch (e.type) {
-        case 'arrive':
-          who.set(a!, x.name as string);
-          s = `${x.name} arrives: ${x.species}, ${x.pronouns}${(x.traits as string[]).length ? `, ${(x.traits as string[]).join(', ')}` : ''}`;
-          break;
-        case 'kiss': {
-          const k = pairKey(a!, b!);
-          s = kissed.has(k) ? null : `${nm(a)} and ${nm(b)} kiss for the first time${at}`;
-          kissed.add(k);
-          break;
-        }
-        case 'lovin':
-          s = `${nm(a)} and ${nm(b)} hook up${x.first ? ' for the first time' : ''}${kissed.has(pairKey(a!, b!)) ? '' : ', never having kissed'}${x.where === 'public' ? ', in public' : ''}${at}`;
-          break;
-        case 'exclusive':
-          s = `${nm(a)} and ${nm(b)} go exclusive${x.secretly ? ` (${nm(b)} secretly thinks it's a fling)` : ''}`;
-          break;
-        case 'breakup':
-          s = `${nm(a)} breaks up with ${nm(b)}`;
-          break;
-        case 'betrayal':
-          s = `${nm(a)} catches ${nm(b)} with ${nm(c)} (${x.what})${at}`;
-          break;
-        case 'jealous':
-          s = `${nm(a)} is jealous: ${nm(b)} with ${nm(c)} (${x.what})${at}`;
-          break;
-        case 'blab':
-          s = `${nm(a)} tells ${nm(b)} about ${nm(c)} and ${nm(e.actors[3])}${x.venting ? ' (venting)' : ` (${x.stage})`}${at}`;
-          break;
-        case 'confession':
-          s = `${nm(a)} confesses to ${nm(b)}: they were with ${nm(c)} (${x.stage})${at}`;
-          break;
-        case 'confessional': {
-          const about = ((x.about as string[] | undefined) ?? []).map(nm);
-          const said: Record<string, string> = {
-            take: `gives the camera their side of it${about.length ? ` with ${about[0]}` : ''}`,
-            grudge: `trashes ${about[0]} to the camera`,
-            crush: `admits to the camera they fancy ${about[0]}`,
-            spill: `tells the camera about ${about[0]} and ${about[1]}`,
-            suspicion: `tells the camera ${about[0]} is the killer`,
-            cheating: `confesses to the camera they've been with ${about[0]} behind ${about[1]}'s back`,
-          };
-          s = said[x.kind as string] ? `Diary room: ${nm(a)} ${said[x.kind as string]}${x.summoned ? ' (summoned)' : ''}` : null;
-          break;
-        }
-        case 'playback':
-          s = `At dinner the announcer plays ${nm(a)}'s confessional (${x.kind}) to ${(x.heard as string[]).length} people`;
-          break;
-        case 'scene':
-          s = `${nm(a)} makes a scene about ${nm(b)} and ${nm(c)}${(x.heard as string[]).length ? ` in front of ${(x.heard as string[]).map(nm).join(', ')}` : ''}${at}`;
-          break;
-        case 'puke':
-          s = `${nm(a)} throws up${at}`;
-          break;
-        case 'meal_empty':
-          s = `${nm(a)} turns up for ${x.meal === 'leftovers' ? 'the leftovers' : x.meal} and there's nothing left${at}`;
-          break;
-        case 'swipe_snack':
-          s = `${nm(a)} swipes ${nm(b)}'s snack${x.noticed ? ' and gets caught' : ''}${at}`;
-          break;
-        case 'share_snack':
-          s = `${nm(a)} shares a snack with a hungry ${nm(b)}${at}`;
-          break;
-        case 'sold_out':
-          s = `The snack machine is empty (${nm(a)} took the last one)`;
-          break;
-        case 'passed_out':
-          s = `${nm(a)} passes out${at}`;
-          break;
-        case 'fight':
-          s = `${nm(x.winner as string)} beats ${nm(x.loser as string)} in a brawl${at}`;
-          break;
-        case 'cage_match':
-          s = `cage match: ${nm(x.winner as string)} beats ${nm(x.loser as string)}${x.forfeit ? ' by forfeit' : ''}`;
-          break;
-        case 'dance_off':
-          s = `dance-off${x.sudden ? ' (sudden death)' : ''}: ${nm(x.winner as string)} wins, ${nm(x.loser as string)} loses`;
-          break;
-        case 'bill':
-          s = `tomorrow's bill: ${x.format === 'button' ? 'the Button' : `${x.format === 'cage_match' ? 'cage match' : 'dance-off'}, ${e.actors.map(nm).join(' vs ')}`}`;
-          break;
-        case 'confront':
-          s = `${nm(a)} goes to have it out with ${nm(b)} (${x.with})${at}`;
-          break;
-        case 'caught_cheating':
-          s = `${nm(a)} catches ${nm(b)} cheating at cards${at}`;
-          break;
-        case 'button':
-          s = `the Button: ${(x.pressers as string[]).map(nm).join(', ') || 'nobody'} pressed`;
-          break;
-        case 'break':
-          s = x.level === 'extreme' || x.kind === 'steal_food' ? `${nm(a)} breaks (${x.level} ${x.kind}, over ${x.source})${b ? ` at ${nm(b)}` : ''}${at}` : null;
-          break;
-        case 'murder':
-          s = `MURDER: ${nm(a)} kills ${nm(b)}${at}, ${(x.witnesses as string[]).length ? `seen by ${(x.witnesses as string[]).map(nm).join(', ')}` : 'unseen'}`;
-          break;
-        case 'body_found':
-          s = x.announced ? `the announcer declares ${x.name}'s body` : `${nm(a)} finds ${x.name}'s body${at}`;
-          break;
-        case 'accusation':
-          s = `${nm(a)} accuses ${nm(b)} of killing ${x.name}`;
-          break;
-        case 'trial':
-          s = `trial for ${x.name}: ${nm(x.loser as string)} loses ${x.against}-${Object.keys(x.votes as object).length - (x.against as number)}${x.right ? ' (the killer)' : ' (innocent)'}`;
-          break;
-        case 'killer_known':
-          s = `${e.actors.slice(1).map(nm).join(', ')} now ${e.actors.length > 2 ? 'believe' : 'believes'} ${nm(a)} killed ${x.name} (${x.how})`;
-          break;
-        case 'immunity_spent':
-          s = `${nm(a)} hands over an immunity (${x.cause})`;
-          break;
-        case 'sentence':
-          sentences.push(`${nm(a)} ${(x.infractions as string[]).join('+')}${x.meter ? ` ${x.meter}` : ''}${x.fishbowl ? ` fishbowl ${x.fishbowl}` : ''}`);
-          break;
-        case 'wheel':
-          s = `${nm(a)} spins the Wheel: ${x.segment}`;
-          break;
-        case 'death':
-          s = `${x.name} is spaced (${x.cause}${x.cause === 'meter' && sentences.some((l) => l.startsWith(`${x.name} `)) ? ', after a fine' : ''})`;
-          break;
-        case 'ceremony':
-          if (sentences.length) out.push(`  ${clock(e.t)} sentences: ${sentences.join('; ')}`);
-          sentences = [];
-          s = `ranks: ${(x.ranks as string[]).map(nm).join(', ')}`;
-          break;
-      }
-      if (s) out.push(`  ${clock(e.t)} ${s}`);
-    }
+    for (const e of step(world, MINUTES_PER_DAY)) out.push(...line(e));
   }
   return out;
 }
@@ -626,6 +638,58 @@ export function dayTrace(data: GameData, seed: number, day: number, who?: string
     for (const row of r) {
       out.push(row.head + (row.chats.size ? `  · chats with ${[...row.chats].join(', ')}` : ''));
       for (const n of row.notes) out.push(`      ${n}`);
+    }
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Tuning in: what a new viewer would see at one moment
+
+/**
+ * A snapshot for a viewer tuning in at one moment (`sim tunein`): the last few hours of the
+ * season log, who's aboard and how they're doing, and the relationships worth knowing about.
+ * Read-only: it steps a fresh world to that minute and looks.
+ */
+export function tuneIn(data: GameData, seed: number, day: number, at: number, hours: number): string[] {
+  const world = createWorld(data, seed);
+  const { line, nm } = narrator();
+  const when = (day - 1) * MINUTES_PER_DAY + at;
+  const from = when - hours * 60;
+  const recent: string[] = [];
+  let lastDay = 0;
+  while (world.t < when) {
+    for (const e of step(world, Math.min(MINUTES_PER_DAY, when - world.t))) {
+      const lines = line(e);
+      if (e.t < from || !lines.length) continue;
+      const d = Math.floor(e.t / MINUTES_PER_DAY) + 1;
+      if (d !== lastDay) recent.push(`Day ${d}`);
+      lastDay = d;
+      recent.push(...lines);
+    }
+  }
+  const out = [`Seed ${seed}, tuning in on day ${day} at ${clock(when)}`, '', `The last ${hours} hours`, ...recent, '', 'Aboard now'];
+  const alive = [...world.contestants].sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
+  for (const c of alive) {
+    const days = ((world.t - c.arrivedAt) / MINUTES_PER_DAY).toFixed(1);
+    const doing = c.activity ? `${c.activity.action}${c.activity.phase === 'walk' ? ' (on the way)' : ''}` : c.asleep ? 'asleep' : 'idle';
+    out.push(`  ${String(c.rank ?? '-').padStart(2)} ${c.name.padEnd(9)} ${days.padStart(4)} days aboard, meter ${c.meter.toFixed(0).padStart(3)}, mood ${c.mood.toFixed(0).padStart(3)}, ${doing} in ${c.room}${c.confined ? ', in the fishbowl' : ''}${c.intox > 0.5 ? `, intox ${c.intox.toFixed(0)}` : ''}; ${c.traits.join(', ') || 'no traits'}`);
+    const thoughts = [...c.thoughts].sort((a, b) => Math.abs(b.value) - Math.abs(a.value)).slice(0, 4);
+    if (thoughts.length) out.push(`       thinking: ${thoughts.map((t) => `${t.id}${t.about ? ` (${nm(t.about)})` : ''} ${t.value > 0 ? '+' : ''}${t.value.toFixed(0)}`).join(', ')}`);
+  }
+  out.push('', 'Between them (labels, strong feelings either way, beliefs about killers)');
+  for (const c of alive) {
+    for (const [id, r] of Object.entries(c.ledger)) {
+      if (!alive.some((o) => o.id === id)) continue;
+      const bits: string[] = [];
+      if (r.label !== 'none') bits.push(r.label);
+      if (r.affection >= 40 || r.affection <= -30) bits.push(`affection ${r.affection.toFixed(0)}`);
+      if (r.fear >= 40) bits.push(`fear ${r.fear.toFixed(0)}`);
+      if (r.lovin) bits.push(`lovin' ×${r.lovin}`);
+      if (r.killer) bits.push(`believes they killed ${r.killer}`);
+      if (!bits.length) continue;
+      const why = [...r.reasons].sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)).slice(0, 2).map((x) => x.why);
+      out.push(`  ${c.name} → ${nm(id)}: ${bits.join(', ')}${why.length ? `  (${why.join('; ')})` : ''}`);
     }
   }
   return out;

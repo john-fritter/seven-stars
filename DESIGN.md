@@ -1311,11 +1311,12 @@ sim run --days 30 --seeds 200 --data ./data
 sim sweep --param meter.drain --from 0.8 --to 1.4 --step 0.1 --days 30 --seeds 100
 sim stories --days 30 --seeds 24
 sim season --seed 24 --days 30
+sim tunein --seed 24 --day 12 --at 14:30 --hours 36
 ```
 
 `run` and `stories` take `--set file.path=value` to try a value without editing the data.
 
-**Story sampling** (Oct 23) reads the log the way a daily viewer would, and is meant to be repeated after any change to the show. `stories` counts what makes or breaks a season: how people die and whether a fine came first, what the ceremony reads out and what people sneak in for, who sleeps through the ceremony, first hookups without a kiss, cage reruns, breakdowns, murders and what happens to a killer afterwards, what a daily check-in sees, repeated names and karaoke hogging. `season` prints one season day by day with names (arrivals, first kisses, hookups, betrayals, fights, events, breaks, murders, trials, sentences, the Wheel, deaths), for reading.
+**Story sampling** (Oct 23) reads the log the way a daily viewer would, and is meant to be repeated after any change to the show. `stories` counts what makes or breaks a season: how people die and whether a fine came first, what the ceremony reads out and what people sneak in for, who sleeps through the ceremony, first hookups without a kiss, cage reruns, breakdowns, murders and what happens to a killer afterwards, what a daily check-in sees, repeated names and karaoke hogging. `season` prints one season day by day with names (arrivals, first kisses, hookups, betrayals, fights, events, breaks, murders, trials, sentences, the Wheel, deaths), for reading. `tunein` (Oct 30) is what a viewer switching on at one moment would see: the last few hours of the season log, everyone aboard with rank, days aboard, meter, mood, what they're doing and their strongest thoughts, and every relationship with a label, strong feelings either way or a belief about a killer.
 
 **It reports:**
 
