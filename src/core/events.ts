@@ -13,6 +13,7 @@ import { rollCall } from './show.js';
 import { brawl } from './social.js';
 import { think } from './thoughts.js';
 import type { Booking, Contestant } from './types.js';
+import { trainedEdge } from './wants.js';
 
 const byId = (ctx: Ctx, id: string) => ctx.w.contestants.find((c) => c.id === id);
 const round2 = (x: number) => Math.round(x * 100) / 100;
@@ -68,6 +69,11 @@ const pairKey = (a: Contestant, b: Contestant) => (a.id < b.id ? `${a.id}|${b.id
 export function cagePair(ctx: Ctx, here: Contestant[]): Contestant[] {
   const ev = ctx.w.show.event!;
   if (ev.actors.length) return alive(ctx, ev.actors); // one of them may have died since the slot opened
+  return leastFond(ctx, here);
+}
+
+/** The two who like each other least, a past cage match counting as `rematch` more affection. */
+function leastFond(ctx: Ctx, here: Contestant[]): Contestant[] {
   const rematch = ctx.data.events.cage_match.rematch;
   let best: Contestant[] = [];
   let low = Infinity;
@@ -79,6 +85,27 @@ export function cagePair(ctx: Ctx, here: Contestant[]): Contestant[] {
     }
   }
   return best;
+}
+
+/**
+ * Tomorrow's bill (activities.yaml bill), announced at the ceremony when the Wheel hasn't booked
+ * the slot: the next format and who's in it, so the booked can train or rehearse.
+ */
+export function announceBill(ctx: Ctx): void {
+  const show = ctx.w.show;
+  if (show.booked) return;
+  const format = pick(ctx.w.rng, ctx.data.events.rotation.filter((f) => f !== show.lastFormat));
+  const pool = ctx.w.contestants.filter((c) => !c.confined);
+  let actors: Contestant[] = [];
+  if (format === 'cage_match') actors = leastFond(ctx, pool);
+  else if (format === 'dance_off') {
+    const [lo, hi] = ctx.data.events.dance_off.dancers;
+    const n = Math.min(pool.length, lo + Math.floor(between(ctx.w.rng, 0, hi - lo + 1)));
+    actors = shuffle(ctx.w.rng, [...pool]).slice(0, n);
+  }
+  if (format !== 'button' && actors.length < 2) return; // not enough people; the slot is drawn on the day
+  show.booked = { format, actors: actors.map((c) => c.id), sudden: false, prize: false };
+  log(ctx, 'bill', show.booked.actors, undefined, { format, day: dayOf(ctx.w.t) + 1 });
 }
 
 /** Two contestants fight in the cage: no infraction, nobody dies. A winning challenger takes the prize. */
@@ -121,11 +148,11 @@ export function swapRanks(ctx: Ctx, up: Contestant, down: Contestant): void {
   log(ctx, 'rank_swap', [up.id, down.id], up.room, { up: up.rank, down: down.rank });
 }
 
-/** Dance score: playful + stamina + beauty ÷ 2 + the crowd's affection + a die roll. */
+/** Dance score: playful + stamina + beauty ÷ 2 + the crowd's affection + rehearsal + a die roll. */
 export function danceScore(ctx: Ctx, c: Contestant, crowd: Contestant[]): number {
   const d = ctx.data.events.dance_off;
   const love = crowd.length ? crowd.reduce((s, o) => s + (o.ledger[c.id]?.affection ?? 0), 0) / crowd.length : 0;
-  return d.playful * axis(ctx, c, 'playful') + d.stamina * c.stamina + d.beauty * c.beauty + d.crowd * love + between(ctx.w.rng, 0, d.die);
+  return d.playful * axis(ctx, c, 'playful') + d.stamina * c.stamina + d.beauty * c.beauty + d.crowd * love + trainedEdge(ctx, c, 'dance') + between(ctx.w.rng, 0, d.die);
 }
 
 function danceOff(ctx: Ctx, here: Contestant[]): void {

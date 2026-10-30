@@ -42,6 +42,8 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
   const killers = new Map<string, number>(); // living killers -> when the murder happened
   const known = new Set<string>(); // killers someone believes did it
   let booked = false;
+  const confronted = new Map<string, number>(); // pair -> when one last confronted the other
+  const trained = new Set<string>(); // who trained for today's match
   // Jealousy (and betrayal) in the last two days: did the jealous one turn on the rival, or go after the partner?
   const jealousy: { a: string; b: string; c: string; t: number; rival: boolean; back: boolean; won: boolean }[] = [];
   const breakers = new Map<string, number>();
@@ -238,7 +240,45 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
         case 'kept_up':
           add(n, 'keptUp');
           break;
+        // Wants and things to do (wants.ts, cards.ts).
+        case 'confront':
+          add(n, 'confronts');
+          if (data.with === 'insult') add(n, 'confrontInsults');
+          confronted.set(pairKey(a!, b!), e.t);
+          break;
+        case 'talk':
+          if (data.for === 'friend') add(n, 'comforting');
+          if (data.for === 'partner') add(n, 'partnerTalks');
+          break;
+        case 'cards':
+          add(n, 'hands');
+          if (data.pot) add(n, 'handsForSnacks');
+          break;
+        case 'deal_in':
+          add(n, 'dealIns');
+          break;
+        case 'caught_cheating':
+          add(n, 'cheatsCaught');
+          break;
+        case 'bill':
+          add(n, 'bills');
+          break;
+        case 'training':
+          add(n, 'montages');
+          trained.add(a!);
+          break;
+        case 'got_ready':
+          add(n, 'readied');
+          break;
       }
+      // A confrontation that comes to blows within the half hour.
+      if (e.type === 'fight' && e.room !== 'cage' && (confronted.get(pairKey(a!, b!)) ?? -Infinity) > e.t - 30) add(n, 'confrontFights');
+      if (e.type === 'cage_match' && !data.forfeit) {
+        const w = trained.has(data.winner as string);
+        const l = trained.has(data.loser as string);
+        if (w !== l) add(n, w ? 'trainedWon' : 'trainedLost');
+      }
+      if (e.type === 'cage_match' || e.type === 'dance_off' || e.type === 'event_cancelled') trained.clear();
       if (HOSTILE.has(e.type) && known.has(b!)) add(n, 'killerSnubbed');
       if (e.type === 'cage_match' && (known.has(a!) || known.has(b!))) add(n, 'killerCaged');
     }
@@ -310,7 +350,7 @@ export function storyReport(seeds: StorySeed[]): string[] {
   line();
   line('Fights');
   const cm = n('cageMatches');
-  line(`  cage matches: ${cm}, ${n('cageRepeats')} (${pct(n('cageRepeats'), cm)}) a pair who'd already met in the cage; ${pct(n('cageBooked'), cm)} booked by the Wheel`);
+  line(`  cage matches: ${cm}, ${n('cageRepeats')} (${pct(n('cageRepeats'), cm)}) a pair who'd already met in the cage; ${pct(n('cageBooked'), cm)} booked in advance (by the Wheel or tomorrow's bill)`);
   line(`  brawls outside the cage ${per(n('brawls') * 7, days)} a week`);
   line();
   line('Breakdowns');
@@ -336,6 +376,14 @@ export function storyReport(seeds: StorySeed[]): string[] {
   line(`  killers lived on ${n('killerDays').toFixed(1)} days in all after their murders; ${n('knownKillerDays')} of those days somebody knew`);
   line(`  someone came to believe a killer did it ${n('killerKnown')} times (${n('killerBelievers')} believers)`);
   line(`  aimed at a known killer afterwards: ${n('killerSnubbed')} insults or slights, ${n('killerTargeted')} breaks, ${n('killerCaged')} cage matches, ${n('killerFights')} brawls`);
+  line();
+  line('Wants and things to do');
+  line(`  tomorrow's bill announced on ${pct(n('bills'), n('ceremonies'))} of nights; ${per(n('montages') * 7, days, 1)} training sessions a week for a booked match`);
+  line(`    a cage match between one who trained and one who didn't: the trained one won ${pct(n('trainedWon'), n('trainedWon') + n('trainedLost'))} of ${n('trainedWon') + n('trainedLost')}`);
+  line(`  confronting a rival ${per(n('confronts') * 7, days, 1)} a week (${pct(n('confrontInsults'), n('confronts'))} straight to an insult, ${pct(n('confrontFights'), n('confronts'))} came to blows)`);
+  line(`  going to a friend in trouble ${per(n('comforting'), days, 1)} a day; seeking out a partner or crush ${per(n('partnerTalks'), days, 1)} a day`);
+  line(`  cards: ${per(n('hands') * 7, days, 0)} hands a week (${pct(n('handsForSnacks'), n('hands'))} for snacks), ${per(n('dealIns') * 7, days, 1)} games started a week, ${per(n('cheatsCaught') * 7, days, 1)} cheats caught`);
+  line(`  getting ready for the evening ${per(n('readied'), days, 1)} a day`);
   line();
   line('A daily check-in sees');
   line(`  a death ${pct(n('daysWithDeath'), days)} of days, a first kiss ${pct(n('daysWithFirstKiss'), days)}, someone caught cheating ${pct(n('daysWithCaught'), days)}, a brawl ${pct(n('daysWithBrawl'), days)}`);
@@ -432,6 +480,15 @@ export function seasonLog(data: GameData, seed: number, days: number): string[] 
           break;
         case 'dance_off':
           s = `dance-off${x.sudden ? ' (sudden death)' : ''}: ${nm(x.winner as string)} wins, ${nm(x.loser as string)} loses`;
+          break;
+        case 'bill':
+          s = `tomorrow's bill: ${x.format === 'button' ? 'the Button' : `${x.format === 'cage_match' ? 'cage match' : 'dance-off'}, ${e.actors.map(nm).join(' vs ')}`}`;
+          break;
+        case 'confront':
+          s = `${nm(a)} goes to have it out with ${nm(b)} (${x.with})${at}`;
+          break;
+        case 'caught_cheating':
+          s = `${nm(a)} catches ${nm(b)} cheating at cards${at}`;
           break;
         case 'button':
           s = `the Button: ${(x.pressers as string[]).map(nm).join(', ') || 'nobody'} pressed`;

@@ -188,9 +188,36 @@ The scoring stays a utility score with noise and a weighted pick among the best 
 
 **Result** (200 seeds × 30 days, main after PR #20 → this pass): all 11 targets pass both times. Deaths 2.52 → 2.73 a week, stay 2.64 → 2.42 weeks, breaks 2.39 → 2.88 a day (extreme 5.9 → 7.4 a week), fights 4.65 → 4.79, brawls per hookup 0.76 → 0.47, hookups 2.94 → 5.06 a week, couple nights 0.59 → 0.76, hookups within a couple 0.60 → 0.70. Waking time: talking 19%, the window 15.3% → 2.5% of all time, dancing 8.4% → 1.9%; no contestant-day has three hours at the window (was 54%). Friends 32% → 43% of directed pairs, rivals 9.5% → 7.1%. Points 36.6 → 46.1 a contestant-day, meter at night 49.5 → 54.5. Mood while awake 48.7 → 45.6. **Outgoing is no longer a survival stat:** stay by outgoing band 0–3 / 4–6 / 7–10 went 2.13 / 2.76 / 3.01 → 2.30 / 2.46 / 2.54 weeks. Company: the reserved spend 73% of waking time over their point (15% worn out), the outgoing 32% (1%), and talk 25% vs 38% of it. Speed: 200 seeds × 30 days in about 130 s on this machine with other work running (was about 66 s for 100).
 
-**Still open:** extreme breaks rose to 7.4 a week; rank 7 still spends 10% of waking time under hunger 10; activities started a few minutes before a meal or summons are dropped when it comes (about one a contestant-day, only visible in the debug view). Wants beyond the ratings pull (a booked match, a friend in trouble, status) and new things to do (gym, cards, getting ready) are designed but not built.
+**Still open:** rank 7 still spends 10% of waking time under hunger 10; activities started a few minutes before a meal or summons are dropped when it comes (about one a contestant-day, only visible in the debug view).
 
-**Tooling.** `sim day --seed N --day D [--who Name]` prints every choice each contestant makes in a day with their needs, company, mood, meter and rank, and what happened during it.
+**Tooling.** `sim day --seed N --day D [--who Name]` prints every choice each contestant makes in a day with their needs, company, mood, meter and rank, and what happened during it. An act.start that a want pulled on carries it (`for: partner`, `match`, ...).
+
+### Wants and things to do
+
+*Built Oct 30 (proposals, all numbers in `data/wants.yaml`, `data/activities.yaml` and `data/objects.yaml`): the fourth layer of the choosing design, and the first new pastimes with a reason behind them.*
+
+**Why extreme breaks rose in the last pass.** Their share of breaks didn't move (36% → 37%); breaks as a whole rose 14% because mood fell three points. Measured at every break and over waking hours (40 seeds each): rejection thoughts −8.5 → −12.1 an awake hour (more flirts inside conversations, more rebuffs), grief −6.2 → −8.3 (more friendships, so each death hurts more people), and the new "worn out by people" and "lonely" thoughts. Nothing was comforting anyone, which is where the friend-in-trouble want comes in.
+
+**Wants** are pulls on particular options while a situation lasts, added with the people in the room, before the personality and mood multipliers: strength = base × Π (1 + k × (axis − 5) ÷ 5).
+
+- **A partner or a crush** (label dating or exclusive; with no partner, the strongest crush at attraction 6+, at 0.6 of a partner's pull; × loyal 0.5; a Clingy contestant's × partnerPull): +1.2 to talking with them, +0.5 to doing something with people in the room they're in, +0.8 to getting ready.
+- **A rival** (affection −30 or worse; the worst one): two pulls, and personality picks between them. Avoiding (0.8 × calm 0.6 × brave −0.3) costs every option but chores in the room the rival is awake in. Confronting (0.9 × brave 0.6 × calm −0.6 × kind −0.5, × the bored's lean toward stirring things up) is an option of its own: walk up to six minutes over and have it out, a slight or (35%) an insult, which can come to blows like any insult. Confronting the same person wears like a pastime (+0.5 tolerance each time).
+- **A friend in trouble** (affection 30+, mood under 45, and the meter under 20 or heartbreak, grief and rejection thoughts adding to −8 or worse): +1.5 to talking with them (× kind 0.8, loyal 0.5). In that conversation kind words come × 5, deep talk × 2, sharing a snack or a gift × 3, and each leaves them "{who} was there for me" (+3, 8 hours).
+- **A booked match** (the Wheel's or tomorrow's bill): 1.2 toward what trains for it, growing to double as the 15:00 slot nears over its last 18 hours; cage × brave 0.5 × calm −0.3, dance × vain 0.5 × playful 0.5; × 2 when it's sudden death.
+- **Status** (0.3 × vain 1): toward options tagged `status` (the hot tub, getting ready). A first cut that grew it as the meter fell sent the desperate sneaking into the spa (soaks for status 11.9 a day, sneaking fines 3.1 → 4.1 a day, meter deaths 1.0 → 1.75 a week), so it doesn't.
+- **The meter** is the ratings pull, as built.
+
+**Things to do.**
+
+- **Tomorrow's bill.** After the Wheel, if it hasn't booked tomorrow's event, the host announces it: the next format in the rotation, and for a cage match the two who like each other least (rematches discounted as before), for a dance-off two to four drawn at random; nobody in the fishbowl. A booked contestant who doesn't turn up forfeits, as with the Wheel's bookings.
+- **The heavy bags** (two, in the cage room): a 30-minute workout, fun 6 (fitness is a seventh recreation taste), tagged fitness (vain, brave 0.3), sweaty (rest 6, hunger 4, hygiene 14 an hour), "Worked up a sweat" (+2 × vain). It trains **fight**: +0.5 an hour, fading 0.03 an hour; fight power + 3 × fight.
+- **Rehearsing** (anywhere, only for someone booked into a dance-off): 30 minutes, loud, performing. It trains **dance**: dance score + 4 × dance. Training for a booked match pays 3 when finished (a training montage, `training`). A cage match between one who trained and one who didn't goes to the trained one 58% of the time.
+- **Cards** (a four-seat table in the cafe): 30 minutes, fun 12, a game. It's started by dealing someone in, asked like a conversation (the best person within four minutes' walk, × talking odds × their taste for games), or by sitting down at a table where a game's going; alone at an empty table a seat scores × 0.35. Every 15 minutes a table with two or more plays a hand: a die of 10 + calm × 0.3. The dishonest cheat (0.25 × (10 − honest) ÷ 10, +4); each other player spots it at 0.4 × (honest ÷ 10 + 0.5) and calls it out with an insult ("{who} cheated at cards" −3). The winner takes a snack from each loser who has one, gets "Cleaned up at cards" (+3) and 2 points; a loser with calm under 4 sulks (−2, affection −4). Caught cheating pays 3 each. No `social` tag, so the reserved play too.
+- **Getting ready** (a mirror in each bedroom, two in the public restroom): 20 minutes between 18:30 and 21:00, hygiene +10, tagged status. Finished, they look 1.5 better (attraction's looks, out of 10) until 02:00, and "Looking good tonight" (+3 × vain). Not again while it lasts.
+
+**Result** (200 seeds × 30 days, main after PR #21 → this pass): all 11 targets pass both times. Breaks 2.88 → 2.50 a day, extreme 7.4 → 6.5 a week; mood while awake 45.6 → 47.3. Deaths 2.73 → 2.46 a week (meter 1.00 → 1.06), stay 2.42 → 2.70 weeks, fights 4.79 → 4.99 a week, hookups 5.06 → 5.16. Rivals 7.1% → 9.2% of directed pairs, friends 43% → 38%. Waking time: cards 3.4% of all time, workouts 1.8%, getting ready 1.2%, rehearsing 0.9%, the window 2.5% → 2.0%. A week on the station: 11 confrontations (35% straight to an insult), 60 hands of cards (6.5 cheats caught), 23 training sessions, 30 evenings getting ready; a friend in trouble is sought out about 10 times a day. Karaoke fell a third (49 → 33 a week), and skipped-ceremony fines rose 0.65 → 0.94 a day (more people dozing off by 20:30). Speed: 200 seeds × 30 days in 102 s (was 85 s).
+
+**Still open:** the reserved die sooner again: stay by outgoing 0–3 / 4–6 / 7–10 went 2.30 / 2.46 / 2.54 → 2.02 / 2.88 / 3.26 weeks. Switching each new piece off in turn (100 seeds each) didn't find one cause: they all lean the same way a little, and the band numbers move ±0.3 between runs. Cooking a treat is designed but not built.
 
 ## Booze
 
@@ -1228,7 +1255,7 @@ A killer who accuses an innocent and wins walks free; the engine keeps the truth
 
 The core is a TypeScript library with no I/O, no clock and no global randomness. Everything tunable lives in YAML data files, hot-reloaded by the harness and debug view.
 
-**Data files:** schedule, rooms (including temperatures), plans (the floor plans), objects, species, clothing, generator, traits, needs, personality, actions, social (interactions, the ledger, attraction, fights, knocking), romance, thoughts, breaks, booze, scoring, ranks, rules, wheel, events, trials.
+**Data files:** schedule, rooms (including temperatures), plans (the floor plans), objects, species, clothing, generator, traits, needs, personality, actions, social (interactions, the ledger, attraction, fights, knocking), romance, thoughts, breaks, booze, scoring, ranks, rules, wheel, events, trials, wants (what contestants are after), activities (training, cards, getting ready, tomorrow's bill).
 
 **Core API (sketch):**
 

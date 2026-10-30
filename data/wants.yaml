@@ -1,0 +1,76 @@
+# Wants: what a contestant is after while a situation lasts. DESIGN.md Part two, How contestants
+# choose: wants and things to do. All proposal (Oct 30), from the choosing design doc.
+#
+# A want isn't a bar. It adds a pull to particular options (talking with someone, a workout, the
+# mirror) for as long as its situation lasts, sized by personality:
+#   strength = base × Π (1 + k × (axis − 5) ÷ 5) over its `scale`, × trait multipliers
+# The pull is added before the personality and mood multipliers, like the people in the room.
+# Options a want pulled on are logged with it on act.start (data.for), so day traces show why.
+#
+# The meter is a want too: that's the ratings pull as built (scoring.yaml ratings).
+
+# A partner (their label is one of `labels`) or, with no partner, a crush (attraction at least
+# `crushAt`). Pulls toward talking with them, doing something with people where they are, and
+# getting ready for the evening. A Clingy contestant's pull is × traits.yaml partnerPull.
+partner:
+  labels: [dating, exclusive]
+  crushAt: 6
+  crush: 0.6                 # a crush pulls this much of a partner
+  talk: 1.2
+  near: 0.5
+  ready: 0.8
+  scale: [{ axis: loyal, k: 0.5 }]
+
+# A rival: someone they dislike this much (affection). Two pulls, both always there, and
+# personality picks which wins: avoiding them (a cost on anything but chores in the room the
+# rival is in, awake) or confronting them (walking over to have it out: a slight or an insult,
+# which can turn into a fight as any insult can). The worst rival counts.
+rival:
+  below: -30
+  avoid: { base: 0.8, scale: [{ axis: calm, k: 0.6 }, { axis: brave, k: -0.3 }] }
+  confront:
+    base: 0.9
+    scale: [{ axis: brave, k: 0.6 }, { axis: calm, k: -0.6 }, { axis: kind, k: -0.5 }]
+    action: confront           # objects.yaml personal action
+    within: 6                  # minutes' walk
+    insult: 0.35               # the share of confrontations that go straight to an insult; the rest are slights
+    again: 0.5                 # confronting the same person wears like a pastime: tolerance per confrontation
+
+# A friend (affection at least `friendAt`) in trouble: visibly down (mood under `moodBelow`), and
+# either their meter under `meterBelow` or carrying bad thoughts of these `sources` adding up to
+# `thoughts` or worse (dumped, betrayed, grieving, rebuffed). Pulls toward talking with them. In a conversation with a friend in trouble, the
+# comforting interactions come × `comfort`, and each one leaves the friend `consoled`.
+friend:
+  friendAt: 30
+  moodBelow: 45
+  meterBelow: 20
+  sources: [heartbreak, grief, rejection]
+  thoughts: -8
+  talk: 1.5
+  scale: [{ axis: kind, k: 0.8 }, { axis: loyal, k: 0.5 }]
+  comfort: { kind_words: 5, deep_talk: 2, share_snack: 3, gift: 3 }
+  consoled: consoled
+  consoledBy: [kind_words, deep_talk, share_snack, gift]
+
+# A match booked for them (the Wheel's, or tomorrow's bill announced at the ceremony): training
+# for it. Pulls toward the actions that train that event's skill (objects.yaml `trains`),
+# growing as it nears: base × (1 + soon × (1 − hours left ÷ hours)), from the booking on.
+match:
+  base: 1.2
+  soon: 1
+  hours: 18
+  skills: { cage_match: fight, dance_off: dance }
+  scale:
+    cage_match: [{ axis: brave, k: 0.5 }, { axis: calm, k: -0.3 }]
+    dance_off:  [{ axis: vain, k: 0.5 }, { axis: playful, k: 0.5 }]
+  # Sudden death on the line (the Wheel's dance-off): × this.
+  sudden: 2
+
+# Status: being seen at their best. Pulls toward options tagged `status` (the hot tub, getting
+# ready), more as the meter falls (× 1 + meterK × (1 − meter ÷ max)).
+# Tuning (Oct 30): base 0.5 and meterK 1 sent the desperate sneaking into the spa (soaks for
+# status 11.9 a day, sneaking fines 3.1 → 4.1 a day, meter deaths 1.0 → 1.75 a week).
+status:
+  base: 0.3
+  meterK: 0
+  scale: [{ axis: vain, k: 1 }]

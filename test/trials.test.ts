@@ -9,7 +9,9 @@ import type { Body, Contestant, Trial } from '../src/core/types.js';
 import { aboard, alone, data } from './helpers.js';
 
 /** Everyone meets everyone, so feelings start at zero both ways. */
+/** Everyone meets everyone, fresh: whatever their first morning left between them is wiped. */
 function introduce(ctx: Parameters<typeof meet>[0], cast: Contestant[]): void {
+  for (const a of cast) a.ledger = {};
   for (const a of cast) for (const b of cast) if (a !== b) meet(ctx, a, b);
 }
 

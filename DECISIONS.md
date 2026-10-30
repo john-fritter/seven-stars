@@ -156,6 +156,15 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Which NanoGPT models.
 - [ ] A real name.
 
+**Proposed for wants and things to do (Oct 30).** The next layer of the choosing design (john: yes to wants and activities). All numbers in `data/wants.yaml`, `data/activities.yaml` and `data/objects.yaml`; DESIGN.md Part two, How contestants choose: the next pass, Wants and things to do.
+
+- [ ] Wants as pulls on particular options: a partner or crush, a rival (avoid or confront, personality picks), a friend in trouble (comforting them consoles them), a booked match (train), status (vain). The meter's want is the ratings pull as built.
+- [ ] Confronting a rival is its own option: walk over and have it out (a slight, or 35% an insult).
+- [ ] Tomorrow's bill is announced at the ceremony (format and who's in it) whenever the Wheel hasn't booked the slot, so the booked can train.
+- [ ] Heavy bags in the cage room (train for the cage), rehearsing for a booked dance-off, a card table in the cafe (deal someone in; hands for snacks, cheats called out), a mirror in each bedroom and two in the restroom (getting ready 18:30–21:00 makes them look better until 02:00).
+- [ ] New awards: a training montage 3, a hand of cards won 2, caught cheating 3 each.
+- [ ] Side effects: extreme breaks 7.4 → 6.5 a week, karaoke down a third, skipped-ceremony fines 0.65 → 0.94 a day; the reserved die sooner again (stay 2.02 vs 3.26 weeks for the most outgoing).
+
 **Proposed in the choosing rework (Oct 29).** john asked for the decision system to be rethought as a whole (dinner bell and the chore tag approved; nap cap rejected), then to build and measure. All numbers in `data/`; DESIGN.md Part two, How contestants choose: the next pass.
 
 - [ ] The body clock: the sleep line through the day, the 12-point wake margin, bedtime at line 45, restless sleep on a bad spot.

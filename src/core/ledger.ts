@@ -91,10 +91,11 @@ export function genderFit(a: Contestant, b: Contestant): number {
   return (a.drawnToFeminine * (10 - b.gender) + a.drawnToMasculine * b.gender) / 100;
 }
 
-/** Beauty as others see it, 0..1, clothing included. */
+/** Beauty as others see it, 0..1, clothing included, and more after getting ready (activities.yaml ready). */
 export function looks(ctx: Ctx, b: Contestant): number {
   const clothes = ctx.data.clothing.byRank[String(accessRank(ctx, b)) as '1']!.beauty;
-  return clamp((b.beauty + clothes) / 10, 0, 1);
+  const ready = ctx.w.t < b.primped ? ctx.data.activities.ready.beauty : 0;
+  return clamp((b.beauty + clothes + ready) / 10, 0, 1);
 }
 
 /** How close b's personality is to a's ideal, 0..1. */

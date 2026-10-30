@@ -75,6 +75,8 @@ export interface Contestant {
   intox: number; // 0.. intoxication
   drinks: number; // hangover weight of what they've drunk since the last wake chime
   tolerance: Record<string, number>; // action id -> how worn out on it they are, 0..1 (needs.yaml tolerance)
+  trained: Partial<Record<'fight' | 'dance', number>>; // skills sharpened by training, 0..1, fading (activities.yaml training)
+  primped: number; // looking their best until this time (activities.yaml ready); 0: not
   hammeredSince: number | null;
   inventory: string[]; // carried drinks, by quality
   snacks: number; // snacks stashed from the machine (ranks.yaml snacks)

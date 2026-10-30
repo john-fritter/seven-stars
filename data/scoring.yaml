@@ -38,6 +38,11 @@ awards:
   scene:       { actor: 12 }              # was 6
   puke:        { actor: 4 }
   passed_out:  { actor: 3 }
+  # Proposals (Oct 30, things to do): a hand of cards won, a cheat called out at the table, and a
+  # training montage (a workout or rehearsal for a match they're booked into).
+  cards:       { winner: 2 }
+  caught_cheating: { each: 3 }
+  training:    { actor: 3 }
   karaoke:     { actor: 3 }               # a finished karaoke performance
   infraction:  { actor: 4, witnessed: false }
   sentence:    { actor: 6, witnessed: false }

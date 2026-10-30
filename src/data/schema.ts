@@ -119,6 +119,12 @@ export const actionSchema = z.object({
   unless: z.string().optional(),
   // Proposal (need sliders): uses up a snack from the machine's stock or from their own stash.
   takes: z.enum(['machine', 'stash']).optional(),
+  // Proposals (Oct 30, wants and things to do: activities.yaml).
+  trains: z.enum(['fight', 'dance']).optional(),
+  forEvent: z.string().optional(),
+  window: z.tuple([clock, clock]).optional(),
+  players: z.number().int().min(2).optional(),
+  primps: z.boolean().default(false),
 });
 
 export const objectsSchema = z.object({
@@ -827,6 +833,58 @@ export const traitsSchema = z.object({
   traits: z.record(z.string(), traitSchema).refine((t) => Object.values(t).some((x) => x.weight > 0), 'needs at least one trait with weight above 0'),
 });
 
+const wantScale = z.array(z.object({ axis: axisEnum, k: num.default(0.5) })).default([]);
+
+export const wantsSchema = z.object({
+  partner: z.object({ labels: z.array(z.string()), crushAt: num, crush: num, talk: num, near: num, ready: num, scale: wantScale }),
+  rival: z.object({
+    below: num,
+    avoid: z.object({ base: num, scale: wantScale }),
+    confront: z.object({ base: num, scale: wantScale, action: z.string(), within: num, insult: unit, again: unit }),
+  }),
+  friend: z.object({
+    friendAt: num,
+    moodBelow: num,
+    meterBelow: num,
+    sources: z.array(z.string()),
+    thoughts: num,
+    talk: num,
+    scale: wantScale,
+    comfort: z.record(z.string(), num),
+    consoled: z.string(),
+    consoledBy: z.array(z.string()),
+  }),
+  match: z.object({
+    base: num,
+    soon: num,
+    hours: num.positive(),
+    skills: z.record(z.string(), z.enum(['fight', 'dance'])),
+    scale: z.record(z.string(), wantScale),
+    sudden: num,
+  }),
+  status: z.object({ base: num, meterK: num, scale: wantScale }),
+});
+
+export const activitiesSchema = z.object({
+  training: z.object({ perHour: num.min(0), fadePerHour: num.min(0), fight: num, dance: num }),
+  bill: z.boolean(),
+  cards: z.object({
+    hand: z.number().int().positive(),
+    die: num.min(0),
+    face: num,
+    cheat: unit,
+    cheatBonus: num,
+    spot: unit,
+    won: z.string(),
+    lost: z.string(),
+    soreBelow: num,
+    sore: num,
+    cheated: z.string(),
+    alone: unit,
+  }),
+  ready: z.object({ until: clock, beauty: num }),
+});
+
 /** Every data file, by file name (without .yaml). */
 export const fileSchemas = {
   schedule: scheduleSchema,
@@ -854,6 +912,8 @@ export const fileSchemas = {
   events: eventsSchema,
   trials: trialsSchema,
   traits: traitsSchema,
+  wants: wantsSchema,
+  activities: activitiesSchema,
 } as const;
 
 export type GameData = { [K in keyof typeof fileSchemas]: z.output<(typeof fileSchemas)[K]> };

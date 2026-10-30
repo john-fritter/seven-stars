@@ -106,6 +106,14 @@ thoughts:
   saw_breakdown: { label: "Watched {who} fall apart", value: -2, hours: 12, stack: 2, source: sympathy,  # sympathy picks
                    scale: [{ axis: kind, k: 1 }] }                                                      # no break
 
+  # Wants and things to do (proposal, Oct 30: DESIGN.md How contestants choose: wants and things to do).
+  consoled:      { label: "{who} was there for me", value: 3, hours: 8, stack: 2, source: person }
+  worked_out:    { label: "Worked up a sweat", value: 2, hours: 4, stack: 1, source: status, scale: [{ axis: vain }] }
+  looking_good:  { label: "Looking good tonight", value: 3, hours: 5, stack: 1, source: status, scale: [{ axis: vain, k: 1 }] }
+  won_at_cards:  { label: "Cleaned up at cards", value: 3, hours: 6, stack: 1, source: status }
+  lost_at_cards: { label: "Lost to {who} at cards", value: -2, hours: 6, stack: 1, source: humiliation }
+  cheated_at_cards: { label: "{who} cheated at cards", value: -3, hours: 24, stack: 2, source: person }
+
   # Needs and comfort
   hungry:      { label: "Hungry", value: -4, hours: 0.5, stack: 1, source: hunger }            # proposal
   exhausted:   { label: "Exhausted", value: -8, hours: 0.5, stack: 1, source: discomfort }     # proposal; need sliders (Oct 27): was −6

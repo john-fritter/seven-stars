@@ -17,7 +17,7 @@ pronouns:
   randomChance: 0.15         # "pronouns follow gender with some randomness"
   options: [she/her, he/him, they/them]
 
-recreation: [dancing, music, views, games, spa, nature]
+recreation: [dancing, music, views, games, spa, nature, fitness]   # fitness: proposal (Oct 30, the gym)
 favoriteRecreations: 2
 
 # Named traits (the old quirks among them) are rolled from traits.yaml.
