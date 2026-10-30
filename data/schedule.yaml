@@ -16,6 +16,10 @@ meals:
   - { id: dinner, group: dinner, from: "19:00", to: "20:30", room: lounge, ranks: [1, 6] }
   - { id: leftovers, group: dinner, from: "20:30", to: "21:00", room: common, ranks: [7, 7] }
 mealMinutes: 30          # proposal: how long eating takes
+# Proposal (day traces, Oct 29; john approved): the dinner bell. A meal opening wakes sleepers who
+# haven't eaten that meal and are hungrier than this. Rank 7 slept through the leftovers, on the
+# couch beside them, on half their days.
+dinnerBell: { hungerBelow: 50 }
 
 # Everyone awake attends. Ranks are assigned `resolveAfter` minutes in, once people have walked over.
 ceremony:

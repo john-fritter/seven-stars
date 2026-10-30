@@ -477,3 +477,69 @@ export function seasonLog(data: GameData, seed: number, days: number): string[] 
   }
   return out;
 }
+
+// ---------------------------------------------------------------------------------------------
+// One contestant's day, every choice
+
+/**
+ * Everything each contestant (or the one named) does on one day: every action they start, with
+ * their needs, mood, meter and rank at the moment they chose it, and what happened during it.
+ * For spotting nonsense in a single life (`sim day`).
+ */
+export function dayTrace(data: GameData, seed: number, day: number, who?: string): string[] {
+  const world = createWorld(data, seed);
+  const names = new Map<string, string>();
+  const nm = (id: string) => names.get(id) ?? id;
+  const sheet = new Map<string, string>();
+  const rows = new Map<string, { head: string; notes: string[]; chats: Set<string> }[]>();
+  const start = (day - 1) * MINUTES_PER_DAY;
+  for (let t = 0; t < day * MINUTES_PER_DAY; t++) {
+    const events = step(world, 1);
+    for (const e of events) if (e.type === 'arrive') names.set(e.actors[0]!, e.data!.name as string);
+    if (t < start) continue;
+    for (const e of events) {
+      for (const id of new Set(e.actors)) {
+        if (who && nm(id) !== who) continue;
+        const c = world.contestants.find((x) => x.id === id);
+        if (c && !sheet.has(id)) sheet.set(id, `${c.species}, ${c.pronouns}; ${c.traits.join(', ') || 'no traits'}; ${Object.entries(c.personality).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(', ')}; company point ${c.companyPoint.toFixed(0)}`);
+        const r = rows.get(id) ?? (rows.set(id, []), rows.get(id)!);
+        const x = e.data ?? {};
+        if (e.type === 'act.start') {
+          let s = `${clock(e.t)} ${String(x.action)}${x.object ? ` (${String(x.object).split(':')[1]})` : ''} in ${e.room}${x.walk ? `, walk ${x.walk}` : ''}`;
+          if (c) {
+            const n = c.needs;
+            s = `${s.padEnd(44)} hunger ${n.hunger.toFixed(0)} rest ${n.rest.toFixed(0)} hygiene ${n.hygiene.toFixed(0)} bladder ${n.bladder.toFixed(0)} social ${n.social.toFixed(0)} fun ${n.fun.toFixed(0)} comfort ${n.comfort.toFixed(0)} | company ${c.company.toFixed(0)} mood ${c.mood.toFixed(0)} meter ${c.meter.toFixed(0)}${c.intox > 0.5 ? ` intox ${c.intox.toFixed(0)}` : ''} rank ${c.rank ?? '-'}`;
+          }
+          r.push({ head: s, notes: [], chats: new Set() });
+          continue;
+        }
+        if (e.type === 'meet') continue;
+        if (e.type === 'act.end') {
+          if (x.how !== 'done' && r.length) r[r.length - 1]!.notes.push(`${clock(e.t)} (${x.how} after ${x.minutes}m)`);
+          continue;
+        }
+        if (!r.length) r.push({ head: `${clock(e.t)} (asleep or already busy)`, notes: [], chats: new Set() });
+        const cur = r[r.length - 1]!;
+        const others = e.actors.filter((a) => a !== id).map(nm);
+        if (e.type === 'chitchat') {
+          for (const o of others) cur.chats.add(o);
+          continue;
+        }
+        const d = Object.entries(x)
+          .filter(([k]) => k !== 'awards')
+          .map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v).slice(0, 60) : v}`)
+          .join(' ');
+        cur.notes.push(`${clock(e.t)} ${e.type}${e.actors[0] !== id ? ` (by ${nm(e.actors[0]!)})` : ''}${others.length ? ` ${others.join(', ')}` : ''}${d ? ` {${d}}` : ''}${e.points ? ` +${e.points.toFixed(1)}` : ''}`);
+      }
+    }
+  }
+  const out: string[] = [];
+  for (const [id, r] of rows) {
+    out.push('', `${nm(id)}: ${sheet.get(id) ?? '(gone)'}`);
+    for (const row of r) {
+      out.push(row.head + (row.chats.size ? `  · chats with ${[...row.chats].join(', ')}` : ''));
+      for (const n of row.notes) out.push(`      ${n}`);
+    }
+  }
+  return out;
+}

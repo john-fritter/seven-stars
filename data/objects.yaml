@@ -60,30 +60,30 @@ types:
     capacity: 1
     actions:
       # proposal: washing up is a small hygiene top-up
-      - { id: wash_up, label: washes up, minutes: 2, gains: { hygiene: 5 }, tags: [] }
+      - { id: wash_up, label: washes up, minutes: 2, gains: { hygiene: 5 }, tags: [chore] }
       - { id: sink_bath, label: takes a sink bath, minutes: 15, gains: { hygiene: 15 }, ranks: [7, 7],
           speciesGains: { aquatic: { hygiene: 40 } },  # proposal: "any water refills" aquatics
-          notSpecies: [feline], comfort: 25, thought: sink_bath, tags: [exposed] }
+          notSpecies: [feline], comfort: 25, thought: sink_bath, tags: [chore, exposed] }
   shower_hot:
     capacity: 1
     actions:
       - { id: shower, label: takes a hot shower, minutes: 15, gains: { hygiene: 60 }, comfort: 85,
-          notSpecies: [feline], unless: cold_water, tags: [solitary, exposed, comforting] }
+          notSpecies: [feline], unless: cold_water, tags: [chore, solitary, exposed, comforting] }
       # On a cold-water day (wheel.yaml effects) the hot shower runs cold.
       - { id: cold_shower, label: takes a cold shower, minutes: 10, gains: { hygiene: 40 }, comfort: 25,
           speciesGains: { aquatic: { hygiene: 60 } }, cost: 0.5, speciesCost: { aquatic: 0 },
-          notSpecies: [feline], when: cold_water, thought: cold_shower, tags: [solitary, exposed] }
+          notSpecies: [feline], when: cold_water, thought: cold_shower, tags: [chore, solitary, exposed] }
   shower_cold:
     capacity: 1
     actions:
       - { id: cold_shower, label: takes a cold shower, minutes: 10, gains: { hygiene: 40 }, comfort: 25,
           speciesGains: { aquatic: { hygiene: 60 } },
           cost: 0.5, speciesCost: { aquatic: 0 },  # proposal
-          notSpecies: [feline], thought: cold_shower, tags: [solitary, exposed] }
+          notSpecies: [feline], thought: cold_shower, tags: [chore, solitary, exposed] }
   thermostat:
     capacity: 1
     actions:
-      - { id: set_thermostat, label: changes the thermostat, kind: thermostat, minutes: 1, tags: [] }
+      - { id: set_thermostat, label: changes the thermostat, kind: thermostat, minutes: 1, tags: [chore] }
 
   # Booze (booze.yaml). Social only counts with company; drinking together bonds.
   bar:
@@ -129,7 +129,7 @@ types:
   vending_snacks:
     capacity: 1
     actions:
-      - { id: snack, label: gets a snack, minutes: 5, gains: { hunger: 20, fun: 3 }, takes: machine, tags: [] }
+      - { id: snack, label: gets a snack, minutes: 5, gains: { hunger: 20, fun: 3 }, takes: machine, tags: [chore] }
   hot_tub:
     capacity: 4
     actions:
@@ -150,5 +150,7 @@ types:
 
 # Actions that need no object.
 personal:
-  - { id: eat_snack, label: eats a stashed snack, minutes: 5, gains: { hunger: 20, fun: 3 }, takes: stash, tags: [] }   # proposal (need sliders)
-  - { id: groom, label: grooms, minutes: 15, gains: { hygiene: 20 }, onlySpecies: [feline], tags: [solitary] }
+  - { id: eat_snack, label: eats a stashed snack, minutes: 5, gains: { hunger: 20, fun: 3 }, takes: stash, tags: [chore] }   # proposal (need sliders)
+  # Proposal (company, Oct 29): a conversation with someone, chosen like anything else (social.yaml company.talk).
+  - { id: talk, label: talks with, minutes: 30, company: true, tags: [social] }
+  - { id: groom, label: grooms, minutes: 15, gains: { hygiene: 20 }, onlySpecies: [feline], tags: [chore, solitary] }

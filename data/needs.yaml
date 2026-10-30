@@ -18,10 +18,34 @@ sleep:
   restPerHour: 9         # × the bed's quality: suite 1.2, good 1.0, dorm 0.8, couch 0.6
                          # need sliders (Oct 28): was 12, so every bed, couch included, refilled more than a
                          # day's rest and a snorer or a hummer cost nothing
-  # Proposal (naps, Oct 27): outside their night, sleep is only a choice with rest under this.
-  # Fun and social sit at 94 to 99 all day, so by late afternoon a nap at rest ~65 outscored
-  # everything else and half the cast slept through the evening. Was effectively 100.
-  napBelow: 30
+  # The body clock (proposal, Oct 29; john: "it should be harder for people to sleep in the day,
+  # you're fighting the circadian rhythm"). Two forces, as in people: sleep pressure (low rest) and
+  # a daily alertness curve. `sleepLine` is the rest below which they can drop off at that time of
+  # their day (night owls and early birds shift it with their night): high through the night, a
+  # dip after lunch, lowest in the early evening, when it's hard to drop off. Asleep, they wake
+  # once rest is `margin` above the line, so by day a doze ends as the curve climbs and by night
+  # (line 90 + margin) they sleep until rested. Replaces napBelow 30 (Oct 27), which let a nap
+  # that started at 16:00 run to the 21:00 chime.
+  clock:
+    sleepLine:
+      - { at: "00:00", rest: 90 }
+      - { at: "05:00", rest: 90 }
+      - { at: "06:30", rest: 60 }
+      - { at: "08:00", rest: 30 }
+      - { at: "12:00", rest: 25 }
+      - { at: "14:30", rest: 35 }    # the post-lunch dip
+      - { at: "16:30", rest: 25 }
+      - { at: "18:00", rest: 12 }    # the early-evening peak of alertness
+      - { at: "20:30", rest: 12 }
+      - { at: "22:00", rest: 30 }
+      - { at: "23:00", rest: 80 }
+    margin: 12
+    # From this line up it's bedtime (about 22:20, or their own night): a bed of their own pulls as
+    # at night, so a tired person heads to bed, not the nearest couch.
+    bedtime: 45
+    # Sleeping somewhere uncomfortable (spot comfort under `below`: the couch 40, the fishbowl
+    # floor 15) wakes them now and then; awake at night, their own bed's pull takes them there.
+    restless: { below: 45, perHour: 0.25 }
   # Proposal: every bed sleeps two. Sharing is welcome with someone they fancy and unwelcome
   # otherwise. Scoring a bed with someone in it (or a host's bed), the bedmate adds
   #   pull × (attraction − neutral) ÷ 10 + labels[their label for the bedmate]
@@ -60,11 +84,24 @@ bladder:
 #   idle:     killing time (nothing worth doing, queueing for a toilet, turned away at a door)
 situational:
   alone: { social: 1.5 }
-  idle: { actions: [idle, wait, at_door], drain: { fun: 2 } }
+  idle: { actions: [idle, wait, at_door, brushed_off], drain: { fun: 2 } }
 # Recreation wears thin: each action's gains of these needs × max(floor, 1 − tolerance), where
 # tolerance rises by perUse over one go (spread over its minutes, to at most 1) and falls
 # recoverPerHour. Window-staring and dancing on repeat give less and less.
-tolerance: { needs: [fun], perUse: 0.3, recoverPerHour: 0.04, floor: 0.4 }
+tolerance: { needs: [fun], perUse: 0.3, recoverPerHour: 0.04, floor: 0.4, appealFloor: 0.15 }
+# Proposal (boredom, Oct 29; john: "the boredom fix should have taken care of the window"). It only
+# trimmed fun, and fun wasn't why people sat there. Now any pastime (not a chore, sleep, a drink or
+# a meal) wears with use, and its whole appeal is × the larger of appealFloor and 1 − tolerance,
+# so the window is lovely for half an hour and dull by the third time. Time with the same person
+# wears the same way (social.yaml company.talk).
+# The bored stir things up: b = (below − fun) ÷ below. Interaction chance × 1 + chance × b; these
+# interactions' weights × 1 + k × b (still scaled by their taste, so the kind rarely insult);
+# actions with these tags × 1 + k × b.
+boredom:
+  below: 60
+  chance: 0.5
+  interactions: { flirt: 1.5, kiss: 1, proposition: 1, slight: 1.5, insult: 1.5 }
+  tags: { risky: 1.5, illicit: 1, performing: 1, drinking: 0.5, game: 0.5 }
 
 comfortFollowPerHour: 30 # proposal: how fast comfort moves toward the current situation's comfort
 

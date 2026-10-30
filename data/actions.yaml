@@ -1,7 +1,14 @@
 # Choosing actions. DESIGN.md Part two, Choosing actions.
 noise: [0.85, 1.15]
 topChoices: 3                 # a weighted pick among the best few
+# Proposal (day traces, Oct 29): only options scoring at least this share of the best are in the
+# pick. Was 0: a rank 1 at 00:45 with their suite bed at 4.8 still took the couch (0.8) one time in ten.
+withinOfBest: 0.6
 walkCostPerMinute: 0.05       # proposal
+# Proposal (day traces, Oct 29; john approved): chores are done for themselves. Liking the people in
+# the room adds nothing to an action tagged this, so nobody washes their hands eleven times next
+# to a friend. (Sleep and the toilet never had it.)
+choreTag: chore
 modestyCost: 1.0              # proposal: × modesty / 10, for exposed actions with others in the room
 modestyThought: no_privacy    # proposal: finishing an exposed action with someone awake watching (scaled by modesty)
 recreationTaste:              # proposal: fun gains × this

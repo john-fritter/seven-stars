@@ -17,20 +17,27 @@ function aboard(seed = 11, d = data) {
 const flat = (x: number) => ({ outgoing: x, kind: x, honest: x, calm: x, loyal: x, brave: x, vain: x, playful: x });
 
 describe('interaction chance', () => {
-  it('is outgoing ÷ 10 × (0.5 + social urgency)', () => {
+  it('is outgoing ÷ 10 × (0.5 + loneliness²), less when worn out by people', () => {
     const { ctx, cast } = aboard();
     const c = cast[0]!;
     c.personality.outgoing = 8;
-    c.needs.social = 100;
+    c.needs.fun = 100; // not bored
+    c.meter = 100; // not desperate
+    c.companyPoint = 50;
+    c.company = 50;
     expect(interactionChance(ctx, c)).toBeCloseTo(0.4);
-    c.needs.social = 0;
+    c.company = 0;
     expect(interactionChance(ctx, c)).toBeCloseTo(1.2);
+    c.company = 100;
+    expect(interactionChance(ctx, c)).toBeLessThan(0.4);
   });
 
   it('scales insults by dislike and cruelty, and gates flirts on attraction', () => {
     const { ctx, cast } = aboard();
     const [a, b] = cast as [Contestant, Contestant];
     meet(ctx, a, b);
+    a.needs.fun = 100; // not bored
+    a.meter = 100; // not desperate
     const insult = data.social.interactions.find((d) => d.id === 'insult')!;
     const flirt = data.social.interactions.find((d) => d.id === 'flirt')!;
     a.personality.kind = 5;

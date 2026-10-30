@@ -53,6 +53,8 @@ export interface Contestant {
   rank: number | null; // null until their first ceremony
   bed: string | null; // object instance id
   needs: Needs;
+  company: number; // how much company they've had lately (social.yaml company); needs.social is how close it is to companyPoint
+  companyPoint: number; // the company level that feels right to them
   mood: number;
   health: number;
   meter: number;

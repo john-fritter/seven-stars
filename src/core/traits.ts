@@ -25,6 +25,7 @@ export interface TraitFx {
   dislikeFade: number;
   partnerPull: number;
   crowd: { at: number; thought: string } | undefined;
+  companyPoint: number;
   watched: { events: string[]; thought: string }[];
   attraction: number;
   datingAfter: number | undefined;
@@ -68,6 +69,7 @@ export function mergeTraits(defs: TraitDef[]): TraitFx {
     dislikeFade: 1,
     partnerPull: 1,
     crowd: undefined,
+    companyPoint: 0,
     watched: [],
     attraction: 1,
     datingAfter: undefined,
@@ -105,6 +107,7 @@ export function mergeTraits(defs: TraitDef[]): TraitFx {
     fx.dislikeFade *= t.dislikeFade;
     fx.partnerPull *= t.partnerPull;
     fx.crowd ??= t.crowd;
+    fx.companyPoint += t.companyPoint;
     if (t.watched) fx.watched.push(t.watched);
     fx.attraction *= t.attraction;
     if (t.datingAfter !== undefined) fx.datingAfter = Math.min(fx.datingAfter ?? Infinity, t.datingAfter);

@@ -16,12 +16,13 @@ function plain(c: Contestant, ...traits: string[]): Contestant {
 }
 
 describe('the ratings pull', () => {
-  it('desperation runs from 0 at meter 50 to 1 at 0, squared', () => {
+  it('desperation runs from 0 at meter `from` to 1 at 0, squared', () => {
     const { ctx, cast } = aboard();
     const c = cast[0]!;
-    c.meter = 60;
+    const from = data.scoring.ratings.from;
+    c.meter = from + 10;
     expect(desperation(ctx, c)).toBe(0);
-    c.meter = 25;
+    c.meter = from / 2;
     expect(desperation(ctx, c)).toBeCloseTo(0.25);
     c.meter = 0;
     expect(desperation(ctx, c)).toBe(1);
@@ -33,14 +34,14 @@ describe('the ratings pull', () => {
     const o = plain(cast[1]!);
     w.show.today = {};
     w.show.mine = {};
-    c.meter = 80;
+    c.meter = data.scoring.ratings.from + 5;
     expect(actionPull(ctx, c, karaoke)).toBe(0);
     expect(interactionBoost(ctx, c, o, inter('insult'))).toBe(1);
     c.meter = 0;
     // karaoke pays the actor 3: 10 × 1 × 3 ÷ 10 × taste 1
     expect(actionPull(ctx, c, karaoke)).toBeCloseTo(data.scoring.ratings.actions * 0.3);
-    // an insult pays the insulter 4: × 1 + 5 × 4 ÷ 10
-    expect(interactionBoost(ctx, c, o, inter('insult'))).toBeCloseTo(1 + data.scoring.ratings.interactions * 0.4);
+    // an insult pays the insulter its actor share: × 1 + interactions × that ÷ 10
+    expect(interactionBoost(ctx, c, o, inter('insult'))).toBeCloseTo(1 + (data.scoring.ratings.interactions * data.scoring.awards.insult!.actor!) / 10);
     expect(interactionBoost(ctx, c, o, inter('chitchat'))).toBe(1); // pays nothing
     expect(interactionBoost(ctx, c, o, inter('breakup'))).toBe(1); // never for the cameras
     // The kind have no taste for it, and a Survivor plays harder.
@@ -68,7 +69,7 @@ describe('the ratings pull', () => {
     const { ctx, cast } = aboard();
     const c = plain(cast[0]!, 'stage_fright');
     c.personality.outgoing = 2;
-    c.meter = 60;
+    c.meter = data.scoring.ratings.from + 5;
     expect(boldness(ctx, c)).toBe(2);
     expect(desperateEase(ctx, c, karaoke)).toBe(1);
     c.meter = 0;
@@ -91,7 +92,7 @@ describe('the surprise bonus', () => {
     w.show.mine = {};
     const plainInsult = log(ctx, 'insult', [a.id, b.id], 'cafe');
     expect(plainInsult.data!.surprise).toBeUndefined();
-    expect((plainInsult.data!.awards as Record<string, number>)[a.id]).toBe(4);
+    expect((plainInsult.data!.awards as Record<string, number>)[a.id]).toBe(data.scoring.awards.insult!.actor!);
     // A saint's insult: taste 0.1, so × 1 + 1 × 0.9.
     b.personality.kind = 10;
     w.show.today = {};
@@ -99,6 +100,6 @@ describe('the surprise bonus', () => {
     w.show.mine = {};
     const saint = log(ctx, 'insult', [b.id, a.id], 'cafe');
     expect(saint.data!.surprise).toBeCloseTo(1.9);
-    expect((saint.data!.awards as Record<string, number>)[b.id]).toBeCloseTo(4 * 1.9);
+    expect((saint.data!.awards as Record<string, number>)[b.id]).toBeCloseTo(data.scoring.awards.insult!.actor! * 1.9);
   });
 });

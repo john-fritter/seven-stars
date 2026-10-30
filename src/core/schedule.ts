@@ -71,8 +71,15 @@ export function runSchedule(ctx: Ctx): void {
     if (m !== meal.from) continue;
     // The group's first sitting puts out the day's spread (rank 7's leftovers come out of dinner's).
     if (s.meals.find((x) => x.group === meal.group) === meal) openSpread(ctx, meal.group);
+    const bell = s.dinnerBell;
     for (const c of ctx.w.contestants) {
-      if (!c.asleep && !c.breakdown && !onToilet(ctx, c) && openMeals(ctx, c).some((x) => x.id === meal.id)) endActivity(ctx, c, 'interrupted');
+      const open = openMeals(ctx, c).some((x) => x.id === meal.id);
+      if (!c.asleep && !c.breakdown && !onToilet(ctx, c) && open) endActivity(ctx, c, 'interrupted');
+      // The dinner bell: the hungry get up for it.
+      if (bell && open && c.asleep && !c.confined && c.needs.hunger < bell.hungerBelow) {
+        endActivity(ctx, c, 'woke');
+        log(ctx, 'dinner_bell', [c.id], meal.room, { meal: meal.id, hunger: Math.round(c.needs.hunger) });
+      }
     }
   }
 

@@ -15,25 +15,27 @@
 # secret:    hidden lifetime points for the first actor, revealed when they die (murder)
 
 awards:
-  deep_talk:   { each: 4 }                # personality step 2 (D-113): was 2, so quiet depth pays
+  # Ratings rebalance (proposal, Oct 29; john: drain faster, bigger rewards for the most dramatic
+  # acts). Talk is now a chosen activity, so the small stuff is everywhere and pays less; drama pays more.
+  deep_talk:   { each: 2 }                # was 4 (personality step 2), 2 before that
   kind_words:  { actor: 1 }               # "Gift; kind words: 2 giver; 1"
   gift:        { actor: 2 }
   slight:      { each: 2 }
-  insult:      { actor: 4, target: 2 }
-  fight:       { each: 12, winner: 6, only: outsideCage }
+  insult:      { actor: 8, target: 3 }    # was 4 / 2
+  fight:       { each: 20, winner: 10, only: outsideCage }   # was 12 / 6
   flirt:       { each: 4 }                # a flirt that lands
   rebuff:      { actor: 3 }               # the rebuffed flirter
-  kiss:        { each: 6 }
-  lovin:       { each: 3, by: first, cases: { "true": { each: 12 } } }   # 12 each the first time with that person
-  betrayal:    { each: 10 }               # discovered: the betrayed, the betrayer and the third party
-  breakup:     { each: 8 }
-  break:       { by: level, cases: { minor: { actor: 5 }, major: { actor: 10 }, extreme: { actor: 15 } } }
+  kiss:        { each: 10 }               # was 6
+  lovin:       { each: 4, by: first, cases: { "true": { each: 20 } } }   # 20 each the first time with that person (was 3 / 12)
+  betrayal:    { each: 25 }               # was 10;               # discovered: the betrayed, the betrayer and the third party
+  breakup:     { each: 15 }               # was 8
+  break:       { by: level, cases: { minor: { actor: 5 }, major: { actor: 15 }, extreme: { actor: 25 } } }   # major and extreme were 10 / 15
   hammered:    { actor: 4 }               # hammered antics, once per time they get hammered
   # Proposals (Oct 23): loose lips, confessions and scenes (romance.yaml gossip), puking and
   # passing out (booze.yaml). A scene's break pays as a break; this is the airing on top.
   blab:        { actor: 3, target: 1 }
-  confession:  { each: 10 }
-  scene:       { actor: 6 }
+  confession:  { each: 20 }               # was 10
+  scene:       { actor: 12 }              # was 6
   puke:        { actor: 4 }
   passed_out:  { actor: 3 }
   karaoke:     { actor: 3 }               # a finished karaoke performance
@@ -71,7 +73,7 @@ modifiers:
 # (proposal): desperate singles propositioning for the cameras costs hookups within a couple.
 # ignore: interactions never pulled.
 ratings:
-  from: 50
+  from: 75     # ratings rebalance (Oct 29): was 50; people start playing to the cameras sooner
   power: 2
   actions: 10
   interactions: 5

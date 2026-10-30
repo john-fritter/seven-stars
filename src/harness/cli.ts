@@ -4,13 +4,14 @@ import { dirname } from 'node:path';
 import { DataError, loadGameData } from '../data/load.js';
 import { applyOverrides, runJob } from './pool.js';
 import { report, type Metric, type Report } from './stats.js';
-import { seasonLog, storyReport } from './stories.js';
+import { dayTrace, seasonLog, storyReport } from './stories.js';
 
 const USAGE = `Usage:
   sim run   --days 30 --seeds 200 [--data ./data] [--out results/run.json] [--threads N]
   sim sweep --param meter.start --from 40 --to 80 --step 10 --days 30 --seeds 100 [--data ./data]
   sim stories --days 30 --seeds 24 [--data ./data]     story sampling: how a viewer would see the seasons
   sim season --seed 24 --days 30 [--data ./data]       one season, day by day, with names
+  sim day --seed 3 --day 5 [--who Pax] [--data ./data] every choice each contestant makes in a day, with their needs
 
 run and stories take --set file.path=value[,file.path=value] to try values without editing the data.
 Every command takes --plan ring|spine|hub to run on another floor plan (plans.yaml).
@@ -214,6 +215,8 @@ async function main(): Promise<void> {
     console.log(`\n(${((performance.now() - t0) / 1000).toFixed(1)}s)`);
   } else if (cmd === 'season') {
     console.log(seasonLog(applyOverrides(loadGameData(dataDir), overrides), num(opts, 'seed'), days).join('\n'));
+  } else if (cmd === 'day') {
+    console.log(dayTrace(applyOverrides(loadGameData(dataDir), overrides), num(opts, 'seed'), num(opts, 'day'), opts.who).join('\n'));
   } else {
     console.log(USAGE);
     process.exitCode = cmd ? 1 : 0;

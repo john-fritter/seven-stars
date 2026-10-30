@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { drainNeeds, freshness, recover, wearThin } from '../src/core/needs.js';
-import { companyPull } from '../src/core/social.js';
+import { companyWant, drainNeeds, freshness, recover, wearThin } from '../src/core/needs.js';
 import { think } from '../src/core/thoughts.js';
 import type { Contestant } from '../src/core/types.js';
 import { aboard, alone, data } from './helpers.js';
@@ -22,37 +21,53 @@ describe('fun and social', () => {
     expect(c.tolerance.gaze).toBeUndefined();
   });
 
-  it('bad moments knock the sliders down', () => {
+  it('bad moments knock the sliders down (social through company)', () => {
     const { ctx, cast } = aboard();
     const [a, b] = cast as [Contestant, Contestant];
-    a.needs.social = 80;
+    a.company = 80;
     think(ctx, a, 'rebuffed', b.id);
-    expect(a.needs.social).toBe(80 + data.thoughts.thoughts.rebuffed!.needs.social!);
+    expect(a.company).toBe(80 + data.thoughts.thoughts.rebuffed!.needs.social!);
   });
 
-  it('social drains faster alone', () => {
+  it('company rises with people around and falls alone', () => {
     const { w, ctx, cast } = aboard();
     const [a, b] = cast as [Contestant, Contestant];
     alone(w, a, b);
     Object.assign(b, { room: a.room, asleep: false });
-    a.needs.social = 50;
+    a.company = 20;
     drainNeeds(ctx, a);
-    const company = 50 - a.needs.social;
+    expect(a.company).toBeGreaterThan(20);
     b.room = a.room === 'garden' ? 'lounge' : 'garden';
-    a.needs.social = 50;
+    a.company = 50;
     drainNeeds(ctx, a);
-    expect(50 - a.needs.social).toBeCloseTo(company * (data.needs.situational.alone.social ?? 1));
+    expect(a.company).toBeLessThan(50);
   });
 
-  it('pulls the lonely toward anyone awake', () => {
+  it('social is how close company sits to their own point, both ways', () => {
     const { w, ctx, cast } = aboard();
     const [a, b] = cast as [Contestant, Contestant];
     alone(w, a, b);
-    Object.assign(b, { room: 'garden', asleep: false, activity: null });
-    a.ledger = {};
-    a.needs.social = 100;
-    expect(companyPull(ctx, a, 'garden')).toBe(0);
-    a.needs.social = 10;
-    expect(companyPull(ctx, a, 'garden')).toBeGreaterThan(0);
+    a.companyPoint = 30;
+    a.company = 30;
+    drainNeeds(ctx, a);
+    const near = a.needs.social;
+    a.company = 80;
+    drainNeeds(ctx, a);
+    const over = a.needs.social;
+    a.company = 0;
+    drainNeeds(ctx, a);
+    expect(near).toBeGreaterThan(90);
+    expect(over).toBeLessThan(10);
+    expect(a.needs.social).toBeLessThan(near);
+  });
+
+  it('wants company when under their point, and quiet when over it', () => {
+    const { ctx, cast } = aboard();
+    const a = cast[0]!;
+    a.companyPoint = 50;
+    a.company = 10;
+    expect(companyWant(ctx, a)).toBeGreaterThan(0);
+    a.company = 90;
+    expect(companyWant(ctx, a)).toBeLessThan(0);
   });
 });

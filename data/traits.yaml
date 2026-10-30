@@ -162,6 +162,7 @@ traits:
     weight: 1
     lean: { by: outgoing, k: -0.8 }
     drain: { social: 0.5 }
+    companyPoint: -20
     crowd: { at: 4, thought: crowded }
   gossip:
     label: Gossip
