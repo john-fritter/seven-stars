@@ -28,6 +28,8 @@ export interface Activity {
   bite?: number; // a meal: hunger a minute from the portion they got
   seconds?: boolean; // a meal: they've gone back for more
   portion?: number; // a meal: how much of a portion they were served (0..1)
+  summoned?: string; // a confessional the operator called them to: the moment it was about
+  about?: string; // ...and the other one in it
 }
 
 export interface Contestant {
@@ -83,6 +85,7 @@ export interface Contestant {
   foundEmpty?: number; // when they last found the snack machine empty
   breakdown: Breakdown | null; // in the middle of a mental break
   seen: Sighting[]; // romance they know about (saw, did, or heard), for gossip and confessions
+  told: Record<string, number>; // what they've told the diary-room camera (confessionals.ts) -> when
 }
 
 /** Something they know: `who` kissed or bedded `with`. */
@@ -180,6 +183,25 @@ export interface ShowState {
   spread: Record<string, number>; // meal group -> portions left today (ranks.yaml spread)
   snacks: number; // left in the snack machine
   restocked: number; // when it was last refilled
+  tapes: Record<string, Tape>; // contestant -> their latest confessional, for playback at dinner
+  summons: Summons[]; // the operator's calls to the diary room, waiting for them to be free
+  called: { day: number; ids: string[] }; // who's been summoned today
+  playback: { who: string; day: number }[]; // confessionals to air at that day's dinner
+}
+
+/** A confessional on tape: what was said, about whom. */
+export interface Tape {
+  t: number;
+  kind: string;
+  about: string[];
+}
+
+/** "Sola to the confessional, please": after a big moment, once they're free. */
+export interface Summons {
+  who: string;
+  moment: string; // the event type
+  about: string | null; // the other one in it
+  t: number;
 }
 
 /** One reason in the ledger. Repeats of the same reason merge into the latest entry. */
@@ -214,6 +236,7 @@ export interface Thought {
   about: string | null;
   value: number; // personality and species already applied
   until: number;
+  vented?: boolean; // poured out in the diary room: its weight already eased (confessionals.yaml vent)
 }
 
 export interface Guest {

@@ -337,6 +337,7 @@ export const scoringSchema = z.object({
   surprise: z.object({
     bonus: num.nonnegative(),
     acts: z.record(z.string(), z.string()).default({}),
+    tags: z.record(z.string(), z.array(z.string())).default({}),
   }),
 });
 
@@ -885,6 +886,33 @@ export const activitiesSchema = z.object({
   ready: z.object({ until: clock, beauty: num }),
 });
 
+export const CONFESSIONAL_KINDS = ['vent', 'take', 'grudge', 'crush', 'spill', 'suspicion', 'cheating'] as const;
+export type ConfessionalKind = (typeof CONFESSIONAL_KINDS)[number];
+
+export const confessionalsSchema = z.object({
+  action: z.string(),
+  event: z.string(),
+  topics: z.record(z.enum(CONFESSIONAL_KINDS), z.object({ loud: z.boolean() })),
+  grudge: z.object({ below: num }),
+  crush: z.object({ attraction: num }),
+  told: z.object({ hours: num.positive() }),
+  vent: z.object({ k: num.min(0), minBad: num.min(0), share: unit }),
+  say: z.object({ k: num.min(0) }),
+  ratings: num.min(0),
+  cautious: unit,
+  summons: z.object({ perDay: z.number().int().min(0), minPoints: num, events: z.array(z.string()), expireHours: num.positive() }),
+  playback: z.object({
+    chance: unit,
+    days: num.positive(),
+    at: clock,
+    room: z.string(),
+    speaker: z.string(),
+    about: z.object({ affection: num, thought: z.string() }),
+    crush: z.object({ affection: num, thought: z.string() }),
+    killer: z.object({ fear: num }),
+  }),
+});
+
 /** Every data file, by file name (without .yaml). */
 export const fileSchemas = {
   schedule: scheduleSchema,
@@ -914,6 +942,7 @@ export const fileSchemas = {
   traits: traitsSchema,
   wants: wantsSchema,
   activities: activitiesSchema,
+  confessionals: confessionalsSchema,
 } as const;
 
 export type GameData = { [K in keyof typeof fileSchemas]: z.output<(typeof fileSchemas)[K]> };

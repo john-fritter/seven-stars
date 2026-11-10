@@ -43,6 +43,11 @@ awards:
   cards:       { winner: 2 }
   caught_cheating: { each: 3 }
   training:    { actor: 3 }
+  # Proposals (Oct 30, confessionals.yaml): what a confessional pays goes by what's said, and the
+  # camera is the only witness. A playback at dinner pays the speaker again (it's on air).
+  confessional: { by: kind, witnessed: false, cases: { vent: { actor: 3 }, take: { actor: 5 }, grudge: { actor: 6 }, crush: { actor: 6 },
+                  spill: { actor: 10 }, suspicion: { actor: 12 }, cheating: { actor: 15 } } }
+  playback:    { actor: 6, witnessed: false }
   karaoke:     { actor: 3 }               # a finished karaoke performance
   infraction:  { actor: 4, witnessed: false }
   sentence:    { actor: 6, witnessed: false }
@@ -90,6 +95,9 @@ ratings:
 # Surprise pays: the first actor's award × 1 + bonus × max(0, 1 − taste), where taste is the same
 # multiplier as above (the personality grid for an action's tags, an interaction's axis scale
 # factors and traits). acts: an event scored as another act's taste (a rebuff is a flirt).
+# tags (proposal, Oct 30): an event judged against the taste for these action tags, when its data
+# says it was `loud` (a confessional that reveals something: the reserved saying something loud).
 surprise:
   bonus: 1
   acts: { rebuff: flirt }
+  tags: { confessional: [performing] }

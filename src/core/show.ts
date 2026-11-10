@@ -6,6 +6,7 @@
 import { CEREMONY, endActivity } from './actions.js';
 import { dayOf, log, MINUTES_PER_DAY, timeOfDay, type Ctx } from './context.js';
 import { axis } from './booze.js';
+import { exposure } from './confessionals.js';
 import { addNeed } from './needs.js';
 import { chance } from './rng.js';
 import { feel } from './ledger.js';
@@ -88,7 +89,9 @@ export function sentencing(ctx: Ctx): { c: Contestant; kind: 'night' | 'day' }[]
     if (!kept.length) continue;
     const step = sentenceStep(ctx, kept);
     const s = r.sentences[step - 1]!;
-    log(ctx, 'sentence', [c.id], room, { step, infractions: kept, ...(s.meter ? { meter: s.meter } : {}), ...(s.fishbowl ? { fishbowl: s.fishbowl } : {}) });
+    // Exposure (D-043): their latest confessional may play at tomorrow's dinner.
+    const playback = exposure(ctx, c);
+    log(ctx, 'sentence', [c.id], room, { step, infractions: kept, ...(s.meter ? { meter: s.meter } : {}), ...(s.fishbowl ? { fishbowl: s.fishbowl } : {}), ...(playback ? { playback } : {}) });
     think(ctx, c, r.sentencedThought);
     collective(ctx, c, kept);
     if (s.meter) addMeter(ctx, c, s.meter);
@@ -202,6 +205,9 @@ function remove(ctx: Ctx, c: Contestant): void {
   }
   w.contestants.splice(w.contestants.indexOf(c), 1);
   w.show.pending = w.show.pending.filter((x) => x.who !== c.id);
+  delete w.show.tapes[c.id];
+  w.show.summons = w.show.summons.filter((x) => x.who !== c.id);
+  w.show.playback = w.show.playback.filter((x) => x.who !== c.id);
   for (const r of Object.values(w.show.seen)) delete r[c.id];
   for (const o of w.contestants) {
     delete o.ledger[c.id];

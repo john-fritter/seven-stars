@@ -1,0 +1,72 @@
+# Confessionals: the diary room. DESIGN.md, How contestants choose: the next pass (Confessionals). All proposals (Oct 30; john
+# asked for confessionals as something to do that pays, and a stage for the reserved).
+#
+# The diary room is a stage with only a camera, so the reserved go there when the crowd's too
+# much. What pays is what's said, and a quiet one saying something loud pays most (scoring.yaml
+# surprise.tags: the speaker's taste for performing). Every visit vents: the worst bad thought on
+# their mind loses `vent.share` of its weight, once per thought. Then they say the best thing they
+# have, picked at random weighted by what it would pay:
+#   vent       nothing to reveal, just pouring it out
+#   take       summoned after a big moment: their side of it (about the other one in it)
+#   grudge     trashing someone they can't stand (affection at or below grudge.below)
+#   crush      admitting they fancy someone they're not with (attraction at least crush.attraction)
+#   spill      telling the camera about a kiss or a hookup between two others (what they know, romance.yaml gossip)
+#   suspicion  naming who they think the killer is (they believe it: trials.ts believe)
+#   cheating   confessing their own fling behind a partner's back (they feel guilty about it)
+# What each pays is scoring.yaml awards.confessional (by kind). `loud` kinds get the surprise.
+action: confess                 # the diary chair's action (objects.yaml diary_chair)
+event: confessional             # the logged event, scored by kind
+topics:
+  vent:      { loud: false }
+  take:      { loud: true }
+  grudge:    { loud: true }
+  crush:     { loud: true }
+  spill:     { loud: true }
+  suspicion: { loud: true }
+  cheating:  { loud: true }
+grudge: { below: -30 }          # the same line as a rival (social.yaml ledger.rivalAt)
+crush: { attraction: 6 }        # the same line as a crush (wants.yaml partner.crushAt)
+told: { hours: 168 }            # they don't tell the camera the same thing twice within a week
+
+# Going on their own: added to the diary chair's score (before personality, mood and the rest).
+#   vent:    k × the worst bad thought they haven't vented yet ÷ 10, if it's at least minBad
+#   say:     k × what the best thing they have to say would pay ÷ 10
+#   ratings: like scoring.yaml ratings.actions: k × desperation × that pay ÷ 10 × their taste for the chair
+#   cautious: facing sentencing tonight (an infraction pending), what they'd reveal pulls × this,
+#            since a sentence can air it (playback below)
+vent: { k: 0.5, minBad: 6, share: 0.5 }
+say: { k: 1 }
+ratings: 5
+cautious: 0.5
+
+# The operator summons people after major moments ("Sola to the confessional, please"): the
+# actors of an event that paid at least minPoints in all, or of one of `events` (which may pay
+# nothing). At most perDay a day; each is called once they're free (awake, not at a gathering,
+# not in a breakdown, not in the fishbowl, not mid-lovin'), within expireHours, and nobody twice
+# a day.
+summons:
+  perDay: 2
+  minPoints: 25
+  events: [body_found, accusation, betrayal, breakup, trial]
+  expireHours: 3
+
+# Exposure (D-043: playing a confessional at dinner is a punishment). Anyone sentenced at the
+# ceremony has `chance` of their latest confessional from the last `days` days airing at the next
+# day's dinner, at `at`, to everyone awake in the dinner room (`room`) or in earshot of it. The speaker is
+# humiliated (`speaker`), and what was said lands:
+#   about:  whoever they trashed (grudge, take) or named as the killer (suspicion), and the two they
+#           spilled about: affection toward the speaker, and a thought
+#   crush:  the one they fancy is flattered (affection and a thought), if they like the speaker at all
+#   tell:   spill and cheating: everyone who hears it learns it (romance.yaml gossip), so it's
+#           betrayal or jealousy as usual
+#   killer: suspicion: everyone who hears it fears the one named
+# Playback pays scoring.yaml awards.playback.
+playback:
+  chance: 0.5
+  days: 3
+  at: "19:30"
+  room: lounge                  # where dinner is (schedule.yaml meals)
+  speaker: aired_confessional
+  about: { affection: -15, thought: trashed_on_air }
+  crush: { affection: 5, thought: fancied_on_air }
+  killer: { fear: 10 }

@@ -184,6 +184,15 @@ function crossCheck(d: GameData, dir: string): void {
   }
   if (br.kinds[br.fallback]?.room !== 'here') errors.push(`${dir}/breaks.yaml: fallback: the fallback break has to happen "here"`);
 
+  const cf = d.confessionals;
+  const chair = Object.values(types).some((t) => t.actions.some((a) => a.id === cf.action));
+  if (!chair) errors.push(`${dir}/confessionals.yaml: action: no object in objects.yaml offers "${cf.action}"`);
+  if (!d.scoring.awards[cf.event]) errors.push(`${dir}/confessionals.yaml: event: no "${cf.event}" row in scoring.yaml awards`);
+  if (!rooms.has(cf.playback.room)) errors.push(`${dir}/confessionals.yaml: playback.room: no room "${cf.playback.room}"`);
+  thought(cf.playback.speaker, 'confessionals.yaml: playback.speaker');
+  thought(cf.playback.about.thought, 'confessionals.yaml: playback.about.thought');
+  thought(cf.playback.crush.thought, 'confessionals.yaml: playback.crush.thought');
+
   const ro = d.romance;
   thought(ro.kiss.thought, 'romance.yaml: kiss.thought');
   thought(ro.kiss.rebuffed, 'romance.yaml: kiss.rebuffed');

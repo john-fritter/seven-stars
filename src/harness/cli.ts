@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { DataError, loadGameData } from '../data/load.js';
 import { applyOverrides, runJob } from './pool.js';
 import { report, type Metric, type Report } from './stats.js';
-import { dayTrace, seasonLog, storyReport } from './stories.js';
+import { dayTrace, seasonLog, storyReport, tuneIn } from './stories.js';
 
 const USAGE = `Usage:
   sim run   --days 30 --seeds 200 [--data ./data] [--out results/run.json] [--threads N]
@@ -12,6 +12,7 @@ const USAGE = `Usage:
   sim stories --days 30 --seeds 24 [--data ./data]     story sampling: how a viewer would see the seasons
   sim season --seed 24 --days 30 [--data ./data]       one season, day by day, with names
   sim day --seed 3 --day 5 [--who Pax] [--data ./data] every choice each contestant makes in a day, with their needs
+  sim tunein --seed 3 --day 12 --at 14:30 [--hours 36]  what a viewer tuning in then would see: recent events, who's aboard, who feels what
 
 run and stories take --set file.path=value[,file.path=value] to try values without editing the data.
 Every command takes --plan ring|spine|hub to run on another floor plan (plans.yaml).
@@ -217,6 +218,10 @@ async function main(): Promise<void> {
     console.log(seasonLog(applyOverrides(loadGameData(dataDir), overrides), num(opts, 'seed'), days).join('\n'));
   } else if (cmd === 'day') {
     console.log(dayTrace(applyOverrides(loadGameData(dataDir), overrides), num(opts, 'seed'), num(opts, 'day'), opts.who).join('\n'));
+  } else if (cmd === 'tunein') {
+    const [h, m] = (opts.at ?? '12:00').split(':').map(Number);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) throw new Error(`--at wants HH:MM, got "${opts.at}"`);
+    console.log(tuneIn(applyOverrides(loadGameData(dataDir), overrides), num(opts, 'seed'), num(opts, 'day'), h! * 60 + m!, num(opts, 'hours', 36)).join('\n'));
   } else {
     console.log(USAGE);
     process.exitCode = cmd ? 1 : 0;

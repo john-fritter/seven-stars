@@ -317,14 +317,14 @@ export function remember(ctx: Ctx, x: Contestant, who: Contestant, other: Contes
 }
 
 /** Hearing it counts as seeing it: `x` learns about the pair, both ways round. */
-function tell(ctx: Ctx, x: Contestant, who: Contestant, other: Contestant, what: string): void {
+export function tell(ctx: Ctx, x: Contestant, who: Contestant, other: Contestant, what: string): void {
   remember(ctx, x, who, other, what);
   evidence(ctx, x, who, other, what);
   evidence(ctx, x, other, who, what);
 }
 
 /** Whether `x` already knows about this pair. */
-function knows(x: Contestant, a: string, b: string): boolean {
+export function knows(x: Contestant, a: string, b: string): boolean {
   return x.seen.some((s) => (s.who === a && s.with === b) || (s.who === b && s.with === a));
 }
 

@@ -24,7 +24,7 @@ rooms:
       objects: { stall_toilet: 3, sink: 3, mirror: 2 } }
   - { id: garden, name: Garden, access: all, privacy: 0.5, temperature: 70, comfort: 60,
       objects: { garden_bench: 2, plants: 1, still: 1 } }
-  - { id: confessional, name: Confessional, access: all, privacy: 0.8, temperature: 70, comfort: 40, objects: {} }
+  - { id: confessional, name: Confessional, access: all, privacy: 0.8, temperature: 70, comfort: 40, objects: { diary_chair: 1 } }
   - { id: medbay, name: Medbay, access: all, privacy: 0.5, temperature: 70, comfort: 40, objects: {} }
   - { id: suite, name: Suite, access: occupants, privacy: 0.8, temperature: 70, comfort: 80,
       objects: { bed_suite: 1, toilet: 1, sink: 1, shower_hot: 1, thermostat: 1, mirror: 1 } }
