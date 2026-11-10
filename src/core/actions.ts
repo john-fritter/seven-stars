@@ -21,6 +21,7 @@ import { caughtIn, infraction, sneakCost } from './show.js';
 import { askToShare, available, companyPull, expectedKnockOdds, guestOf, inPassing, interact, knock, occupants, personPull, talkOdds } from './social.js';
 import { discomfortAt, preferredSetting, setThermostat, situationComfort } from './temperature.js';
 import { think } from './thoughts.js';
+import { CARD_CHEAT, knownFor } from './news.js';
 import { traitFx } from './traits.js';
 import type { Activity, Contestant } from './types.js';
 import { bookedFor, primp, train, wantPull, wantsOf, type Wants } from './wants.js';
@@ -325,6 +326,8 @@ function candidates(ctx: Ctx, c: Contestant): Candidate[] {
         let score = scoreAction(ctx, c, def, room.id, others, critical, bedtime, pull, bedExtra(ctx, c, o, def, night) + want.pull + said) - risk;
         // A game that needs more players: alone at the table they just shuffle and wait.
         if (def.players && users.filter((id) => id !== c.id).length + 1 < def.players) score *= alone;
+        // Sitting down at a table with a cheat they know of.
+        if (def.players && users.some((id) => id !== c.id && knownFor(c, id, CARD_CHEAT))) score *= cheatAversion(ctx, c);
         out.push({ def, object: o, room: room.id, score, ...(want.why ? { why: want.why } : {}) });
       }
     }
@@ -385,16 +388,23 @@ function gameCandidates(ctx: Ctx, c: Contestant, w: Wants, others: Map<string, n
       if (p === c || !available(ctx, p) || p.confined || !c.ledger[p.id] || !canEnter(ctx, p, o.room) || !usable(ctx, p, def)) continue;
       if (p.activity!.action === k.action || isGathering(p.activity!.action) || walkMinutes(ctx.st, c.room, p.room) > k.within) continue;
       const odds = dealOdds(ctx, p, c, def);
-      const score = (base + personPull(ctx, c, p, o.room) * personalityOf(ctx.data, c, def)) * odds;
+      const cheat = knownFor(c, p.id, CARD_CHEAT) ? cheatAversion(ctx, c) : 1;
+      const score = (base + personPull(ctx, c, p, o.room) * personalityOf(ctx.data, c, def)) * odds * cheat;
       if (score > 0 && (!best || score > best.score)) best = { def, object: o, room: o.room, dealIn: p.id, score, ...(want.why ? { why: want.why } : {}) };
     }
     if (best) out.push(best);
   }
 }
 
-/** Odds `p` takes a seat at the game `c` is starting. */
+/** × on playing cards with a known cheat (news.yaml reputation.card_cheat): the honest won't. */
+function cheatAversion(ctx: Ctx, c: Contestant): number {
+  return 1 - ctx.data.news.reputation.card_cheat.refuse * (c.personality.honest / 10);
+}
+
+/** Odds `p` takes a seat at the game `c` is starting: less with a cheat they know of. */
 function dealOdds(ctx: Ctx, p: Contestant, c: Contestant, def: ActionDef): number {
-  return talkOdds(ctx, p, c) * Math.min(1, personalityOf(ctx.data, p, def));
+  const cheat = knownFor(p, c.id, CARD_CHEAT) ? cheatAversion(ctx, p) : 1;
+  return talkOdds(ctx, p, c) * Math.min(1, personalityOf(ctx.data, p, def)) * cheat;
 }
 
 const talkKey = (id: string) => `talk:${id}`;

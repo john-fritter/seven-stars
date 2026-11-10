@@ -7,14 +7,15 @@
 // Lovin' is always consensual and always offscreen: two people choose it, and the log says so.
 import type { InteractionDef, Label } from '../data/schema.js';
 import { begin, endActivity, LOVIN } from './actions.js';
-import { agreeMult, attractionNow, axis, moveMult, stageOf } from './booze.js';
+import { agreeMult, attractionNow, axis, moveMult } from './booze.js';
 import { canEnter, isNightFor, log, type Ctx } from './context.js';
 import { feel, rel, relation } from './ledger.js';
 import { axisFactor } from './needs.js';
-import { between, chance, pick } from './rng.js';
-import { canHear, canSee, nextDoor, walkMinutes, type ObjectInstance } from './station.js';
+import { between, chance } from './rng.js';
+import { canSee, nextDoor, walkMinutes, type ObjectInstance } from './station.js';
 import { interact, shareOdds } from './social.js';
 import { think } from './thoughts.js';
+import { learn, twoTimer } from './news.js';
 import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
 
@@ -66,7 +67,12 @@ function busy(ctx: Ctx, c: Contestant): boolean {
 export function kissOdds(ctx: Ctx, target: Contestant, kisser: Contestant): number {
   const r = rel(target, kisser);
   if (!r) return 0;
-  return clamp((attractionNow(ctx, target, r.attraction, kisser) / 10) * (1 + r.affection / 100) * ctx.data.romance.kiss.successScale * agreeMult(ctx, target), 0, 1);
+  return clamp((attractionNow(ctx, target, r.attraction, kisser) / 10) * (1 + r.affection / 100) * ctx.data.romance.kiss.successScale * agreeMult(ctx, target) * wary(ctx, target, kisser), 0, 1);
+}
+
+/** A known two-timer (news.yaml reputation.two_timer) puts the monogamous off. */
+function wary(ctx: Ctx, target: Contestant, kisser: Contestant): number {
+  return twoTimer(ctx, target, kisser.id) ? 1 - ctx.data.news.reputation.two_timer.kissK * (target.monogamy / 10) : 1;
 }
 
 export function kiss(ctx: Ctx, c: Contestant, o: Contestant): void {
@@ -279,9 +285,7 @@ function consummate(ctx: Ctx, c: Contestant, o: Contestant): void {
     else if (!x.asleep && walls.includes(x.room)) {
       think(ctx, x, p.heard, c.id);
       log(ctx, 'overheard', [x.id, c.id, o.id], x.room, { from: room });
-      remember(ctx, x, c, o, 'lovin');
-      evidence(ctx, x, c, o, 'lovin');
-      evidence(ctx, x, o, c, 'lovin');
+      learn(ctx, x, c, o, 'lovin', ctx.w.t, 'overheard');
     }
   }
   const inBed = c.activity?.object != null;
@@ -297,107 +301,20 @@ function aftermath(ctx: Ctx, b: Contestant, c: Contestant, what: string): void {
   for (const [x, partner] of [[b, c], [c, b]] as const) {
     for (const [id, r] of Object.entries(x.ledger)) if (id !== partner.id && r.label === 'exclusive') think(ctx, x, ro.guilty, id);
   }
-  remember(ctx, b, b, c, what);
-  remember(ctx, c, b, c, what);
+  learn(ctx, b, b, c, what);
+  learn(ctx, c, b, c, what);
   for (const a of ctx.w.contestants) {
     if (a === b || a === c || !canSee(ctx.st, a.room, b.room) || a.asleep) continue;
-    remember(ctx, a, b, c, what);
-    evidence(ctx, a, b, c, what);
-    evidence(ctx, a, c, b, what);
+    learn(ctx, a, b, c, what);
   }
-}
-
-/** `x` now knows that `who` and `other` got together (romance.yaml gossip): the last few things, for a while. */
-export function remember(ctx: Ctx, x: Contestant, who: Contestant, other: Contestant, what: string): void {
-  const g = ctx.data.romance.gossip;
-  const t = ctx.w.t;
-  x.seen = x.seen.filter((s) => s.t > t - g.hours * 60 && !((s.who === who.id && s.with === other.id) || (s.who === other.id && s.with === who.id)));
-  x.seen.push({ who: who.id, with: other.id, what, t });
-  if (x.seen.length > g.remember) x.seen.shift();
-}
-
-/** Hearing it counts as seeing it: `x` learns about the pair, both ways round. */
-export function tell(ctx: Ctx, x: Contestant, who: Contestant, other: Contestant, what: string): void {
-  remember(ctx, x, who, other, what);
-  evidence(ctx, x, who, other, what);
-  evidence(ctx, x, other, who, what);
-}
-
-/** Whether `x` already knows about this pair. */
-export function knows(x: Contestant, a: string, b: string): boolean {
-  return x.seen.some((s) => (s.who === a && s.with === b) || (s.who === b && s.with === a));
-}
-
-/** The latest thing `c` knows about `target` and someone else, if they're still aboard. */
-export function latestAbout(ctx: Ctx, c: Contestant, target: Contestant): [Contestant, Contestant] | null {
-  for (let i = c.seen.length - 1; i >= 0; i--) {
-    const s = c.seen[i]!;
-    if (s.who !== target.id && s.with !== target.id) continue;
-    const other = ctx.w.contestants.find((o) => o.id === (s.who === target.id ? s.with : s.who));
-    if (other && other !== c) return [target, other];
-  }
-  return null;
-}
-
-/**
- * Loose lips, after a chat (romance.yaml gossip.interactions): drink makes them confess their own
- * cheating to the one they're cheating on, or blurt something they know about someone else,
- * the juiciest first (about someone the listener is involved with). Sober, the playful and the
- * dishonest gossip a little too.
- */
-export function looseLips(ctx: Ctx, c: Contestant, o: Contestant, id: string): void {
-  const ro = ctx.data.romance;
-  if (!ro.gossip.interactions.includes(id)) return;
-  const st = stageOf(ctx, c) ?? { id: 'sober', lips: ro.gossip.sober * Math.max(0, 1 + c.personality.playful / 10 - c.personality.honest / 10), confess: 0 };
-  const alive = (x: string) => ctx.w.contestants.find((k) => k.id === x);
-  if (st.confess && c.thoughts.some((x) => x.id === ro.guilty && x.about === o.id) && chance(ctx.w.rng, st.confess)) {
-    const mine = [...c.seen].reverse().find((s) => (s.who === c.id || s.with === c.id) && s.who !== o.id && s.with !== o.id && !knows(o, s.who, s.with) && alive(s.who === c.id ? s.with : s.who));
-    if (mine) {
-      const other = alive(mine.who === c.id ? mine.with : mine.who)!;
-      c.thoughts = c.thoughts.filter((x) => !(x.id === ro.guilty && x.about === o.id));
-      log(ctx, 'confession', [c.id, o.id, other.id], c.room, { stage: st.id });
-      tell(ctx, o, c, other, 'confession');
-      return;
-    }
-  }
-  if (!st.lips || !chance(ctx.w.rng, st.lips)) return;
-  const known = c.seen.filter((s) => s.who !== c.id && s.with !== c.id && s.who !== o.id && s.with !== o.id && !knows(o, s.who, s.with) && alive(s.who) && alive(s.with));
-  if (!known.length) return;
-  const juicy = known.filter((s) => labelOf(o, alive(s.who)!) !== 'none' || labelOf(o, alive(s.with)!) !== 'none');
-  const s = pick(ctx.w.rng, juicy.length ? juicy : known);
-  const [who, other] = [alive(s.who)!, alive(s.with)!];
-  log(ctx, 'blab', [c.id, o.id, who.id, other.id], c.room, { stage: st.id, juicy: juicy.length > 0 });
-  tell(ctx, o, who, other, 'gossip');
-}
-
-/** A scene: everyone here hears what `target` did, from someone falling apart in front of them. */
-export function airIt(ctx: Ctx, c: Contestant, target: Contestant): void {
-  const known = latestAbout(ctx, c, target);
-  if (!known) return;
-  const [who, other] = known;
-  const heard = ctx.w.contestants.filter((x) => x !== c && x !== who && x !== other && canHear(ctx.st, x.room, c.room) && !x.asleep);
-  log(ctx, 'scene', [c.id, who.id, other.id], c.room, { heard: heard.map((x) => x.id) });
-  for (const x of heard) tell(ctx, x, who, other, 'scene');
-}
-
-/** Pouring it all out to a friend: the latest thing they know about someone else spills too. */
-export function pourOut(ctx: Ctx, c: Contestant, friend: Contestant): void {
-  const known = c.seen.filter((s) => s.who !== c.id && s.with !== c.id && s.who !== friend.id && s.with !== friend.id && !knows(friend, s.who, s.with));
-  if (!known.length) return;
-  const s = known[known.length - 1]!;
-  const who = ctx.w.contestants.find((k) => k.id === s.who);
-  const other = ctx.w.contestants.find((k) => k.id === s.with);
-  if (!who || !other) return;
-  log(ctx, 'blab', [c.id, friend.id, who.id, other.id], c.room, { venting: true });
-  tell(ctx, friend, who, other, 'gossip');
 }
 
 /**
  * A sees B with C. A's label for B decides: betrayal if A believed they were exclusive, else
  * jealousy, if A still cares about B. Either way A turns on the rival, C; a jealous A also pines
- * for B and goes after them harder.
+ * for B and goes after them harder. Returns whether A reacted. Only news gets here (news.ts learn).
  */
-export function evidence(ctx: Ctx, a: Contestant, b: Contestant, c: Contestant, what: string): void {
+export function evidence(ctx: Ctx, a: Contestant, b: Contestant, c: Contestant, what: string): boolean {
   const ro = ctx.data.romance;
   const j = ro.jealousy;
   const label = labelOf(a, b);
@@ -407,12 +324,13 @@ export function evidence(ctx: Ctx, a: Contestant, b: Contestant, c: Contestant, 
     log(ctx, 'betrayal', [a.id, b.id, c.id], a.room, { what });
     resent(ctx, a, c);
     confront(ctx, a, b, traitFx(ctx.data, a).confront ?? ro.betrayal.confront);
+    return true;
   } else if (JEALOUS.includes(label)) {
     const r = rel(a, b)!;
-    if (r.affection < j.cares.affection || r.attraction < j.cares.attraction) return;
+    if (r.affection < j.cares.affection || r.attraction < j.cares.attraction) return false;
     // Seeing it again soon after doesn't start it over.
     const hours = ctx.data.thoughts.thoughts[j.thought]!.hours;
-    if (a.thoughts.some((x) => x.id === j.thought && x.about === c.id && x.until - hours * 60 > ctx.w.t - j.again * 60)) return;
+    if (a.thoughts.some((x) => x.id === j.thought && x.about === c.id && x.until - hours * 60 > ctx.w.t - j.again * 60)) return false;
     feel(ctx, a, b, 'affection', j.affection, 'jealousy');
     resent(ctx, a, c);
     think(ctx, a, j.pining.thought, b.id);
@@ -420,6 +338,31 @@ export function evidence(ctx: Ctx, a: Contestant, b: Contestant, c: Contestant, 
     // Only the Jealous confront over mere jealousy.
     const always = traitFx(ctx.data, a).confront;
     if (always) confront(ctx, a, b, always);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * More of something A has already reacted to (news.ts learn): B is still at it with C. What A
+ * feels starts over (the betrayal, the grudge, the pining), with no fresh hit to affection.
+ */
+export function stoke(ctx: Ctx, a: Contestant, b: Contestant, c: Contestant): void {
+  const ro = ctx.data.romance;
+  const label = labelOf(a, b);
+  const keep = (id: string, about: string) => {
+    const x = a.thoughts.find((t) => t.id === id && t.about === about);
+    if (x) x.until = Math.max(x.until, ctx.w.t + ctx.data.thoughts.thoughts[id]!.hours * 60);
+    else think(ctx, a, id, about);
+  };
+  if (label === 'exclusive') {
+    keep(ro.betrayal.thought, b.id);
+    keep(ro.jealousy.thought, c.id);
+  } else if (JEALOUS.includes(label)) {
+    const r = rel(a, b)!;
+    if (r.affection < ro.jealousy.cares.affection || r.attraction < ro.jealousy.cares.attraction) return;
+    keep(ro.jealousy.thought, c.id);
+    keep(ro.jealousy.pining.thought, b.id);
   }
 }
 
@@ -450,7 +393,8 @@ function confront(ctx: Ctx, a: Contestant, b: Contestant, odds: number): void {
 export function exclusiveOdds(ctx: Ctx, target: Contestant, asker: Contestant): number {
   const r = rel(target, asker);
   if (!r) return 0;
-  return clamp((r.attraction / 10) * (0.5 + target.monogamy / 10) * axisFactor(ctx.data.romance.exclusive.loyalK, target.personality.loyal), 0, 1);
+  const player = twoTimer(ctx, target, asker.id) ? ctx.data.news.reputation.two_timer.exclusive : 1;
+  return clamp((r.attraction / 10) * (0.5 + target.monogamy / 10) * axisFactor(ctx.data.romance.exclusive.loyalK, target.personality.loyal) * player, 0, 1);
 }
 
 /** The chance a yes is privately a fling: (10 − honest) × (10 − monogamy) ÷ 100. */

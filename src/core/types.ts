@@ -84,16 +84,21 @@ export interface Contestant {
   snacks: number; // snacks stashed from the machine (ranks.yaml snacks)
   foundEmpty?: number; // when they last found the snack machine empty
   breakdown: Breakdown | null; // in the middle of a mental break
-  seen: Sighting[]; // romance they know about (saw, did, or heard), for gossip and confessions
+  news: News[]; // what they know (news.ts): who's been with whom, who's known for what
   told: Record<string, number>; // what they've told the diary-room camera (confessionals.ts) -> when
 }
 
-/** Something they know: `who` kissed or bedded `with`. */
-export interface Sighting {
+/**
+ * Something they know (news.yaml): `who` and `with` got together, the worst of it being `what`
+ * (a kiss, lovin'), or, with `with` null, `who` is known for `what` (a card cheat). `t` is when it
+ * last happened, not when they heard.
+ */
+export interface News {
   who: string;
-  with: string;
+  with: string | null;
   what: string;
   t: number;
+  felt?: boolean; // they've reacted to it (jealousy, betrayal): more of the same only stokes it
 }
 
 /** A mental break in progress. Its activity is the break kind; it ends with catharsis. */
@@ -194,6 +199,8 @@ export interface Tape {
   t: number;
   kind: string;
   about: string[];
+  when?: number; // a romance spilled or confessed: when it last happened
+  what?: string; // ...and the worst of it
 }
 
 /** "Sola to the confessional, please": after a big moment, once they're free. */

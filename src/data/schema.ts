@@ -573,7 +573,7 @@ const stageSchema = z.object({
   goggles: num.default(0),
   // Their odds of saying yes to a kiss or a proposition, ×.
   agree: num.default(1),
-  // Loose lips: per chat (romance.yaml gossip.interactions), the chance they blurt something they
+  // Loose lips: per chat (news.yaml gossip.interactions), the chance they blurt something they
   // know; and the chance they confess their own cheating to the one they're cheating on.
   lips: unit.default(0),
   confess: unit.default(0),
@@ -701,8 +701,18 @@ export const romanceSchema = z.object({
     pining: z.object({ thought: z.string(), boost: num.positive(), monogamyK: num }),
   }),
   guilty: z.string(),
-  // What people know about who's been with whom: the last `remember` things, for `hours`.
-  gossip: z.object({ remember: z.number().int().positive(), hours: num.positive(), interactions: z.array(z.string()), sober: unit.default(0) }),
+});
+
+export const newsSchema = z.object({
+  severity: z.record(z.string(), num.positive()),
+  gossip: z.object({ interactions: z.array(z.string()), sober: unit.default(0), halfLifeDays: num.positive(), juicy: num.min(0) }),
+  protect: num.min(0),
+  tipOff: z.object({ k: num.min(0) }),
+  scoop: z.object({ min: unit }),
+  reputation: z.object({
+    card_cheat: z.object({ refuse: unit, spot: num.min(0), wary: unit }),
+    two_timer: z.object({ days: num.positive(), kissK: unit, exclusive: unit }),
+  }),
 });
 
 export const wheelSchema = z.object({
@@ -943,6 +953,7 @@ export const fileSchemas = {
   wants: wantsSchema,
   activities: activitiesSchema,
   confessionals: confessionalsSchema,
+  news: newsSchema,
 } as const;
 
 export type GameData = { [K in keyof typeof fileSchemas]: z.output<(typeof fileSchemas)[K]> };

@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { axis, drink, giftDrink, hammeredHour, hangover, hungoverFactor, qualityFor, soberMinute, soberFactor, stageOf } from '../src/core/booze.js';
 import { createWorld, step } from '../src/core/index.js';
 import { fadeLedger, meet, rel } from '../src/core/ledger.js';
-import { askExclusive, evidence, exclusiveOdds, kiss, kissOdds, looseLips, lovin, piningMult, propositionOdds, remember, secretFlingOdds } from '../src/core/romance.js';
+import { askExclusive, evidence, exclusiveOdds, kiss, kissOdds, lovin, piningMult, propositionOdds, secretFlingOdds } from '../src/core/romance.js';
+import { learn, looseLips } from '../src/core/news.js';
 import { interactionWeight } from '../src/core/social.js';
 import type { Contestant, World } from '../src/core/types.js';
 import { ctxFor, data } from './helpers.js';
@@ -43,7 +44,7 @@ describe('booze', () => {
     meet(ctx, a, b);
     meet(ctx, b, c);
     Object.assign(rel(b, c)!, { label: 'exclusive' });
-    remember(ctx, a, c, d, 'kiss');
+    learn(ctx, a, c, d, 'kiss');
     a.intox = 100; // hammered
     let told = false;
     for (let i = 0; i < 50 && !told; i++) {
@@ -57,7 +58,7 @@ describe('booze', () => {
     for (let i = 0; i < 20; i++) looseLips(ctx, a, b, 'chitchat');
     expect(ctx.events.filter((e) => e.type === 'blab').length).toBe(n);
     // A confession: a cheats on b with d, and tells b.
-    remember(ctx, a, a, d, 'kiss');
+    learn(ctx, a, a, d, 'kiss');
     a.thoughts.push({ id: data.romance.guilty, about: b.id, value: -5, until: w.t + 600 });
     for (let i = 0; i < 50 && !ctx.events.some((e) => e.type === 'confession'); i++) looseLips(ctx, a, b, 'chitchat');
     expect(ctx.events.find((e) => e.type === 'confession')?.actors).toEqual([a.id, b.id, d.id]);

@@ -5,7 +5,8 @@ import { actionDef, bedmateFeeling, begin, boredom, endActivity, FIGHT } from '.
 import { attractionNow, axis, giftDrink, grubbiness, moveMult, stageMult, stageOf } from './booze.js';
 import { shareSnack, swipeSnack } from './pantry.js';
 import { log, type Ctx } from './context.js';
-import { askExclusive, attachedMult, breakUp, evidence, kiss, invite, looseLips, moveAllowed, piningMult, proposition } from './romance.js';
+import { learn, looseLips } from './news.js';
+import { askExclusive, attachedMult, breakUp, kiss, invite, moveAllowed, piningMult, proposition } from './romance.js';
 import { boldness, chanceBoost, interactionBoost } from './ratings.js';
 import { witnessesOf } from './scoring.js';
 import { infraction } from './show.js';
@@ -476,7 +477,7 @@ export function knock(ctx: Ctx, c: Contestant, host: Contestant, roomId: string,
   data.odds = round2(odds);
   data.answer = yes ? 'yes' : 'no';
   log(ctx, 'knock', [c.id, host.id], roomId, data);
-  if (other && data.saw) evidence(ctx, c, host, other, 'guest');
+  if (other && data.saw) learn(ctx, c, host, other, 'guest');
   if (yes) c.guest = { room: roomId, host: host.id, since: t };
   else think(ctx, c, forBed && !other ? ctx.data.needs.sleep.share.refused : k.turnedAway, host.id);
   return yes;

@@ -5,6 +5,7 @@ import { axis } from './booze.js';
 import { log, type Ctx } from './context.js';
 import { feel } from './ledger.js';
 import { between, chance } from './rng.js';
+import { CARD_CHEAT, knownFor, learnRep } from './news.js';
 import { interact } from './social.js';
 import { think } from './thoughts.js';
 import type { Contestant } from './types.js';
@@ -28,7 +29,10 @@ export function cardsRound(ctx: Ctx): void {
 function hand(ctx: Ctx, players: Contestant[], room: string): void {
   const k = ctx.data.activities.cards;
   const rng = ctx.w.rng;
-  const cheats = players.filter((c) => chance(rng, (k.cheat * (10 - c.personality.honest)) / 10));
+  const rep = ctx.data.news.reputation.card_cheat;
+  const known = (o: Contestant, c: Contestant) => knownFor(o, c.id, CARD_CHEAT);
+  // A cheat who knows someone at the table has their number plays it straighter.
+  const cheats = players.filter((c) => chance(rng, ((k.cheat * (10 - c.personality.honest)) / 10) * (players.some((o) => o !== c && known(o, c)) ? rep.wary : 1)));
   const score = new Map(players.map((c) => [c, between(rng, 0, k.die) + k.face * axis(ctx, c, 'calm') + (cheats.includes(c) ? k.cheatBonus : 0)]));
   const ranked = [...players].sort((a, b) => score.get(b)! - score.get(a)!);
   const winner = ranked[0]!;
@@ -51,8 +55,9 @@ function hand(ctx: Ctx, players: Contestant[], room: string): void {
   }
   for (const cheat of cheats) {
     for (const o of players) {
-      if (o === cheat || !chance(rng, k.spot * (o.personality.honest / 10 + 0.5))) continue;
-      log(ctx, 'caught_cheating', [o.id, cheat.id], room);
+      if (o === cheat || !chance(rng, k.spot * (o.personality.honest / 10 + 0.5) * (known(o, cheat) ? rep.spot : 1))) continue;
+      log(ctx, 'caught_cheating', [o.id, cheat.id], room, { known: players.filter((x) => x !== cheat && known(x, cheat)).length });
+      for (const x of players) learnRep(ctx, x, cheat, CARD_CHEAT); // the whole table saw it
       think(ctx, o, k.cheated, cheat.id);
       interact(ctx, o, cheat, ctx.data.social.interactions.find((d) => d.id === 'insult')!);
       break; // one is enough: the game's over for them

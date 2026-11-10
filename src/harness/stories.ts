@@ -190,6 +190,10 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
           add(n, 'blabs');
           if (data.venting) add(n, 'blabsVenting');
           if (data.juicy) add(n, 'blabsJuicy');
+          if (e.actors.length < 4) add(n, 'blabsReputation');
+          break;
+        case 'tip_off':
+          add(n, 'tipOffs');
           break;
         case 'confession':
           add(n, 'confessions');
@@ -269,6 +273,7 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
           break;
         case 'caught_cheating':
           add(n, 'cheatsCaught');
+          if (((data.known as number | undefined) ?? 0) > 0) add(n, 'cheatsCaughtKnown');
           break;
         case 'bill':
           add(n, 'bills');
@@ -377,7 +382,8 @@ export function storyReport(seeds: StorySeed[]): string[] {
   line();
   line('Booze and gossip');
   line(`  ${per(n('drinks'), days, 1)} drinks a day, ${pct(n('drinksMorning'), n('drinks'))} before noon; ${per(n('hammered'), days)} hammered a day, ${per(n('pukes') * 7, days)} pukes and ${per(n('passedOut') * 7, days)} pass-outs a week`);
-  line(`  ${per(n('blabs') * 7, days, 1)} secrets spilled a week (${pct(n('blabsJuicy'), n('blabs'))} to someone involved, ${pct(n('blabsVenting'), n('blabs'))} while venting), ${per(n('confessions') * 7, days)} drunken confessions a week`);
+  line(`  ${per(n('blabs') * 7, days, 1)} secrets spilled a week (${pct(n('blabsJuicy'), n('blabs'))} to someone involved, ${pct(n('blabsVenting'), n('blabs'))} while venting, ${pct(n('blabsReputation'), n('blabs'))} who cheats at cards), ${per(n('confessions') * 7, days)} drunken confessions a week`);
+  line(`  ${per(n('tipOffs') * 7, days)} tip-offs a week: a friend telling someone their partner has been with someone else`);
   line(`  ${per(n('scenes') * 7, days)} scenes a week that aired someone's secret, heard by ${per(n('sceneHeard'), n('scenes'), 1)} people each`);
   line();
   line('The diary room');
@@ -396,7 +402,7 @@ export function storyReport(seeds: StorySeed[]): string[] {
   line(`    a cage match between one who trained and one who didn't: the trained one won ${pct(n('trainedWon'), n('trainedWon') + n('trainedLost'))} of ${n('trainedWon') + n('trainedLost')}`);
   line(`  confronting a rival ${per(n('confronts') * 7, days, 1)} a week (${pct(n('confrontInsults'), n('confronts'))} straight to an insult, ${pct(n('confrontFights'), n('confronts'))} came to blows)`);
   line(`  going to a friend in trouble ${per(n('comforting'), days, 1)} a day; seeking out a partner or crush ${per(n('partnerTalks'), days, 1)} a day`);
-  line(`  cards: ${per(n('hands') * 7, days, 0)} hands a week (${pct(n('handsForSnacks'), n('hands'))} for snacks), ${per(n('dealIns') * 7, days, 1)} games started a week, ${per(n('cheatsCaught') * 7, days, 1)} cheats caught`);
+  line(`  cards: ${per(n('hands') * 7, days, 0)} hands a week (${pct(n('handsForSnacks'), n('hands'))} for snacks), ${per(n('dealIns') * 7, days, 1)} games started a week, ${per(n('cheatsCaught') * 7, days, 1)} cheats caught (${pct(n('cheatsCaughtKnown'), n('cheatsCaught'))} by a table that already knew)`);
   line(`  getting ready for the evening ${per(n('readied'), days, 1)} a day`);
   line();
   line('A daily check-in sees');
@@ -460,7 +466,10 @@ function narrator(): { line: (e: SimEvent) => string[]; nm: (id: string | undefi
         s = `${nm(a)} is jealous: ${nm(b)} with ${nm(c)} (${x.what})${at}`;
         break;
       case 'blab':
-        s = `${nm(a)} tells ${nm(b)} about ${nm(c)} and ${nm(e.actors[3])}${x.venting ? ' (venting)' : ` (${x.stage})`}${at}`;
+        s = `${nm(a)} tells ${nm(b)} ${e.actors[3] ? `about ${nm(c)} and ${nm(e.actors[3])}` : `that ${nm(c)} cheats at cards`}${x.venting ? ' (venting)' : ` (${x.stage})`}${at}`;
+        break;
+      case 'tip_off':
+        s = `${nm(a)} tips off ${nm(b)}: ${nm(c)} has been with ${nm(e.actors[3])}${at}`;
         break;
       case 'confession':
         s = `${nm(a)} confesses to ${nm(b)}: they were with ${nm(c)} (${x.stage})${at}`;

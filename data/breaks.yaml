@@ -45,7 +45,7 @@ weights: { envy: 5 }
 #   insults:  insult the target every this many minutes while they're in the room
 #   wreck:    the target's thought and affection toward the breaker
 #   airs:     on arrival, the whole room hears what the target did (the latest romance the breaker
-#             knows about them), which counts as evidence (romance.yaml gossip)
+#             knows about them), which counts as evidence (news.yaml)
 #   vent:     on arrival, a deep talk with the target, and the latest thing they know spills
 #   rant:     a slight at whoever's here every this many minutes
 #   target:   ... | friend (whoever they like best, affection 30+)

@@ -156,6 +156,15 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Which NanoGPT models.
 - [ ] A real name.
 
+**Proposed for what people know (Nov 10).** john asked to fix old news landing as new, loyal people spilling friends' secrets, and nobody learning who does what. All numbers in `data/news.yaml`; DESIGN.md Part two, What people know.
+
+- [ ] Each contestant keeps every pair they know got together (the worst of it, and when) for as long as both are aboard; only news lands, and more of the same only stokes what they already feel.
+- [ ] Gossip picks by freshness (halving every two days) and juiciness (× 3), then they say it at odds of their loyalty to the people in it (1 − 1.25 × loyal ÷ 10 × affection ÷ 100 each).
+- [ ] Tip-offs: a loyal friend tells someone their partner has been with someone else (0.5 × loyal ÷ 10 × affection ÷ 100).
+- [ ] Diary spills are worth the share of the house who don't know yet × their willingness, and aren't said under 0.15.
+- [ ] Reputation: a caught card cheat is known to the table and spreads by gossip (the honest won't play with them, spot × 3, the cheat cheats × 0.3 when watched); a known two-timer (two people inside a week) gets kisses × 1 − 0.5 × monogamy ÷ 10 and exclusivity × 0.3.
+- [ ] Side effects: breakups 0.73 → 0.36 a week, cards 54 → 35 hands a week, murders 0.58 → 0.52; all 11 targets pass.
+
 **Proposed for confessionals (Oct 30).** john asked for confessionals as something to do that affects ratings, with a way in for the reserved, and approved the proposal. All numbers in `data/confessionals.yaml`, `data/scoring.yaml` and `data/objects.yaml`; DESIGN.md, How contestants choose: the next pass, Confessionals.
 
 - [ ] The diary chair (20 minutes, solitary, a chore: it pulls only for what they have to say). Every visit eases the worst unvented bad thought by half, then they say one thing, weighted by pay: vent 3, their take when summoned 5, a grudge 6, a crush 6, spilling someone else's romance 10, naming a killer 12, confessing their own cheating 15. Not the same thing twice in a week.

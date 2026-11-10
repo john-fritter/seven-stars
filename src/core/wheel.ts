@@ -2,7 +2,8 @@
 // assigned at the ceremony, the new bottom rank spins it in front of everyone. Segments and what
 // they do are rows in wheel.yaml.
 import { dayOf, log, type Ctx } from './context.js';
-import { evidence, labelOf } from './romance.js';
+import { learn } from './news.js';
+import { labelOf } from './romance.js';
 import { feel } from './ledger.js';
 import { shuffle, weightedIndex } from './rng.js';
 import { addMeter } from './scoring.js';
@@ -93,7 +94,7 @@ export function revealSecrets(ctx: Ctx): void {
     const b = cast.find((c) => c.id === bId);
     if (!a || !b) continue;
     if (label !== 'exclusive' && labelOf(b, a) === 'exclusive') think(ctx, b, notExclusive, a.id);
-    for (const x of cast) if (x !== a && x !== b) evidence(ctx, x, a, b, 'secrets');
+    for (const x of cast) if (x !== a && x !== b) learn(ctx, x, a, b, 'secrets');
   }
 }
 
