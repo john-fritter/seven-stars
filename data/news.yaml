@@ -1,0 +1,53 @@
+# What people know, and what it's worth to tell. DESIGN.md Part two, What people know.
+# Proposals (Nov 10, john: deal with old news repeating, loyal people spilling friends' secrets,
+# and nobody learning who does what).
+#
+# News: everything someone saw, did or heard about, per pair (who got together with whom, and the
+# worst of it), and what people are known for. Each piece keeps when it last happened, and is
+# kept for as long as the people in it are aboard. Hearing a piece of news only lands if it's news
+# to them: they didn't know it, or it's worse than what they knew (they'd heard about a kiss; now
+# it's lovin'). Hearing it again, or hearing an old version, does nothing. Seeing the same two at
+# it again only stokes what they already feel (the thoughts start over), without a fresh scene.
+#
+# How bad each kind of pair news is. Being let into a bedroom and the Wheel reading out labels
+# count as much as a kiss.
+severity: { kiss: 1, guest: 1, secrets: 1, lovin: 2 }
+
+# Loose lips (moved from romance.yaml): after one of these chats, drink (booze.yaml stages lips)
+# makes them blurt something they know. Sober, odds sober × (1 + playful/10 − honest/10).
+gossip:
+  interactions: [chitchat, deep_talk, glass_talk]
+  sober: 0.05
+  # Which piece comes to mind, weighted: fresh news is worth more (× 0.5 every `halfLifeDays` since
+  # it last happened), and news about someone the listener is involved with × `juicy`. Then they
+  # tell it at odds of how willing they are (loyalty, below).
+  halfLifeDays: 2
+  juicy: 3
+
+# Loyalty keeps secrets. Their willingness to tell a piece of news about someone they like:
+# Π over the people in it of 1 − protect × loyal/10 × affection/100 (affection above 0 only), so
+# loyal 10 at affection 80 never tells on them, and loyal 2 at affection 50 tells nine times in ten.
+# It's the odds they say it in gossip and venting, and × what spilling it to the camera is worth.
+protect: 1.25
+
+# Tipping off a friend: after a chat, someone who knows the listener's partner (anyone they're
+# flirting with or more) has been with someone else may tell them straight, sober or not, with odds
+# k × loyal/10 × affection/100 toward the listener, × their willingness to tell on the partner.
+tipOff: { k: 0.5 }
+
+# Scoops (confessionals.yaml): spilling a romance to the camera is worth its award × the share of
+# the others aboard who don't know it yet × their willingness to tell on them, and isn't on their
+# mind at all under `min`. Nobody's interested in what everyone knows.
+scoop: { min: 0.15 }
+
+# Reputation: what people are known for, learned by seeing it and spread by gossip like any news.
+reputation:
+  # A card cheat: everyone at the table learns it when they're caught. Anyone who knows is less
+  # keen to deal them in, sit down with them or take a seat when they deal (× 1 − refuse ×
+  # honest/10: the honest won't, the crooked shrug); spots them cheating × spot; and a cheat at a
+  # table with someone who knows cheats at odds × wary.
+  card_cheat: { refuse: 0.9, spot: 3, wary: 0.3 }
+  # A two-timer: someone they know has been with two different people inside `days`. Kissing one
+  # lands at odds × 1 − kissK × monogamy/10 (the monogamous are put off), and a yes to exclusivity
+  # at × exclusive.
+  two_timer: { days: 7, kissK: 0.5, exclusive: 0.3 }

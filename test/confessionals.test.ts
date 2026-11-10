@@ -3,7 +3,7 @@ import { begin, endActivity, runActivity } from '../src/core/actions.js';
 import { callSummons, confessionalPull, exposure, playbackMinute, topicPoints, topics, watchMoments } from '../src/core/confessionals.js';
 import { dayOf, log } from '../src/core/context.js';
 import { relation } from '../src/core/ledger.js';
-import { remember } from '../src/core/romance.js';
+import { learn } from '../src/core/news.js';
 import { surpriseOf } from '../src/core/ratings.js';
 import { think } from '../src/core/thoughts.js';
 import { aboard, alone } from './helpers.js';
@@ -14,7 +14,7 @@ function cast() {
   const { w, ctx, cast } = aboard();
   const [a, b, c] = cast as [typeof cast[0], typeof cast[0], typeof cast[0]];
   alone(w, a, b, c);
-  for (const x of [a, b, c]) Object.assign(x, { personality: flat(5), traits: [], thoughts: [], seen: [], told: {}, room: 'common', asleep: false, rank: 4, activity: null, meter: 80 });
+  for (const x of [a, b, c]) Object.assign(x, { personality: flat(5), traits: [], thoughts: [], news: [], told: {}, room: 'common', asleep: false, rank: 4, activity: null, meter: 80 });
   w.show.pending = [];
   return { w, ctx, a, b, c };
 }
@@ -39,14 +39,14 @@ describe('confessionals', () => {
     expect(topics(ctx, a)).toEqual([]);
     relation(ctx, a, b).affection = -50;
     relation(ctx, a, c).attraction = 8;
-    remember(ctx, a, b, c, 'kiss');
+    learn(ctx, a, b, c, 'kiss');
     const kinds = topics(ctx, a).map((t) => t.kind).sort();
     expect(kinds).toEqual(['crush', 'grudge', 'spill']);
     relation(ctx, a, b).killer = 'Someone';
     expect(topics(ctx, a).map((t) => t.kind)).toContain('suspicion');
     // Their own fling with c, behind b's back.
-    a.seen = [];
-    remember(ctx, a, a, c, 'kiss');
+    a.news = [];
+    learn(ctx, a, a, c, 'kiss');
     think(ctx, a, ctx.data.romance.guilty, b.id);
     const cheat = topics(ctx, a).find((t) => t.kind === 'cheating')!;
     expect(cheat.about).toEqual([c.id, b.id]);
@@ -56,7 +56,7 @@ describe('confessionals', () => {
     const { ctx, a, b, c } = cast();
     think(ctx, a, 'sentenced');
     const before = a.thoughts.find((x) => x.id === 'sentenced')!.value;
-    remember(ctx, a, b, c, 'kiss');
+    learn(ctx, a, b, c, 'kiss');
     const e = visit(ctx, a);
     expect(e.data!.kind).toBe('spill');
     expect(e.data!.about).toEqual([b.id, c.id]);
@@ -87,7 +87,7 @@ describe('confessionals', () => {
     think(ctx, a, 'sentenced');
     const upset = confessionalPull(ctx, a, def);
     expect(upset).toBeGreaterThan(calm);
-    remember(ctx, a, b, c, 'lovin');
+    learn(ctx, a, b, c, 'lovin');
     const secret = confessionalPull(ctx, a, def);
     expect(secret).toBeGreaterThan(upset);
     a.meter = 10;
@@ -136,14 +136,14 @@ describe('confessionals', () => {
 
   it('a sentence can air the latest confessional at the next dinner, and everyone in earshot hears it', () => {
     const { w, ctx, a, b, c } = cast();
-    remember(ctx, a, b, c, 'lovin');
+    learn(ctx, a, b, c, 'lovin');
     visit(ctx, a);
     const p = ctx.data.confessionals.playback;
     let aired = false;
     for (let i = 0; i < 50 && !aired; i++) aired = exposure(ctx, a);
     expect(aired).toBe(true);
     const x = w.contestants.find((o) => o !== a && o !== b && o !== c)!;
-    Object.assign(x, { asleep: false, room: p.room, seen: [] });
+    Object.assign(x, { asleep: false, room: p.room, news: [] });
     const fondB = relation(ctx, b, a).affection;
     // Dinner tomorrow, at the playback time.
     w.t = (dayOf(w.t)) * 1440 + p.at;
@@ -154,7 +154,7 @@ describe('confessionals', () => {
     expect(e.data!.heard).toContain(x.id);
     expect(a.thoughts.some((t) => t.id === p.speaker)).toBe(true);
     expect(relation(ctx, b, a).affection).toBeLessThan(fondB);
-    expect(x.seen.some((s) => (s.who === b.id && s.with === c.id) || (s.who === c.id && s.with === b.id))).toBe(true);
+    expect(x.news.some((s) => (s.who === b.id && s.with === c.id) || (s.who === c.id && s.with === b.id))).toBe(true);
     expect(w.show.tapes[a.id]).toBeUndefined();
   });
 });

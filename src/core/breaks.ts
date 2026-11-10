@@ -13,7 +13,7 @@ import { addNeed } from './needs.js';
 import { chance, pick } from './rng.js';
 import { infraction, kill } from './show.js';
 import { brawl, interact } from './social.js';
-import { airIt, pourOut } from './romance.js';
+import { airIt, pourOut } from './news.js';
 import { grievance, think } from './thoughts.js';
 import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';

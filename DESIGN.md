@@ -235,7 +235,7 @@ The scoring stays a utility score with noise and a weighted pick among the best 
 | Take | summoned after a moment: their side of it | 5 |
 | Grudge | someone at affection −30 or worse | 6 |
 | Crush | attraction 6+ for someone they aren't dating | 6 |
-| Spill | a kiss or hookup between two others they know about (the gossip memory) | 10 |
+| Spill | a kiss or hookup between two others they know about (What people know), × the share of the house who don't know it yet × their willingness to tell on them | 10 |
 | Suspicion | someone they believe is a killer | 12 |
 | Cheating | their own fling behind the back of a partner they feel guilty about | 15 |
 
@@ -1091,6 +1091,26 @@ One PR per step, each tuned back to all targets before the next:
 2. The ratings pull, personal act boredom, the surprise bonus and the deep-talk change.
 3. People as mood, grudges, friction, envy, joys and pains, and the murder nudge. (Built.)
 
+## What people know (proposed, Nov 10)
+
+john (Nov 10): deal with old news landing as new, loyal people spilling their friends' secrets, and nobody learning who does what. All numbers in `data/news.yaml`; the code is `src/core/news.ts`.
+
+**News.** Each contestant keeps their own news: every pair they know got together, with the worst of it (a kiss, or lovin') and when it last happened, and what people are known for. Seeing it, doing it, overhearing it, being told and the Wheel's secrets all count. They keep it for as long as the people in it are aboard (the old memory held six things for a week, so the same affair kept coming back as news).
+
+- **Only news lands.** Hearing something they already know, or an older or milder version of it, does nothing. A pair's news lands again only if it's worse than what they knew (they'd heard about a kiss; now it's lovin'). Seeing the same two at it again after they've already reacted only stokes it: the betrayal, the grudge and the pining start over, with no fresh scene and no fresh hit to affection. If they learned it before they cared (before they were dating the person), the next sighting lands in full.
+- **What comes to mind.** Gossip and venting pick a piece of news the listener doesn't know, weighted by freshness (× 0.5 every two days since it last happened) and × 3 if it's about someone the listener is involved with.
+- **Loyalty keeps secrets.** Then they say it at odds of their willingness: Π over the people in it of 1 − 1.25 × loyal ÷ 10 × affection ÷ 100 (affection above 0 only). Loyal 10 at affection 80 never tells on them; loyal 2 at affection 50 tells nine times in ten. Drink makes them chattier but not less loyal.
+- **Tip-offs.** After a chat, a friend who knows the listener's partner (flirting or more) has been with someone else may tell them straight, sober or not: odds 0.5 × loyal ÷ 10 × affection ÷ 100 toward the listener, × their willingness to tell on the partner. Logged as `tip_off`; it lands like any news.
+- **Scoops.** Spilling a romance to the diary camera is worth its award × the share of the rest of the house who don't know it yet × their willingness to tell on them, and isn't on their mind at all under 0.15.
+
+**Reputation.** What people are known for, learned by seeing it and passed on by gossip like any other news.
+
+- **Card cheat.** Everyone at the table learns it when a cheat is caught. Anyone who knows is less keen to deal them in, take a seat when they deal, or sit down at a table they're at (× 1 − 0.9 × honest ÷ 10: the honest won't, the crooked shrug), spots them cheating × 3, and a cheat at a table with someone who knows cheats at × 0.3.
+- **Two-timer.** Someone they know has been with two different people inside a week. Their kisses land at × 1 − 0.5 × monogamy ÷ 10, and a yes to exclusivity at × 0.3. Nothing is stored for it: it's read off their news.
+- A killer's name already works this way (`trials.yaml` memory, the ledger's `killer`).
+
+**Measured** (40 seasons × 30 days, before → after): jealousy and betrayal events that repeat an earlier one for the same three people 72% → 21% of betrayals and 44% → 10% of jealousy (what's left is mostly news getting worse, a kiss then lovin'); jealousy and betrayal together 14.5 → 6.4 a week (200 × 30). Loyal 7+ contestants spill 0.53 secrets about friends each in a stay, against 3.19 for loyal 3 or under (before: 1.34 and 1.19). Diary spills 21% → 11% of confessionals. Card cheats caught a fourth time 29% → 8%; hands with a known cheat at the table 46% → 12%; cards 54 → 35 hands a week, as the known cheats get frozen out. Tip-offs 1.6 a week. Side effects: breakups 0.73 → 0.36 a week and murders 0.58 → 0.52, since the same affair no longer hammers affection again and again; hookups 5.6 → 6.9 a week. All 11 targets pass.
+
 ## Booze
 
 | Quality | Rank | Enjoyment per drink | Where |
@@ -1123,7 +1143,7 @@ The enjoyment thought lasts 3 hours and stacks to three drinks. Drinks can be ca
 - **Drinking together:** finishing a drink while others in the room are drinking gives +2 affection toward each of them; they get theirs when they finish.
 - **Self-control** (proposed, Oct 23; john: day drinking is fine, but nobody hammered and passed out at noon): the drink's score is × (1 − intoxication ÷ limit), where the limit is 35 + 5 × drinking, plus up to 30 more for the miserable (× (50 − mood) ÷ 50 under mood 50). Most people stop around tipsy; heavy drinkers and the miserable get hammered.
 - **Hammered effects** (proposed, Oct 23): every hour while hammered, 25% they throw up (hygiene −40; "threw up in front of everyone" −8 if anyone saw; witnesses get "watched them throw up" −2), else 30% they pass out where they are for one to three hours ("passed out in front of everyone" −6). The ceremony's summons doesn't rouse them, so passing out anywhere but the common room at 21:00 is a skipped ceremony.
-- **Gossip and loose lips** (proposed, Oct 23): everyone remembers the last six kisses and hookups they saw, took part in or heard about, for a week. After a chat, a deep talk or a word through the glass, they may spill one to someone who doesn't know it yet, the juiciest first (about someone the listener is involved with): sober 5% × (1 + playful ÷ 10 − honest ÷ 10), tipsy 15%, drunk 40%, hammered 60%. Hearing it counts as seeing it, so it's betrayal or jealousy as usual. Drunken confessions: chatting with the one they're cheating on, they confess it (tipsy 15%, drunk 50%, hammered 80%), which is evidence for the listener and ends the guilt. Scores: spilling 3 (1 to the listener), a confession 10 each, throwing up 4, passing out 3.
+- **Gossip and loose lips** (proposed, Oct 23; what they know and what they pick to tell reworked Nov 10, see What people know): after a chat, a deep talk or a word through the glass, they may spill something to someone who doesn't know it yet: sober 5% × (1 + playful ÷ 10 − honest ÷ 10), tipsy 15%, drunk 40%, hammered 60%. Hearing it counts as seeing it, so it's betrayal or jealousy as usual. Drunken confessions: chatting with the one they're cheating on, they confess it (tipsy 15%, drunk 50%, hammered 80%), which is evidence for the listener and ends the guilt. Scores: spilling 3 (1 to the listener), a confession 10 each, throwing up 4, passing out 3.
 - **Carrying and gifts:** after a drink, a 10% chance (× kindness, × 3 for hoarders) of taking one along, up to two. A gift is an interaction (weight 0.03, × kindness and affection) that needs a carried drink: the best one is handed over and downed on the spot, affection +5, or +15 when it's better than the target's own rank pours, "brought me a drink" (+4), and 2 points to the giver.
 
 ## The meter and scoring

@@ -28,7 +28,7 @@ bladderPerDrink: 15                # "+15 per drink"
 #   goggles: attraction points added whenever they judge someone (gates and odds), and
 #   agree: × their odds of saying yes to a kiss or a proposition (proposal, Oct 23, john: drunk
 #          hookups come from drink making people more impulsive and agreeable)
-#   lips: per chat (romance.yaml gossip), the chance they blurt something they know, and
+#   lips: per chat (news.yaml), the chance they blurt something they know, and
 #   confess: the chance they tearfully confess their own cheating to the one they're cheating on
 #          (proposals, Oct 23, john: loose lips and drunken confessions)
 #   walk: walking time (hammered stumbling; proposal ×1.5)

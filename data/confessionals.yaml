@@ -10,7 +10,7 @@
 #   take       summoned after a big moment: their side of it (about the other one in it)
 #   grudge     trashing someone they can't stand (affection at or below grudge.below)
 #   crush      admitting they fancy someone they're not with (attraction at least crush.attraction)
-#   spill      telling the camera about a kiss or a hookup between two others (what they know, romance.yaml gossip)
+#   spill      telling the camera about a kiss or a hookup between two others (what they know, news.yaml; worth its scoop)
 #   suspicion  naming who they think the killer is (they believe it: trials.ts believe)
 #   cheating   confessing their own fling behind a partner's back (they feel guilty about it)
 # What each pays is scoring.yaml awards.confessional (by kind). `loud` kinds get the surprise.
@@ -57,7 +57,7 @@ summons:
 #   about:  whoever they trashed (grudge, take) or named as the killer (suspicion), and the two they
 #           spilled about: affection toward the speaker, and a thought
 #   crush:  the one they fancy is flattered (affection and a thought), if they like the speaker at all
-#   tell:   spill and cheating: everyone who hears it learns it (romance.yaml gossip), so it's
+#   tell:   spill and cheating: everyone who hears it learns it (news.yaml), so it's
 #           betrayal or jealousy as usual
 #   killer: suspicion: everyone who hears it fears the one named
 # Playback pays scoring.yaml awards.playback.

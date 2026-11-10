@@ -217,7 +217,8 @@ function crossCheck(d: GameData, dir: string): void {
   thought(d.booze.puke.thought, 'booze.yaml: puke.thought');
   thought(d.booze.puke.witnessThought, 'booze.yaml: puke.witnessThought');
   thought(d.booze.passOut.thought, 'booze.yaml: passOut.thought');
-  for (const id of ro.gossip.interactions) if (!d.social.interactions.some((x) => x.id === id)) errors.push(`${dir}/romance.yaml: gossip.interactions: no interaction "${id}" in social.yaml`);
+  for (const id of d.news.gossip.interactions) if (!d.social.interactions.some((x) => x.id === id)) errors.push(`${dir}/news.yaml: gossip.interactions: no interaction "${id}" in social.yaml`);
+  for (const k of ['kiss', 'lovin']) if (!d.news.severity[k]) errors.push(`${dir}/news.yaml: severity: needs a "${k}" row`);
   if (!d.social.interactions.some((x) => x.id === 'insult')) errors.push(`${dir}/social.yaml: interactions: an "insult" is needed (fights, sprees, confrontations)`);
 
   // The Wheel, the daily event and trials

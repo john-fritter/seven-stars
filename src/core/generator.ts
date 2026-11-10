@@ -85,7 +85,7 @@ export function rollContestant(data: GameData, rng: Rng, id: string, t: number, 
     inventory: [],
     snacks: 0,
     breakdown: null,
-    seen: [],
+    news: [],
     told: {},
   };
   c.traits = rollTraits(data, rng, c);

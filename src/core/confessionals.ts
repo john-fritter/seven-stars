@@ -15,7 +15,8 @@ import { personalityOf } from './derived.js';
 import { feel } from './ledger.js';
 import { desperation, expectedPoints, tagSurprise } from './ratings.js';
 import { chance, weightedIndex } from './rng.js';
-import { labelOf, tell } from './romance.js';
+import { hear, scoop, willing } from './news.js';
+import { labelOf } from './romance.js';
 import { gathering } from './schedule.js';
 import { canHear } from './station.js';
 import { think, updateMood } from './thoughts.js';
@@ -27,6 +28,9 @@ export interface Topic {
   kind: ConfessionalKind;
   about: string[];
   key: string | null; // what they'll remember having told (null: not remembered)
+  worth?: number; // × what it pays: a spill is worth its scoop and their willingness to tell (news.yaml)
+  when?: number; // a romance: when it last happened
+  what?: string; // ...and the worst of it
 }
 
 const pairKey = (a: string, b: string) => (a < b ? `${a}:${b}` : `${b}:${a}`);
@@ -40,8 +44,8 @@ export function topics(ctx: Ctx, c: Contestant): Topic[] {
   const cf = ctx.data.confessionals;
   const since = ctx.w.t - cf.told.hours * 60;
   const out: Topic[] = [];
-  const add = (kind: ConfessionalKind, about: string[], key: string) => {
-    if ((c.told[key] ?? -Infinity) <= since) out.push({ kind, about, key });
+  const add = (kind: ConfessionalKind, about: string[], key: string, more: Partial<Topic> = {}) => {
+    if ((c.told[key] ?? -Infinity) <= since) out.push({ kind, about, key, ...more });
   };
   for (const [id, r] of Object.entries(c.ledger)) {
     const o = alive(ctx, id);
@@ -52,16 +56,20 @@ export function topics(ctx: Ctx, c: Contestant): Topic[] {
     if (r.attraction >= cf.crush.attraction && label !== 'dating' && label !== 'exclusive') add('crush', [id], `crush:${id}`);
   }
   const guilty = ctx.data.romance.guilty;
-  for (const s of c.seen) {
+  for (const s of c.news) {
+    if (s.with === null) continue;
     if (s.who !== c.id && s.with !== c.id) {
-      if (alive(ctx, s.who) && alive(ctx, s.with)) add('spill', [s.who, s.with], `spill:${pairKey(s.who, s.with)}`);
+      // A scoop: only worth it if not everyone knows, and if they're willing to tell on them.
+      if (!alive(ctx, s.who) || !alive(ctx, s.with)) continue;
+      const worth = scoop(ctx, c, s) * willing(ctx, c, s);
+      if (worth >= ctx.data.news.scoop.min) add('spill', [s.who, s.with], `spill:${pairKey(s.who, s.with)}`, { worth, when: s.t, what: s.what });
       continue;
     }
     // Their own fling, behind the back of someone they feel guilty about.
     const other = s.who === c.id ? s.with : s.who;
     if (!alive(ctx, other)) continue;
     const partner = c.thoughts.find((x) => x.id === guilty && x.about !== null && x.about !== other && alive(ctx, x.about));
-    if (partner) add('cheating', [other, partner.about!], `cheating:${other}`);
+    if (partner) add('cheating', [other, partner.about!], `cheating:${other}`, { when: s.t, what: s.what });
   }
   return out;
 }
@@ -87,7 +95,7 @@ export function confessionalPull(ctx: Ctx, c: Contestant, def: ActionDef): numbe
   if (def.id !== cf.action) return 0;
   const worst = worstUnvented(ctx, c);
   let pay = topicPoints(ctx, c, 'vent');
-  for (const t of topics(ctx, c)) pay = Math.max(pay, topicPoints(ctx, c, t.kind));
+  for (const t of topics(ctx, c)) pay = Math.max(pay, topicPoints(ctx, c, t.kind) * (t.worth ?? 1));
   if (ctx.w.show.pending.some((x) => x.who === c.id)) pay *= cf.cautious;
   const vent = worst ? (cf.vent.k * -worst.value) / 10 : 0;
   const ratings = cf.ratings * traitFx(ctx.data, c).ratingsPull * desperation(ctx, c) * (pay / 10) * personalityOf(ctx.data, c, def);
@@ -109,11 +117,11 @@ export function confide(ctx: Ctx, c: Contestant, a: Activity): void {
   const options = topics(ctx, c);
   if (a.summoned) options.push({ kind: 'take', about: a.about && alive(ctx, a.about) ? [a.about] : [], key: null });
   let said: Topic = { kind: 'vent', about: [], key: null };
-  if (options.length) said = options[weightedIndex(ctx.w.rng, options.map((t) => Math.max(0.01, topicPoints(ctx, c, t.kind))))]!;
+  if (options.length) said = options[weightedIndex(ctx.w.rng, options.map((t) => Math.max(0.01, topicPoints(ctx, c, t.kind) * (t.worth ?? 1))))]!;
   const since = ctx.w.t - cf.told.hours * 60;
   for (const k of Object.keys(c.told)) if (c.told[k]! <= since) delete c.told[k];
   if (said.key) c.told[said.key] = ctx.w.t;
-  ctx.w.show.tapes[c.id] = { t: ctx.w.t, kind: said.kind, about: said.about };
+  ctx.w.show.tapes[c.id] = { t: ctx.w.t, kind: said.kind, about: said.about, ...(said.when !== undefined ? { when: said.when, what: said.what! } : {}) };
   log(ctx, cf.event, [c.id], a.room, {
     kind: said.kind,
     loud: cf.topics[said.kind]?.loud ?? false,
@@ -239,7 +247,8 @@ function air(ctx: Ctx, who: string): void {
       if (!a || !b) break;
       trashed(a);
       trashed(b);
-      for (const h of heard) if (h !== a && h !== b) tell(ctx, h, a, b, 'playback');
+      const n = { who: a.id, with: b.id, what: tape.what ?? 'kiss', t: tape.when ?? tape.t };
+      for (const h of heard) if (h !== a && h !== b) hear(ctx, h, n, 'playback');
       break;
     }
     case 'cheating': {
@@ -247,7 +256,8 @@ function air(ctx: Ctx, who: string): void {
       if (!other) break;
       const listeners = new Set(heard);
       if (partner) listeners.add(partner); // it's about them: they'll hear
-      for (const h of listeners) if (h !== other) tell(ctx, h, c, other, 'playback');
+      const n = { who: c.id, with: other.id, what: tape.what ?? 'kiss', t: tape.when ?? tape.t };
+      for (const h of listeners) if (h !== other) hear(ctx, h, n, 'playback');
       break;
     }
   }
