@@ -236,6 +236,8 @@ export interface Relation {
   kisses: number; // kisses that landed between them, either way
   lovin: number; // times they've had lovin'
   killer?: string; // the name of someone they believe the other one murdered (trials.ts believe)
+  hurt: number; // 0..100: how much they're still hurting over what the other did (social.yaml ledger.hurt)
+  aired?: number; // when they last had it out with each other (wants.yaml rival.confront)
 }
 
 export interface Thought {

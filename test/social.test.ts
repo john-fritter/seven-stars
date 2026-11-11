@@ -141,11 +141,11 @@ describe('the ledger', () => {
     const [a, b] = cast as [Contestant, Contestant];
     delete a.ledger[b.id];
     delete b.ledger[a.id];
-    for (let i = 0; i < 5; i++) feel(ctx, a, b, 'affection', 30, 'chitchat');
+    for (let i = 0; i < 5; i++) feel(ctx, a, b, 'attraction', 3, 'flirt');
     const r = rel(a, b)!;
-    expect(r.affection).toBe(100);
+    expect(r.attraction).toBe(10);
     const last = r.reasons[r.reasons.length - 1]!;
-    expect(last).toMatchObject({ why: 'chitchat', dim: 'affection', amount: 150, times: 5 });
+    expect(last).toMatchObject({ why: 'flirt', dim: 'attraction', amount: 15, times: 5 });
     feel(ctx, a, b, 'fear', -10, 'insult');
     expect(r.fear).toBe(0);
   });

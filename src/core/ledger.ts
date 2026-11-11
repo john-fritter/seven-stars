@@ -28,7 +28,7 @@ export function rel(a: Contestant, b: Contestant): Relation | undefined {
 export function meet(ctx: Ctx, a: Contestant, b: Contestant): void {
   if (a.ledger[b.id]) return;
   const chemistry = normal(ctx.w.rng, 0, ctx.data.social.attraction.chemistrySd);
-  const fresh = (): Relation => ({ affection: 0, trust: 0, fear: 0, attraction: 0, knows: 0, chemistry, met: ctx.w.t, seen: ctx.w.t, reasons: [], label: 'none', flirts: 0, kisses: 0, lovin: 0 });
+  const fresh = (): Relation => ({ affection: 0, trust: 0, fear: 0, attraction: 0, knows: 0, chemistry, met: ctx.w.t, seen: ctx.w.t, reasons: [], label: 'none', flirts: 0, kisses: 0, lovin: 0, hurt: 0 });
   a.ledger[b.id] = fresh();
   b.ledger[a.id] = fresh();
   const first = ctx.data.social.attraction.firstImpression;
@@ -43,11 +43,36 @@ export function relation(ctx: Ctx, a: Contestant, b: Contestant): Relation {
   return a.ledger[b.id]!;
 }
 
+/** Whether a ledger reason is a wound: a wrong done to them, not just an annoyance (social.yaml ledger.hurt). */
+export function isWound(ctx: Ctx, why: string): boolean {
+  return ctx.data.social.ledger.hurt.wounds.some((w) => why === w || why.startsWith(`${w} `));
+}
+
+/**
+ * How much of an affection change lands (social.yaml ledger). Feelings have room to move, not a
+ * wall: warmth toward someone they already like lands × 1 − headroom × affection ÷ 100, so another
+ * nice chat with a close friend keeps them close rather than making them closer, and dislike piles
+ * up the same way. A wound from someone they like cuts deeper, × 1 + deeper × affection ÷ 100. And
+ * while they're still hurting over them, warmth lands × 1 − blocks × hurt ÷ 100.
+ */
+export function landed(ctx: Ctx, r: Relation, amount: number, why: string): number {
+  const l = ctx.data.social.ledger;
+  const a = r.affection;
+  if (amount > 0) return amount * Math.max(0, 1 - (l.headroom * Math.max(0, a)) / 100) * Math.max(0, 1 - (l.hurt.blocks * r.hurt) / 100);
+  const wound = isWound(ctx, why);
+  return amount * (a > 0 && wound ? 1 + (l.deeper * a) / 100 : 1) * Math.max(0, 1 - (l.headroom * Math.max(0, -a)) / 100);
+}
+
 /** Records a dated reason in a's ledger about b and moves that dimension. */
 export function feel(ctx: Ctx, a: Contestant, b: Contestant, dim: Dim, amount: number, why: string): void {
   if (amount === 0) return;
   const r = relation(ctx, a, b);
   const [lo, hi] = RANGE[dim];
+  if (dim === 'affection') {
+    amount = landed(ctx, r, amount, why);
+    // A wound leaves them hurting over it, and that heals slowly (fadeLedger).
+    if (amount < 0 && isWound(ctx, why)) r.hurt = Math.min(100, r.hurt - amount * ctx.data.social.ledger.hurt.per);
+  }
   r[dim] = clamp(r[dim] + amount, lo, hi);
   const last = r.reasons[r.reasons.length - 1];
   if (last && last.why === why && last.dim === dim) {
@@ -60,12 +85,24 @@ export function feel(ctx: Ctx, a: Contestant, b: Contestant, dim: Dim, amount: n
   }
 }
 
+/** A wound from b that a hasn't had out with them yet (wants.yaml rival.confront): something new since they last did. */
+export function freshWound(ctx: Ctx, r: Relation): boolean {
+  if (r.aired === undefined) return true;
+  return r.reasons.some((x) => x.dim === 'affection' && x.amount < 0 && x.t > r.aired! && isWound(ctx, x.why));
+}
+
+/** They've had it out: whatever was between them has been said, on both sides. */
+export function airedOut(ctx: Ctx, a: Contestant, b: Contestant): void {
+  relation(ctx, a, b).aired = ctx.w.t;
+  relation(ctx, b, a).aired = ctx.w.t;
+}
+
 /**
  * Once a day, feelings fade a little toward neutral. Loyal people's affection fades slower, and
  * so does affection for someone they believe they're dating or exclusive with. Grudges stick:
  * dislike fades slower, slower still for the volatile, and at the rate their traits say (never
  * for a Grudge-holder, twice as fast for the Forgiving). Dislike of a believed killer stops at the
- * floor (trials.yaml memory).
+ * floor (trials.yaml memory). Hurt heals at its own rate, by the same grudge factors.
  */
 export function fadeLedger(ctx: Ctx, c: Contestant): void {
   const l = ctx.data.social.ledger;
@@ -78,6 +115,8 @@ export function fadeLedger(ctx: Ctx, c: Contestant): void {
     r.affection *= 1 - Math.min(1, rate);
     // Someone they believe is a killer stays a rival (trials.yaml memory).
     if (r.killer && before <= floor) r.affection = Math.min(r.affection, floor);
+    r.hurt *= 1 - Math.min(1, l.hurt.heal * grudge);
+    if (r.hurt < 0.5) r.hurt = 0;
     r.trust *= 1 - l.fadePerDay.trust;
     r.fear *= 1 - l.fadePerDay.fear;
   }

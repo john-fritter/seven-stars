@@ -270,7 +270,7 @@ function ledgerHtml(c: Contestant): string {
         .map((x) => `${label(x.why)}${x.times > 1 ? ` ×${x.times}` : ''} ${x.dim} ${x.amount > 0 ? '+' : ''}${x.amount.toFixed(1)}`)
         .join('; ');
       return `<div class="rel"><b>${esc(who(id))}${gone}</b> ${tags ? `<small>${esc(tags)}</small>` : ''}<br>
-        affection ${r.affection.toFixed(0)}, attraction ${r.attraction.toFixed(1)}, trust ${r.trust.toFixed(0)}, fear ${r.fear.toFixed(0)}, knows ${(r.knows * 100).toFixed(0)}%<br>
+        affection ${r.affection.toFixed(0)}, attraction ${r.attraction.toFixed(1)}, trust ${r.trust.toFixed(0)}, fear ${r.fear.toFixed(0)}, ${r.hurt >= 1 ? `hurt ${r.hurt.toFixed(0)}, ` : ''}knows ${(r.knows * 100).toFixed(0)}%<br>
         <small>${esc(reasons)}</small></div>`;
     })
     .join('');

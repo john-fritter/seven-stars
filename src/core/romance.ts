@@ -9,7 +9,7 @@ import type { InteractionDef, Label } from '../data/schema.js';
 import { begin, endActivity, LOVIN } from './actions.js';
 import { agreeMult, attractionNow, axis, moveMult } from './booze.js';
 import { canEnter, isNightFor, log, type Ctx } from './context.js';
-import { feel, rel, relation } from './ledger.js';
+import { airedOut, feel, rel, relation } from './ledger.js';
 import { axisFactor } from './needs.js';
 import { between, chance } from './rng.js';
 import { canSee, nextDoor, walkMinutes, type ObjectInstance } from './station.js';
@@ -49,10 +49,8 @@ export function moveAllowed(ctx: Ctx, c: Contestant, o: Contestant, def: Interac
     case 'invite':
       // Getting on for bedtime, with a bed for two to go to, once the ceremony is over.
       return !busy(ctx, c) && !busy(ctx, o) && isNightFor(ctx, c, ctx.w.t + ro.invite.lead) && bedFor(ctx, c, o) !== null;
-    case 'breakup': {
-      const r = rel(c, o)!;
-      return r.affection <= ro.breakup.affectionBelow || c.thoughts.some((x) => x.id === ro.betrayal.thought && x.about === o.id);
-    }
+    case 'breakup':
+      return breakupReason(ctx, c, o) !== null;
     default:
       return true;
   }
@@ -386,7 +384,10 @@ export function piningMult(ctx: Ctx, a: Contestant, b: Contestant): number {
 /** Having it out: an insult to their face, if they're both here and awake. */
 function confront(ctx: Ctx, a: Contestant, b: Contestant, odds: number): void {
   const sm = ctx.data.social.interactions.find((d) => d.id === 'insult');
-  if (sm && a.room === b.room && !b.asleep && chance(ctx.w.rng, odds)) interact(ctx, a, b, sm);
+  if (sm && a.room === b.room && !b.asleep && chance(ctx.w.rng, odds)) {
+    interact(ctx, a, b, sm);
+    airedOut(ctx, a, b);
+  }
 }
 
 /** Odds of a yes to exclusivity: their attraction, monogamy and loyalty. */
@@ -418,10 +419,33 @@ export function askExclusive(ctx: Ctx, c: Contestant, o: Contestant): void {
   log(ctx, 'exclusive', [c.id, o.id], c.room, { odds: round2(odds), secretly });
 }
 
+/**
+ * Why c would end it with o, if they would (romance.yaml breakup): betrayed, fallen out, still
+ * hurting over them, the spark gone, or someone else. Null: no reason to.
+ */
+export function breakupReason(ctx: Ctx, c: Contestant, o: Contestant): { why: string; for?: string } | null {
+  const ro = ctx.data.romance;
+  const b = ro.breakup;
+  const r = rel(c, o);
+  if (!r) return null;
+  if (c.thoughts.some((x) => x.id === ro.betrayal.thought && x.about === o.id)) return { why: 'betrayed' };
+  if (r.affection <= b.affectionBelow) return { why: 'fell_out' };
+  if (r.hurt >= b.hurtAt) return { why: 'hurt' };
+  if (r.attraction < b.cooledBelow) return { why: 'cooled' };
+  let best: { id: string; at: number } | null = null;
+  for (const x of ctx.w.contestants) {
+    const rx = c.ledger[x.id];
+    if (x === c || x === o || !rx || (b.wander.flirted && rx.flirts === 0)) continue;
+    if (rx.attraction >= r.attraction + b.wander.margin && (!best || rx.attraction > best.at)) best = { id: x.id, at: rx.attraction };
+  }
+  return best ? { why: 'someone_else', for: best.id } : null;
+}
+
 export function breakUp(ctx: Ctx, c: Contestant, o: Contestant): void {
   const from = labelOf(c, o);
+  const reason = breakupReason(ctx, c, o);
   relation(ctx, c, o).label = 'ex';
   relation(ctx, o, c).label = 'ex';
   think(ctx, o, ctx.data.romance.breakup.dumped, c.id);
-  log(ctx, 'breakup', [c.id, o.id], c.room, { from });
+  log(ctx, 'breakup', [c.id, o.id], c.room, { from, why: reason?.why ?? 'fell_out', ...(reason?.for ? { for: reason.for } : {}) });
 }

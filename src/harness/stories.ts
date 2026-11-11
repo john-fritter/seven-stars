@@ -44,6 +44,7 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
   const known = new Set<string>(); // killers someone believes did it
   let booked = false;
   const confronted = new Map<string, number>(); // pair -> when one last confronted the other
+  const confrontCount = new Map<string, number>(); // pair -> confrontations between them
   const trained = new Set<string>(); // who trained for today's match
   // Jealousy (and betrayal) in the last two days: did the jealous one turn on the rival, or go after the partner?
   const jealousy: { a: string; b: string; c: string; t: number; rival: boolean; back: boolean; won: boolean }[] = [];
@@ -131,6 +132,10 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
         case 'jealous':
           add(n, 'jealous');
           jealousy.push({ a: a!, b: b!, c: e.actors[2]!, t: e.t, rival: false, back: false, won: false });
+          break;
+        case 'breakup':
+          add(n, 'breakups');
+          add(n, `breakup.${String(data.why ?? 'fell_out')}`);
           break;
         case 'betrayal':
           add(n, 'betrayals');
@@ -258,6 +263,8 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
         case 'confront':
           add(n, 'confronts');
           if (data.with === 'insult') add(n, 'confrontInsults');
+          if ((confrontCount.get(pairKey(a!, b!)) ?? 0) >= 2) add(n, 'confrontRepeats');
+          confrontCount.set(pairKey(a!, b!), (confrontCount.get(pairKey(a!, b!)) ?? 0) + 1);
           confronted.set(pairKey(a!, b!), e.t);
           break;
         case 'talk':
@@ -359,6 +366,9 @@ export function storyReport(seeds: StorySeed[]): string[] {
   line(`  first hookups: ${fh}; ${n('firstHookupsUnkissed')} (${pct(n('firstHookupsUnkissed'), fh)}) before any kiss, ${n('firstHookupsUnflirted')} (${pct(n('firstHookupsUnflirted'), fh)}) before any flirt`);
   line(`  hookups ${per(n('hookups') * 7, days)} a week, first kisses ${per(n('firstKisses') * 7, days)} a week`);
   line(`  jealousy ${per(n('jealous'), n('kisses'))} per kiss; caught cheating ${per(n('betrayals') * 7, days)} a week`);
+  const bu = n('breakups');
+  const whys = ['betrayed', 'fell_out', 'hurt', 'cooled', 'someone_else'].map((k) => `${pct(n(`breakup.${k}`), bu)} ${k.replace('_', ' ')}`).join(', ');
+  line(`  breakups ${per(bu * 7, days)} a week (${whys}); murders ${per(n('murders') * 7, days)} a week`);
   const je = n('jealous');
   line(`  within two days of jealousy: ${pct(n('jealousRival'), je)} turned on the rival (${pct(n('jealousRivalViolent'), je)} with fists or an extreme break),`);
   line(`    ${pct(n('jealousBack'), je)} went after the partner, ${pct(n('jealousWon'), je)} got a kiss or more from them`);
@@ -400,7 +410,7 @@ export function storyReport(seeds: StorySeed[]): string[] {
   line('Wants and things to do');
   line(`  tomorrow's bill announced on ${pct(n('bills'), n('ceremonies'))} of nights; ${per(n('montages') * 7, days, 1)} training sessions a week for a booked match`);
   line(`    a cage match between one who trained and one who didn't: the trained one won ${pct(n('trainedWon'), n('trainedWon') + n('trainedLost'))} of ${n('trainedWon') + n('trainedLost')}`);
-  line(`  confronting a rival ${per(n('confronts') * 7, days, 1)} a week (${pct(n('confrontInsults'), n('confronts'))} straight to an insult, ${pct(n('confrontFights'), n('confronts'))} came to blows)`);
+  line(`  confronting a rival ${per(n('confronts') * 7, days, 1)} a week (${pct(n('confrontInsults'), n('confronts'))} straight to an insult, ${pct(n('confrontFights'), n('confronts'))} came to blows, ${pct(n('confrontRepeats'), n('confronts'))} a pair's third or more)`);
   line(`  going to a friend in trouble ${per(n('comforting'), days, 1)} a day; seeking out a partner or crush ${per(n('partnerTalks'), days, 1)} a day`);
   line(`  cards: ${per(n('hands') * 7, days, 0)} hands a week (${pct(n('handsForSnacks'), n('hands'))} for snacks), ${per(n('dealIns') * 7, days, 1)} games started a week, ${per(n('cheatsCaught') * 7, days, 1)} cheats caught (${pct(n('cheatsCaughtKnown'), n('cheatsCaught'))} by a table that already knew)`);
   line(`  getting ready for the evening ${per(n('readied'), days, 1)} a day`);
@@ -456,9 +466,11 @@ function narrator(): { line: (e: SimEvent) => string[]; nm: (id: string | undefi
       case 'exclusive':
         s = `${nm(a)} and ${nm(b)} go exclusive${x.secretly ? ` (${nm(b)} secretly thinks it's a fling)` : ''}`;
         break;
-      case 'breakup':
-        s = `${nm(a)} breaks up with ${nm(b)}`;
+      case 'breakup': {
+        const why: Record<string, string> = { betrayed: ' after the betrayal', hurt: ': too much hurt between them', cooled: ': the spark is gone', someone_else: ` for ${nm(x.for as string)}`, fell_out: ': they fell out' };
+        s = `${nm(a)} breaks up with ${nm(b)}${why[x.why as string] ?? ''}`;
         break;
+      }
       case 'betrayal':
         s = `${nm(a)} catches ${nm(b)} with ${nm(c)} (${x.what})${at}`;
         break;
@@ -694,6 +706,7 @@ export function tuneIn(data: GameData, seed: number, day: number, at: number, ho
       if (r.label !== 'none') bits.push(r.label);
       if (r.affection >= 40 || r.affection <= -30) bits.push(`affection ${r.affection.toFixed(0)}`);
       if (r.fear >= 40) bits.push(`fear ${r.fear.toFixed(0)}`);
+      if (r.hurt >= 20) bits.push(`still hurting ${r.hurt.toFixed(0)}`);
       if (r.lovin) bits.push(`lovin' ×${r.lovin}`);
       if (r.killer) bits.push(`believes they killed ${r.killer}`);
       if (!bits.length) continue;
