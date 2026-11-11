@@ -9,6 +9,7 @@ import { axis } from './booze.js';
 import { dayOf, log, timeOfDay, type Ctx } from './context.js';
 import { feel, relation } from './ledger.js';
 import { shuffle } from './rng.js';
+import { reopen, verdict } from './guilt.js';
 import { mourn, rollCall, space } from './show.js';
 import { think } from './thoughts.js';
 import type { Body, Contestant, Trial } from './types.js';
@@ -36,7 +37,7 @@ export function found(ctx: Ctx, body: Body, finder: Contestant | null): void {
     log(ctx, 'body_found', finder ? [finder.id] : [], body.room, { victim: body.id, name: body.name, minutes: ctx.w.t - body.t, ...(finder ? {} : { announced: true }) });
     if (finder) think(ctx, finder, ctx.data.trials.foundThought, body.id);
   }
-  mourn(ctx, body.id, body.feelings);
+  mourn(ctx, body.id, body.feelings, body.killer);
   const killer = ctx.w.contestants.find((c) => c.id === body.killer);
   if (killer) believe(ctx, killer, body.witnesses, body, 'witnessed');
   accuse(ctx, body);
@@ -97,12 +98,17 @@ function accuse(ctx: Ctx, body: Body): void {
     log(ctx, 'no_accusation', [], body.room, { victim: body.id, name: body.name });
     return;
   }
-  const { accuser, accused } = best;
-  // Held at the next morning's trial hour.
+  schedule(ctx, body, best.accuser, best.accused, body.witnesses, best.suspicion, false);
+}
+
+/** An accusation, tried at the next morning's trial hour. Reopened: an old murder brought back (guilt.ts). */
+export function schedule(ctx: Ctx, body: Pick<Body, 'id' | 'name' | 'killer' | 'feelings'>, accuser: Contestant, accused: Contestant, witnesses: string[], suspicion: number, reopened: boolean): void {
+  const tr = ctx.data.trials;
   const day = dayOf(ctx.w.t) + (timeOfDay(ctx.w.t) < ctx.data.schedule.trials.at ? 0 : 1);
-  const trial: Trial = { day, victim: body.id, name: body.name, killer: body.killer, accuser: accuser.id, accused: accused.id, witnesses: body.witnesses, feelings: body.feelings };
+  const trial: Trial = { day, victim: body.id, name: body.name, killer: body.killer, accuser: accuser.id, accused: accused.id, witnesses, feelings: body.feelings, ...(reopened ? { reopened } : {}) };
   ctx.w.show.trials.push(trial);
-  log(ctx, 'accusation', [accuser.id, accused.id], accuser.room, { victim: body.id, name: body.name, suspicion: Math.round(best.suspicion), day, right: accused.id === body.killer });
+  ctx.w.show.cases.find((k) => k.victim === body.id)?.accusers.push(accuser.id);
+  log(ctx, 'accusation', [accuser.id, accused.id], accuser.room, { victim: body.id, name: body.name, suspicion: Math.round(suspicion), day, right: accused.id === body.killer, ...(reopened ? { reopened } : {}) });
   think(ctx, accused, tr.accused.thought, accuser.id);
   feel(ctx, accused, accuser, 'affection', tr.accused.affection, 'accused me of murder');
 }
@@ -156,6 +162,8 @@ function hold(ctx: Ctx, trial: Trial, present: Contestant[]): void {
   const accused = ctx.w.contestants.find((c) => c.id === trial.accused);
   if (!accuser || !accused) {
     log(ctx, 'trial_cancelled', [accuser, accused].filter((x) => x !== undefined).map((x) => x.id), room, { victim: trial.victim, name: trial.name });
+    const k = ctx.w.show.cases.find((x) => x.victim === trial.victim);
+    if (k) reopen(ctx, k);
     return;
   }
   // Proposal: the accuser and accused don't vote.
@@ -179,14 +187,16 @@ function hold(ctx: Ctx, trial: Trial, present: Contestant[]): void {
     loser: loser.id,
     killer: trial.killer,
     right: loser.id === trial.killer,
+    ...(trial.reopened ? { reopened: true } : {}),
   });
   think(ctx, winner, ctx.data.trials.survivedThought);
   const spaced = space(ctx, loser, 'trial', room);
   // An accused who walks out alive, cleared or saved by an immunity, is a killer to everyone who
-  // wanted them spaced.
+  // wanted them spaced, apart from the real killer, who knows better.
   const survivor = spaced ? winner : loser;
   if (survivor === accused) {
     const against = Object.keys(votes).filter((id) => votes[id] === accused.id);
-    believe(ctx, accused, [accuser.id, ...against], { id: trial.victim, name: trial.name, feelings: trial.feelings }, spaced ? 'cleared' : 'immunity');
+    believe(ctx, accused, [accuser.id, ...against].filter((id) => id !== trial.killer), { id: trial.victim, name: trial.name, feelings: trial.feelings }, spaced ? 'cleared' : 'immunity');
   }
+  verdict(ctx, trial, loser, spaced);
 }

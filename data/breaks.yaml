@@ -25,6 +25,9 @@ sources:
   # jealousy are their own source, and it breaks into a scene, aimed at whoever the worst of it is
   # about (the cheating partner or the rival).
   heartbreak:  { minor: scene, major: blowup, extreme: attack }
+  # Proposal (Nov 11, a killer's guilt): guilt (a crime, cheating, being caught sneaking) cries in
+  # the confessional, drinks to forget, and at worst it all comes out in front of everyone.
+  guilt:       { minor: cry, major: drink_binge, extreme: blurt }
 
 # Proposal (joys and pains step): a source's bad thoughts count × this when picking the biggest
 # grievance; mood is unchanged. Envy is a few points of mood but it burns, and at × 1 it never
@@ -50,6 +53,7 @@ weights: { envy: 5 }
 #   rant:     a slight at whoever's here every this many minutes
 #   target:   ... | friend (whoever they like best, affection 30+)
 #   attack:   a crime of passion (below)
+#   confess:  on arrival, the room hears what they feel guiltiest about
 #   orElse:   what it becomes when it can't happen (proposal, Oct 23: an attack with nobody to attack
 #             smashes the set, terror with nobody to lash out at panics; venting with no friend hides)
 # A break that can't happen (no target, or they're in the fishbowl and it needs to go somewhere)
@@ -77,6 +81,9 @@ kinds:
   attack_top:      { label: "goes for the top of the ranking", room: target, target: top, minutes: 10, attack: true, orElse: tantrum }
   lash_out:        { label: "lashes out", room: target, target: feared, minutes: 10, attack: true, orElse: panic }
   catatonic:       { label: "sits catatonic", room: here, minutes: 120 }
+  # Proposal (Nov 11): on arrival, everyone in earshot hears the worst thing they feel guilty
+  # about: a murder (they believe it, trials.yaml guilt), or their cheating (news.yaml).
+  blurt:           { label: "breaks down and confesses in front of everyone", room: here, minutes: 20, confess: true }
 
 # Crimes of passion. An extreme attack turns violent only if kindness is at most `kindAtMost` or
 # calm at most `calmAtMost` (drunk kindness counts); otherwise it collapses (`collapse` by the

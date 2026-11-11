@@ -153,6 +153,22 @@ export interface Body {
   feelings: Record<string, { affection: number; enemy: boolean }>; // everyone else, at the time of death
 }
 
+/**
+ * A murder on the books while its killer is aboard (trials.yaml guilt, reopen): it can come back
+ * whenever someone learns the truth, however its trial went.
+ */
+export interface Case {
+  victim: string;
+  name: string;
+  killer: string;
+  room: string;
+  t: number;
+  feelings: Body['feelings']; // everyone's feelings for the victim when they died
+  knew: string[]; // who knows for certain: saw it, or heard the killer confess
+  accusers: string[]; // who has accused the killer over it
+  kept: string[]; // friends the killer confided in who kept the secret
+}
+
 /** An accusation waiting for the morning trial. */
 export interface Trial {
   day: number;
@@ -163,6 +179,7 @@ export interface Trial {
   accused: string;
   witnesses: string[];
   feelings: Body['feelings']; // everyone's feelings for the victim when they died
+  reopened?: boolean; // an old murder, brought back by someone who learned the truth
 }
 
 /** The show's bookkeeping: the judge's boredom, repeat pairs, infractions awaiting sentence, and the
@@ -181,6 +198,7 @@ export interface ShowState {
   bedSwap: string[] | null; // the Wheel's suite night, swapped back at the wake chime
   bodies: Body[];
   trials: Trial[];
+  cases: Case[]; // murders whose killers are still aboard
   trialOn: number | null; // the day trials were last called, so the gathering runs its course
   seen: Record<string, Record<string, number>>; // room -> contestant -> when they last left it
   names: string[]; // every name cast this season, so nobody arrives with a dead contestant's name

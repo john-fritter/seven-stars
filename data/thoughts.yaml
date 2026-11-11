@@ -234,6 +234,14 @@ thoughts:
   # Proposals (trials.yaml memory): knowing a killer walks free, and sharing a room with them.
   knows_killer:  { label: "{who} is a killer and still here", value: -8, hours: 72, stack: 1, source: fear }
   near_killer:   { label: "In a room with {who}, a killer", value: -5, hours: 0.5, stack: 1, source: fear }
+  # Proposals (Nov 11, john: a killer's guilt should depend on personality and circumstances;
+  # trials.yaml guilt). All guilt, so the honest and the kind feel them hardest (sources above).
+  killed_them:   { label: "I killed {who}", value: -10, hours: 168, stack: 1, source: guilt }   # value set by trials.yaml guilt.remorse
+  scapegoat:     { label: "{who} was spaced for what I did", value: -10, hours: 168, stack: 1, source: guilt }
+  got_away:      { label: "Got away with it", value: 5, hours: 72, stack: 1, source: catharsis,
+                   scale: [{ axis: kind, k: -1 }, { axis: honest, k: -0.5 }] }   # nothing at kind 10
+  haunted:       { label: "Back where I killed {who}", value: -4, hours: 0.5, stack: 1, source: guilt }
+  keeping_secret: { label: "Keeping {who}'s secret", value: -4, hours: 72, stack: 1, source: fear }
 
   # The Wheel, the daily event and trials (all proposals)
   spun_wheel:    { label: "Had to spin the Wheel", value: -5, hours: 24, stack: 1, source: fear, needs: { fun: -10 } }

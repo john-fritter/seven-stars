@@ -157,6 +157,7 @@ export function kill(ctx: Ctx, c: Contestant, cause: string, room: string, witne
     const window = ctx.data.trials.nearMinutes;
     const near = ctx.w.contestants.filter((o) => o !== c && (o.room === room || (left[o.id] ?? -Infinity) >= t - window)).map((o) => o.id);
     const body: Body = { id: c.id, name: c.name, room, t, killer, witnesses, near, feelings };
+    ctx.w.show.cases.push({ victim: c.id, name: c.name, killer, room, t, feelings, knew: [...witnesses], accusers: [], kept: [] });
     remove(ctx, c);
     if (witnesses.length) found(ctx, body, null);
     else ctx.w.show.bodies.push(body);
@@ -168,28 +169,38 @@ export function kill(ctx: Ctx, c: Contestant, cause: string, room: string, witne
 
 /**
  * Friends grieve, rivals gloat, the disliked are no great loss, and everyone else is shaken, the
- * more so the more they liked them. The kind don't gloat.
+ * more so the more they liked them. The kind don't gloat. The killer has already reacted, at the
+ * kill (guilt.ts remorse).
  */
-export function mourn(ctx: Ctx, id: string, feelings: Body['feelings']): void {
-  const sp = ctx.data.rules.spacing;
-  const l = ctx.data.social.ledger;
-  const died = ctx.data.thoughts.thoughts[sp.died]!.value;
+export function mourn(ctx: Ctx, id: string, feelings: Body['feelings'], killer?: string): void {
   const n = { grief: 0, gloat: 0, relief: 0, shaken: 0 };
   for (const o of ctx.w.contestants) {
-    if (o.id === id) continue;
-    const aff = feelings[o.id]?.affection ?? 0;
-    if (aff >= l.friendAt) {
-      think(ctx, o, sp.friend, id);
-      n.grief++;
-    } else if (aff <= sp.dislikedAt && axis(ctx, o, 'kind') < sp.kindForgives) {
-      think(ctx, o, aff <= l.rivalAt ? sp.rival : sp.disliked, id);
-      n[aff <= l.rivalAt ? 'gloat' : 'relief']++;
-    } else {
-      think(ctx, o, sp.died, id, Math.min(0, died + sp.diedPerAffection * Math.max(aff, l.rivalAt)));
-      n.shaken++;
-    }
+    if (o.id === id || o.id === killer) continue;
+    n[grieve(ctx, o, id, feelings[o.id]?.affection ?? 0, false)]++;
   }
   log(ctx, 'mourned', [id], undefined, n);
+}
+
+/**
+ * How one person takes a death, by how they felt about the dead. Someone who caused it (`own`)
+ * grieves a friend and gloats over a rival like anyone, but isn't shaken by it.
+ */
+export function grieve(ctx: Ctx, o: Contestant, id: string, aff: number, own: boolean): 'grief' | 'gloat' | 'relief' | 'shaken' {
+  const sp = ctx.data.rules.spacing;
+  const l = ctx.data.social.ledger;
+  if (aff >= l.friendAt) {
+    think(ctx, o, sp.friend, id);
+    return 'grief';
+  }
+  if (aff <= sp.dislikedAt && axis(ctx, o, 'kind') < sp.kindForgives) {
+    think(ctx, o, aff <= l.rivalAt ? sp.rival : sp.disliked, id);
+    return aff <= l.rivalAt ? 'gloat' : 'relief';
+  }
+  if (!own) {
+    const died = ctx.data.thoughts.thoughts[sp.died]!.value;
+    think(ctx, o, sp.died, id, Math.min(0, died + sp.diedPerAffection * Math.max(aff, l.rivalAt)));
+  }
+  return 'shaken';
 }
 
 /** Takes a contestant out of the world: their objects, their guests, and others' feelings about them. */
@@ -204,6 +215,7 @@ function remove(ctx: Ctx, c: Contestant): void {
     c.secret = 0;
   }
   w.contestants.splice(w.contestants.indexOf(c), 1);
+  w.show.cases = w.show.cases.filter((k) => k.killer !== c.id); // a murder dies with its killer
   w.show.pending = w.show.pending.filter((x) => x.who !== c.id);
   delete w.show.tapes[c.id];
   w.show.summons = w.show.summons.filter((x) => x.who !== c.id);

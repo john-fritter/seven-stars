@@ -260,6 +260,13 @@ function crossCheck(d: GameData, dir: string): void {
   thought(tr.foundThought, 'trials.yaml: foundThought');
   thought(tr.accused.thought, 'trials.yaml: accused.thought');
   thought(tr.survivedThought, 'trials.yaml: survivedThought');
+  thought(tr.memory.thought, 'trials.yaml: memory.thought');
+  thought(tr.memory.near, 'trials.yaml: memory.near');
+  thought(tr.guilt.remorse.thought, 'trials.yaml: guilt.remorse.thought');
+  thought(tr.guilt.haunted, 'trials.yaml: guilt.haunted');
+  thought(tr.guilt.scapegoat.thought, 'trials.yaml: guilt.scapegoat.thought');
+  thought(tr.guilt.gotAway, 'trials.yaml: guilt.gotAway');
+  thought(tr.guilt.keep.thought, 'trials.yaml: guilt.keep.thought');
   if (!rooms.has(d.schedule.trials.room)) errors.push(`${dir}/schedule.yaml: trials.room: no room "${d.schedule.trials.room}"`);
 
   // Traits

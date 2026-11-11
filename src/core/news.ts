@@ -11,6 +11,7 @@
 //
 //   weight  = 0.5^(age ÷ halfLife) × (juicy for the listener ? juicy : 1)   which piece comes to mind
 //   willing = Π over the people in it (1 − protect × loyal/10 × affection/100)   the odds they say it
+import { drunkConfession } from './guilt.js';
 import { axis, stageOf } from './booze.js';
 import { log, type Ctx } from './context.js';
 import { chance, weightedIndex } from './rng.js';
@@ -203,6 +204,7 @@ export function looseLips(ctx: Ctx, c: Contestant, o: Contestant, id: string): v
       return;
     }
   }
+  if (drunkConfession(ctx, c, o)) return;
   if (tipOff(ctx, c, o)) return;
   if (!st.lips || !chance(ctx.w.rng, st.lips)) return;
   const n = pickNews(ctx, c, o);

@@ -8,6 +8,7 @@ import type { Level } from '../data/schema.js';
 import { begin, endActivity, onToilet, PASSED_OUT } from './actions.js';
 import { axis, drink, qualityFor } from './booze.js';
 import { accessRank, canEnter, log, type Ctx } from './context.js';
+import { blurt, remorse } from './guilt.js';
 import { feel } from './ledger.js';
 import { addNeed } from './needs.js';
 import { chance, pick } from './rng.js';
@@ -171,6 +172,7 @@ export function breakArrive(ctx: Ctx, c: Contestant): void {
     feel(ctx, target, c, 'affection', kind.wreck.affection, 'wrecked my things');
   }
   if (kind.airs && target) airIt(ctx, c, target);
+  if (kind.confess) blurt(ctx, c);
   if (kind.vent && target && target.room === c.room && !target.asleep) {
     const talk = ctx.data.social.interactions.find((d) => d.id === 'deep_talk');
     if (talk) interact(ctx, c, target, talk);
@@ -246,6 +248,7 @@ export function attack(ctx: Ctx, c: Contestant, target: Contestant): void {
   const room = c.room;
   // One murder mystery at a time (D-050): while a body lies unfound or a trial is pending, nobody dies of it.
   const open = p.oneAtATime && (ctx.w.show.bodies.length > 0 || ctx.w.show.trials.length > 0);
+  const before = c.ledger[target.id]?.affection ?? 0; // how they felt about them, before the blows
   const killChance = open ? 0 : (p.base + p.perStrength * Math.max(0, c.strength - target.strength)) * (p.weapons[room] ?? 1);
   const fight = brawl(ctx, c, target, {
     firstBlow: p.firstBlow,
@@ -259,5 +262,6 @@ export function attack(ctx: Ctx, c: Contestant, target: Contestant): void {
     feel(ctx, w, c, 'fear', p.witnessFear, 'saw a murder');
     think(ctx, w, p.witnessThought, c.id);
   }
+  remorse(ctx, c, dead.id, before);
   kill(ctx, dead, 'murder', room, witnesses.map((w) => w.id), c.id);
 }

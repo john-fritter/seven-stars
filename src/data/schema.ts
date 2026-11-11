@@ -631,6 +631,8 @@ const breakKind = z.object({
   vent: z.boolean().default(false),
   // Every this many minutes, a slight at whoever's here.
   rant: z.number().int().positive().optional(),
+  // On arrival, the room hears what they feel guiltiest about (a murder, their cheating).
+  confess: z.boolean().default(false),
   // What it becomes when it can't happen (no target, or somewhere they can't go), before `fallback`.
   orElse: z.string().optional(),
 });
@@ -795,6 +797,15 @@ export const trialsSchema = z.object({
   testimony: z.object({ base: num, trust: num }),
   survivedThought: z.string(),
   memory: z.object({ affection: num, fear: num, friend: num, floor: num, thought: z.string(), near: z.string() }),
+  guilt: z.object({
+    remorse: z.object({ thought: z.string(), base: num, perAffection: num }),
+    haunted: z.string(),
+    scapegoat: z.object({ thought: z.string(), framed: num }),
+    gotAway: z.string(),
+    full: num.positive(),
+    keep: z.object({ loyal: num, thought: z.string() }),
+  }),
+  reopen: z.boolean(),
 });
 
 const leanBy = z.union([axisEnum, z.enum(['modesty', 'drinking', 'monogamy'])]);
@@ -906,7 +917,7 @@ export const activitiesSchema = z.object({
   ready: z.object({ until: clock, beauty: num }),
 });
 
-export const CONFESSIONAL_KINDS = ['vent', 'take', 'grudge', 'crush', 'spill', 'suspicion', 'cheating'] as const;
+export const CONFESSIONAL_KINDS = ['vent', 'take', 'grudge', 'crush', 'spill', 'suspicion', 'cheating', 'murder'] as const;
 export type ConfessionalKind = (typeof CONFESSIONAL_KINDS)[number];
 
 export const confessionalsSchema = z.object({

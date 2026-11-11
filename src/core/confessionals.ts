@@ -12,6 +12,7 @@ import type { ActionDef, ConfessionalKind } from '../data/schema.js';
 import { begin, CEREMONY, endActivity, EVENT, LOVIN, MEAL, onToilet, PASSED_OUT, TRIAL, type Plan } from './actions.js';
 import { dayOf, log, timeOfDay, type Ctx } from './context.js';
 import { personalityOf } from './derived.js';
+import { confess, crimeOf, guiltShare } from './guilt.js';
 import { feel } from './ledger.js';
 import { desperation, expectedPoints, tagSurprise } from './ratings.js';
 import { chance, weightedIndex } from './rng.js';
@@ -71,6 +72,10 @@ export function topics(ctx: Ctx, c: Contestant): Topic[] {
     const partner = c.thoughts.find((x) => x.id === guilty && x.about !== null && x.about !== other && alive(ctx, x.about));
     if (partner) add('cheating', [other, partner.about!], `cheating:${other}`, { when: s.t, what: s.what });
   }
+  // Their own murder, as far as the guilt weighs on them (trials.yaml guilt).
+  const crime = crimeOf(ctx, c);
+  const share = crime ? guiltShare(ctx, c) : 0;
+  if (crime && share > 0) add('murder', [crime.victim], `murder:${crime.victim}`, { worth: share });
   return out;
 }
 
@@ -251,6 +256,9 @@ function air(ctx: Ctx, who: string): void {
       for (const h of heard) if (h !== a && h !== b) hear(ctx, h, n, 'playback');
       break;
     }
+    case 'murder':
+      confess(ctx, c, heard, 'playback');
+      break;
     case 'cheating': {
       const [other, partner] = about;
       if (!other) break;
