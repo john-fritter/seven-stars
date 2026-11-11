@@ -156,6 +156,17 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Which NanoGPT models.
 - [ ] A real name.
 
+**Proposed for killer guilt and unsolved murders (Nov 11).** john asked for guilt that depends on personality and circumstances rather than a flat "a killer doesn't grieve their victim", and for murders pinned on the wrong person to come back. All numbers in `data/trials.yaml` guilt and reopen; DESIGN.md Part two, Guilt and unsolved murders.
+
+- [ ] Remorse at the kill: "I killed {who}" for a week, −10 − 0.1 × affection for the victim just before (never above 0), source guilt (× honest, × kind, × volatility). The killer grieves a friend and gloats over a rival like anyone, but isn't shaken by the death, and others' mourning doesn't reach them.
+- [ ] Back in the murder room while the remorse lasts: −4.
+- [ ] An innocent spaced for their murder: −10 for a week (−16 if the killer accused them). Walking free from a trial over it: "got away with it" +5, × 1 − (kind − 5) ÷ 5 and × 1 − 0.5 × (honest − 5) ÷ 5.
+- [ ] Guilt as a share of 15 drives confessions: a diary-room topic (pays 20, loud); drunk with a friend at the drunken-confession odds × the share (a friend loyal 7+ who still likes them keeps the secret); and guilt as a break source (cry, bender, and at extreme a confession to the room). Cheaters whose worst guilt is cheating blurt that out instead.
+- [ ] A confession makes the hearers believers and certain, like witnesses. An unfound body is found; a pending trial gains them as witnesses.
+- [ ] Murders stay on the books while the killer is aboard. Whenever someone knows for certain, the bravest who hasn't accused the killer over it accuses at the usual threshold, for the next morning; everyone who knows is a witness at that trial. Each person accuses a killer over a murder once.
+- [ ] The real killer doesn't come to "believe" an acquitted accused did their murder.
+- [ ] Side effects (200 × 30): all 11 targets pass. Murders 0.50 a week unchanged; trials 0.43 → 0.52 a week and the killer spaced 0.28 → 0.39; deaths 2.28 → 2.41 a week, stay 2.93 → 2.76 weeks; breakups 1.32 → 1.30 a week. Killers found out 63% → 79% (40 seasons).
+
 **Proposed for feelings that stick (Nov 10).** john asked to fix affection saturating, grudges that didn't hold, repeat confrontations, and breakups rarer than murders. All numbers in `data/social.yaml` ledger and `data/romance.yaml` breakup; DESIGN.md Part two, Feelings that stick.
 
 - [ ] Affection changes land × 1 − affection ÷ 100 when they push the way it already leans (no cap, just less room); a friend's wound lands × 1 + affection ÷ 100.

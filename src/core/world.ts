@@ -9,6 +9,7 @@ import { maybeBreak } from './breaks.js';
 import { hammeredHour } from './booze.js';
 import { conditions, expireThoughts, trappedHere } from './thoughts.js';
 import { company, worries } from './people.js';
+import { haunt } from './guilt.js';
 import { createRng } from './rng.js';
 import { drainMeter, fearTheMeter } from './scoring.js';
 import { runSchedule } from './schedule.js';
@@ -39,7 +40,7 @@ export function createWorld(data: GameData, seed: number): World {
 }
 
 function newShow(): World['show'] {
-  return { day: 1, today: {}, mine: {}, pairs: {}, pending: [], effects: {}, booked: null, event: null, lastFormat: null, button: null, bedSwap: null, bodies: [], trials: [], trialOn: null, seen: {}, names: [], cage: {}, spread: {}, snacks: 0, restocked: 0, tapes: {}, summons: [], called: { day: 0, ids: [] }, playback: [] };
+  return { day: 1, today: {}, mine: {}, pairs: {}, pending: [], effects: {}, booked: null, event: null, lastFormat: null, button: null, bedSwap: null, bodies: [], trials: [], cases: [], trialOn: null, seen: {}, names: [], cage: {}, spread: {}, snacks: 0, restocked: 0, tapes: {}, summons: [], called: { day: 0, ids: [] }, playback: [] };
 }
 
 /** Swaps the data a world runs on, for hot-reloading tuned values. */
@@ -84,6 +85,7 @@ function tick(ctx: Ctx): void {
       expireThoughts(ctx, c);
       conditions(ctx, c);
       company(ctx, c);
+      haunt(ctx, c);
       if (hour) {
         fearTheMeter(ctx, c);
         trappedHere(ctx, c);

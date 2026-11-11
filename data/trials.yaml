@@ -40,3 +40,40 @@ survivedThought: survived_trial
 # (a rival, social.yaml ledger rivalAt), so it feeds the cage, envy, attack breaks and the next
 # trial's votes. Every ten minutes in a room with someone they believe is a killer: `near`.
 memory: { affection: -30, fear: 20, friend: -30, floor: -30, thought: knows_killer, near: near_killer }
+
+# Proposals (Nov 11, john: "shouldn't there be guilt that depends on the personality and
+# circumstances?" rather than a flat rule that a killer never grieves their victim). Every guilt
+# thought here is source guilt, so it's × honest and × kind (thoughts.yaml sources) and × volatility:
+# a kind, honest, volatile killer is wrecked; a cruel liar barely feels it.
+guilt:
+  # At the kill: `thought` worth base − perAffection × how they felt about the victim just before,
+  # never above 0. Killing a friend (affection 60) is −16 before personality; a stranger −10; someone
+  # they hated (−100) nothing. Like anyone else, a killer who liked the victim grieves them too and a
+  # cruel one gloats over a rival (show.ts mourn), but nobody is shaken by a death they caused.
+  remorse: { thought: killed_them, base: -10, perAffection: 0.1 }
+  # Back in the room where they did it, while the remorse lasts: `haunted`, refreshed every ten minutes.
+  haunted: haunted
+  # A trial spaces an innocent for their murder: `scapegoat` about them, `framed` worse if the killer
+  # was the accuser. Walking free from their own trial or someone else's: `gotAway` (the cruel enjoy
+  # it; at kind 10 it's nothing).
+  scapegoat: { thought: scapegoat, framed: -6 }
+  gotAway: got_away
+  # Guilt has to come out. How heavy it is: their crime's guilt thoughts added up; at `full` or
+  # more, they're as likely to let it out as anything (× guilt ÷ full below that).
+  #   the diary room: their crime is a topic (confessionals.yaml murder), worth × that share; it can
+  #     air at dinner like any tape
+  #   drink: chatting with a friend (affection friendAt+), the stage's `confess` chance × that share
+  #     (booze.yaml): a tearful confession
+  #   a guilt break (breaks.yaml blurt): it all comes out in front of the room
+  full: 15
+  # Someone told in confidence keeps the secret if they're at least `keep.loyal` loyal and still a
+  # friend (affection friendAt+): `keep.thought` instead of believing it.
+  keep: { loyal: 7, thought: keeping_secret }
+
+# Proposals (Nov 11, unsolved murders resurface): a murder stays on the books while its killer is
+# aboard. Whenever someone comes to know the truth (a confession, a tape at dinner, a witness the
+# room didn't believe), the bravest one who knows and hasn't accused the killer over it yet does,
+# if certainty (suspicion.witnessed) × brave ÷ 10 reaches accuseAt, and it goes to the next
+# morning's trial. Anyone who heard the confession counts as a witness there (testimony, voting the
+# truth). It's tried again after a wrong verdict too, if somebody knows.
+reopen: true

@@ -42,6 +42,8 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
   const sentenced = new Map<string, string[]>(); // tonight's sentences, by contestant
   const killers = new Map<string, number>(); // living killers -> when the murder happened
   const known = new Set<string>(); // killers someone believes did it
+  const victims = new Map<string, string>(); // living killers -> their latest victim
+  const foundOut = new Set<string>(); // killers someone came to believe did it
   let booked = false;
   const confronted = new Map<string, number>(); // pair -> when one last confronted the other
   const confrontCount = new Map<string, number>(); // pair -> confrontations between them
@@ -176,17 +178,46 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
           break;
         case 'murder':
           add(n, 'murders');
+          add(n, 'killers');
           today.add('murder');
           killers.set(a!, e.t);
+          victims.set(a!, b!);
           break;
         case 'killer_known':
           add(n, 'killerKnown');
           add(n, 'killerBelievers', e.actors.length - 1);
           known.add(a!);
+          if (killers.has(a!) && !foundOut.has(a!)) {
+            foundOut.add(a!);
+            add(n, 'killersFoundOut');
+            if (data.how === 'drunk' || data.how === 'breakdown' || data.how === 'playback') add(n, 'foundOutByConfession');
+          }
+          break;
+        case 'remorse': {
+          add(n, 'remorse');
+          const v = data.value as number;
+          add(n, v === 0 ? 'remorseNone' : v > -8 ? 'remorseLight' : v > -16 ? 'remorseHeavy' : 'remorseCrushing');
+          add(n, 'remorseValue', v);
+          add(n, `remorseFelt_${data.felt}`);
+          break;
+        }
+        case 'scapegoat':
+          add(n, 'scapegoats');
+          if (data.framed) add(n, 'scapegoatsFramed');
+          break;
+        case 'murder_confession':
+          add(n, data.kept ? 'murderConfessionKept' : `murderConfession_${data.how}`);
+          break;
+        case 'blurted':
+          add(n, 'blurted');
+          break;
+        case 'accusation':
+          if (data.reopened) add(n, 'reopenedAccusations');
           break;
         case 'trial':
           add(n, 'trials');
           if (!data.right) add(n, 'wrongVerdicts');
+          if (data.reopened) add(n, data.right ? 'reopenedRight' : 'reopenedWrong');
           break;
         case 'immunity_spent':
           if (data.cause === 'trial') add(n, 'trialImmunities');
@@ -205,6 +236,7 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
           break;
         case 'confessional':
           add(n, 'confessionals');
+          if (data.kind === 'murder') add(n, 'diaryMurder');
           add(s.diary, String(data.kind));
           if (data.summoned) add(n, 'confessionalsCalled');
           break;
@@ -305,6 +337,18 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
       if (e.type === 'cage_match' && (known.has(a!) || known.has(b!))) add(n, 'killerCaged');
     }
     for (const id of killers.keys()) if (known.has(id)) add(n, 'knownKillerDays');
+    // At the end of each day, what's on a living killer's mind about their victim.
+    for (const [id, v] of victims) {
+      const k = world.contestants.find((c) => c.id === id);
+      if (!k) {
+        victims.delete(id);
+        continue;
+      }
+      add(n, 'killerEvenings');
+      if (k.thoughts.some((x) => x.id === data.rules.spacing.friend && x.about === v)) add(n, 'killerGrieving');
+      if (k.thoughts.some((x) => x.id === data.trials.guilt.remorse.thought && x.about === v)) add(n, 'killerRemorseful');
+      if (k.thoughts.some((x) => x.id === data.trials.guilt.gotAway)) add(n, 'killerGloating');
+    }
     if (today.has('death')) add(n, 'daysWithDeath');
     if (today.has('first kiss')) add(n, 'daysWithFirstKiss');
     if (today.has('caught')) add(n, 'daysWithCaught');
@@ -405,6 +449,15 @@ export function storyReport(seeds: StorySeed[]): string[] {
   line(`  ${mu} murders (one every ${mu ? Math.round(days / mu) : '—'} days), ${n('trials')} trials, ${n('wrongVerdicts')} wrong verdicts, ${n('trialImmunities')} saved by an immunity`);
   line(`  killers lived on ${n('killerDays').toFixed(1)} days in all after their murders; ${n('knownKillerDays')} of those days somebody knew`);
   line(`  someone came to believe a killer did it ${n('killerKnown')} times (${n('killerBelievers')} believers)`);
+  const rm = n('remorse');
+  line(`  remorse at the kill (${rm}): none ${pct(n('remorseNone'), rm)}, light ${pct(n('remorseLight'), rm)}, heavy ${pct(n('remorseHeavy'), rm)}, crushing (−16 or worse) ${pct(n('remorseCrushing'), rm)}; average ${per(n('remorseValue'), rm, 1)}`);
+  line(`    the killer also grieved a friend ${pct(n('remorseFelt_grief'), rm)}, gloated over a rival ${pct(n('remorseFelt_gloat'), rm)}, was relieved ${pct(n('remorseFelt_relief'), rm)}`);
+  const ev = n('killerEvenings');
+  line(`  a living killer's evenings (${ev}): grieving their victim ${pct(n('killerGrieving'), ev)}, remorse ${pct(n('killerRemorseful'), ev)}, "got away with it" ${pct(n('killerGloating'), ev)}`);
+  line(`  innocents spaced for a killer's murder: ${n('scapegoats')} (${n('scapegoatsFramed')} accused by the killer)`);
+  line(`  confessions: ${n('diaryMurder')} to the diary camera, ${n('murderConfession_playback')} aired at dinner, ${n('murderConfession_drunk')} drunk to a friend (${n('murderConfessionKept')} more kept by a loyal friend), ${n('murderConfession_breakdown')} blurted out in a breakdown; ${n('blurted')} cheaters blurted out their cheating`);
+  line(`  killers found out: ${n('killersFoundOut')} of ${n('killers')} (${pct(n('killersFoundOut'), n('killers'))}), ${n('foundOutByConfession')} through their own confession`);
+  line(`  reopened: ${n('reopenedAccusations')} accusations of an old murder; at trial ${n('reopenedRight')} spaced the killer, ${n('reopenedWrong')} the accuser`);
   line(`  aimed at a known killer afterwards: ${n('killerSnubbed')} insults or slights, ${n('killerTargeted')} breaks, ${n('killerCaged')} cage matches, ${n('killerFights')} brawls`);
   line();
   line('Wants and things to do');
@@ -495,6 +548,7 @@ function narrator(): { line: (e: SimEvent) => string[]; nm: (id: string | undefi
           spill: `tells the camera about ${about[0]} and ${about[1]}`,
           suspicion: `tells the camera ${about[0]} is the killer`,
           cheating: `confesses to the camera they've been with ${about[0]} behind ${about[1]}'s back`,
+          murder: `confesses to the camera they killed ${about[0]}`,
         };
         s = said[x.kind as string] ? `Diary room: ${nm(a)} ${said[x.kind as string]}${x.summoned ? ' (summoned)' : ''}` : null;
         break;
@@ -554,7 +608,21 @@ function narrator(): { line: (e: SimEvent) => string[]; nm: (id: string | undefi
         s = x.announced ? `the announcer declares ${x.name}'s body` : `${nm(a)} finds ${x.name}'s body${at}`;
         break;
       case 'accusation':
-        s = `${nm(a)} accuses ${nm(b)} of killing ${x.name}`;
+        s = `${nm(a)} accuses ${nm(b)} of killing ${x.name}${x.reopened ? ' (an old murder, reopened)' : ''}`;
+        break;
+      case 'remorse':
+        s = (x.value as number) < 0 ? `${nm(a)} is sick about killing ${nm(b)} (${x.value})` : `${nm(a)} feels nothing about killing ${nm(b)}`;
+        break;
+      case 'scapegoat':
+        s = `${nm(a)} knows ${nm(b)} was spaced for what they did${x.framed ? ', and they did the accusing' : ''} (${x.value})`;
+        break;
+      case 'murder_confession':
+        s = x.kept
+          ? `${nm(a)}, drunk, tells ${nm(b)} they killed ${x.name}; ${nm(b)} keeps the secret`
+          : `CONFESSION: ${nm(a)} admits killing ${x.name} (${x.how})${e.actors.length > 1 ? `, heard by ${e.actors.slice(1).map(nm).join(', ')}` : ''}${at}`;
+        break;
+      case 'blurted':
+        s = `${nm(a)} breaks down and confesses being with ${nm(b)}${at}`;
         break;
       case 'trial':
         s = `trial for ${x.name}: ${nm(x.loser as string)} loses ${x.against}-${Object.keys(x.votes as object).length - (x.against as number)}${x.right ? ' (the killer)' : ' (innocent)'}`;

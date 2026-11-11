@@ -13,6 +13,8 @@
 #   spill      telling the camera about a kiss or a hookup between two others (what they know, news.yaml; worth its scoop)
 #   suspicion  naming who they think the killer is (they believe it: trials.ts believe)
 #   cheating   confessing their own fling behind a partner's back (they feel guilty about it)
+#   murder     confessing their own murder (proposal, Nov 11), worth × how heavy their guilt is
+#              (trials.yaml guilt.full): the remorseless don't
 # What each pays is scoring.yaml awards.confessional (by kind). `loud` kinds get the surprise.
 action: confess                 # the diary chair's action (objects.yaml diary_chair)
 event: confessional             # the logged event, scored by kind
@@ -24,6 +26,7 @@ topics:
   spill:     { loud: true }
   suspicion: { loud: true }
   cheating:  { loud: true }
+  murder:    { loud: true }
 grudge: { below: -30 }          # the same line as a rival (social.yaml ledger.rivalAt)
 crush: { attraction: 6 }        # the same line as a crush (wants.yaml partner.crushAt)
 told: { hours: 168 }            # they don't tell the camera the same thing twice within a week
@@ -60,6 +63,7 @@ summons:
 #   tell:   spill and cheating: everyone who hears it learns it (news.yaml), so it's
 #           betrayal or jealousy as usual
 #   killer: suspicion: everyone who hears it fears the one named
+#   murder: everyone who hears a killer's own confession believes it (trials.yaml guilt, reopen)
 # Playback pays scoring.yaml awards.playback.
 playback:
   chance: 0.5
