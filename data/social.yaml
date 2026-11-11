@@ -127,6 +127,25 @@ ledger:
   # Grudge-holders never let go and the Forgiving fade it twice as fast (traits.yaml).
   dislikeFade: 0.5
   dislikeCalmK: 0.5
+  # Proposal (feelings that stick, Nov 10). Feelings have room to move, not a wall at 100: a change
+  # in affection lands × 1 − headroom × |affection| ÷ 100 when it pushes further the way it already
+  # leans (warmth toward a friend, dislike toward a rival), so being close is kept up by time
+  # together rather than maxed out by it. A wound (below) from someone they like cuts deeper:
+  # × 1 + deeper × affection ÷ 100, so a friend's insult hurts more than a stranger's.
+  headroom: 1
+  deeper: 1
+  # Hurt: each point of affection a wound takes adds `per` to how much they're still hurting over
+  # that person (0..100). While it lasts, warmth from them lands × 1 − blocks × hurt ÷ 100, so a
+  # couple of deep talks don't paper over a punch. It heals `heal` of itself a day, × the grudge
+  # factors above (the volatile slower, never for a Grudge-holder, twice as fast for the Forgiving).
+  # Wounds are wrongs done to them, by ledger reason (a reason counts if it starts with one of
+  # these words); annoyances (grating, drunk, filthy, the thermostat, noise, pestering) aren't.
+  hurt:
+    per: 1
+    heal: 0.15
+    blocks: 1
+    wounds: [insult, slight, glass_mock, fight, betrayal, jealousy, rival, wrecked my things, trashed me on air,
+      swiped a snack, accused me of murder, killed, pressed the button, punished for them, the wheel punished us]
   # Proposal: labels for the harness and debug view only. Crushes need no label in the sim.
   friendAt: 30
   rivalAt: -30

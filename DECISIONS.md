@@ -156,6 +156,14 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Which NanoGPT models.
 - [ ] A real name.
 
+**Proposed for feelings that stick (Nov 10).** john asked to fix affection saturating, grudges that didn't hold, repeat confrontations, and breakups rarer than murders. All numbers in `data/social.yaml` ledger and `data/romance.yaml` breakup; DESIGN.md Part two, Feelings that stick.
+
+- [ ] Affection changes land × 1 − affection ÷ 100 when they push the way it already leans (no cap, just less room); a friend's wound lands × 1 + affection ÷ 100.
+- [ ] Hurt: a point per point a wound takes; warmth from them lands × 1 − hurt ÷ 100; heals 15% a day by the grudge factors (never for a Grudge-holder).
+- [ ] Confronting a rival needs a new wound since they last had it out; a confrontation counts as having it out for both.
+- [ ] Breakups for a reason: betrayed, affection 0 or below, hurt 40+, attraction under 5, or someone else fancied 1.5 more with a landed flirt.
+- [ ] Side effects: breakups 0.36 → 1.36 a week (murders ~0.5), hookups 6.9 → 4.9 a week, couple nights 80% → 73%; all 11 targets pass.
+
 **Proposed for what people know (Nov 10).** john asked to fix old news landing as new, loyal people spilling friends' secrets, and nobody learning who does what. All numbers in `data/news.yaml`; DESIGN.md Part two, What people know.
 
 - [ ] Each contestant keeps every pair they know got together (the worst of it, and when) for as long as both are aboard; only news lands, and more of the same only stokes what they already feel.

@@ -121,8 +121,11 @@ describe('a killer who walks', () => {
     expect(known.actors.slice(1).sort()).toEqual([accuser.id, ...voters.map((v) => v.id)].sort());
     const m = data.trials.memory;
     const [friend, other] = voters as [Contestant, Contestant];
-    expect(rel(other, accused)!.affection).toBe(Math.min(-10 + m.affection, m.floor));
-    expect(rel(friend, accused)!.affection).toBe(-10 + m.affection + m.friend); // the victim's friend
+    // Dislike piles up with less room to move: × 1 − headroom × dislike ÷ 100.
+    const h = data.social.ledger.headroom;
+    const once = -10 + m.affection * (1 - h * 0.1);
+    expect(rel(other, accused)!.affection).toBeCloseTo(Math.min(once, m.floor));
+    expect(rel(friend, accused)!.affection).toBeCloseTo(once + m.friend * (1 + (h * once) / 100)); // the victim's friend
     expect(rel(other, accused)!.killer).toBe('Gone');
     expect(other.thoughts.some((t) => t.id === m.thought && t.about === accused.id)).toBe(true);
   });

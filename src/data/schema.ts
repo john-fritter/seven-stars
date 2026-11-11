@@ -458,6 +458,10 @@ export const socialSchema = z.object({
     // People as mood (step 3): dislike fades at this share of the usual rate, × 1 + calmK × (calm − 5) ÷ 5.
     dislikeFade: num.min(0).default(1),
     dislikeCalmK: num.default(0),
+    // Feelings that stick (Nov 10): room to move, deeper cuts from friends, and hurt that heals slowly.
+    headroom: unit,
+    deeper: num.nonnegative(),
+    hurt: z.object({ wounds: z.array(z.string()), per: num.nonnegative(), heal: unit, blocks: unit }),
     friendAt: num,
     rivalAt: num,
     crushAt: num,
@@ -685,7 +689,13 @@ export const romanceSchema = z.object({
   bedtime: z.object({ chance: unit, asleep: unit, doze: num.nonnegative(), morning: unit }),
   invite: z.object({ lead: num.nonnegative() }),
   exclusive: z.object({ loyalK: num, thought: z.string(), refused: z.string() }),
-  breakup: z.object({ affectionBelow: num, dumped: z.string() }),
+  breakup: z.object({
+    affectionBelow: num,
+    hurtAt: num,
+    cooledBelow: num,
+    wander: z.object({ margin: num, flirted: z.boolean() }),
+    dumped: z.string(),
+  }),
   attachedK: num,
   betrayal: z.object({ affection: num, thought: z.string(), confront: unit }),
   jealousy: z.object({

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { axis, drink, giftDrink, hammeredHour, hangover, hungoverFactor, qualityFor, soberMinute, soberFactor, stageOf } from '../src/core/booze.js';
 import { createWorld, step } from '../src/core/index.js';
-import { fadeLedger, meet, rel } from '../src/core/ledger.js';
-import { askExclusive, evidence, exclusiveOdds, kiss, kissOdds, lovin, piningMult, propositionOdds, secretFlingOdds } from '../src/core/romance.js';
+import { airedOut, fadeLedger, feel, freshWound, meet, rel } from '../src/core/ledger.js';
+import { askExclusive, breakUp, breakupReason, evidence, exclusiveOdds, kiss, kissOdds, lovin, piningMult, propositionOdds, secretFlingOdds } from '../src/core/romance.js';
 import { learn, looseLips } from '../src/core/news.js';
 import { interactionWeight } from '../src/core/social.js';
 import type { Contestant, World } from '../src/core/types.js';
@@ -223,7 +223,9 @@ describe('romance', () => {
     rel(a, b)!.affection = 50;
     w.show.today = {};
     evidence(ctx, a, b, c, 'kiss');
-    expect(rel(a, b)!.affection).toBe(10);
+    // A betrayal by someone they liked cuts deeper: −40 × (1 + 50 ÷ 100).
+    expect(rel(a, b)!.affection).toBe(50 - 40 * (1 + data.social.ledger.deeper * 0.5));
+    expect(rel(a, b)!.hurt).toBe(60);
     const e = ctx.events.find((x) => x.type === 'betrayal')!;
     expect(e.actors).toEqual([a.id, b.id, c.id]);
     expect(Object.keys(e.data!.awards as object)).toHaveLength(3);
@@ -316,5 +318,92 @@ describe('romance', () => {
     const f = data.social.ledger.fadePerDay.affection;
     expect(rel(a, c)!.affection).toBeCloseTo(50 * (1 - f));
     expect(rel(a, b)!.affection).toBeCloseTo(50 * (1 - f * data.social.ledger.loverFade));
+  });
+});
+
+describe('feelings that stick', () => {
+  const L = data.social.ledger;
+
+  it('give warmth room to move: a close friend gets closer slowly, and a friend\'s insult cuts deeper', () => {
+    const { ctx, cast } = aboard();
+    const [a, b, c] = cast as [Contestant, Contestant, Contestant];
+    meet(ctx, a, b);
+    meet(ctx, a, c);
+    Object.assign(rel(a, b)!, { affection: 80, hurt: 0 });
+    feel(ctx, a, b, 'affection', 10, 'deep_talk');
+    expect(rel(a, b)!.affection).toBeCloseTo(80 + 10 * (1 - L.headroom * 0.8));
+    Object.assign(rel(a, b)!, { affection: 80 });
+    Object.assign(rel(a, c)!, { affection: 0, hurt: 0 });
+    feel(ctx, a, b, 'affection', -15, 'insult');
+    feel(ctx, a, c, 'affection', -15, 'insult');
+    expect(rel(a, b)!.affection).toBeCloseTo(80 - 15 * (1 + L.deeper * 0.8));
+    expect(rel(a, c)!.affection).toBeCloseTo(-15);
+    // Annoyances aren't wounds: no deeper cut, no hurt.
+    Object.assign(rel(a, b)!, { affection: 80, hurt: 0 });
+    feel(ctx, a, b, 'affection', -1, 'grating');
+    expect(rel(a, b)!.affection).toBeCloseTo(79);
+    expect(rel(a, b)!.hurt).toBe(0);
+  });
+
+  it('leave hurt that blocks warmth and heals slowly, never for a Grudge-holder', () => {
+    const { ctx, cast } = aboard();
+    const [a, b] = cast as [Contestant, Contestant];
+    meet(ctx, a, b);
+    Object.assign(rel(a, b)!, { affection: 0, hurt: 0 });
+    a.traits = [];
+    a.personality.calm = 5;
+    feel(ctx, a, b, 'affection', -30, 'fight');
+    expect(rel(a, b)!.hurt).toBeCloseTo(30 * L.hurt.per);
+    rel(a, b)!.affection = 0;
+    feel(ctx, a, b, 'affection', 10, 'deep_talk');
+    expect(rel(a, b)!.affection).toBeCloseTo(10 * (1 - L.hurt.blocks * 0.3));
+    fadeLedger(ctx, a);
+    expect(rel(a, b)!.hurt).toBeCloseTo(30 * (1 - L.hurt.heal * L.dislikeFade));
+    a.traits = ['grudge_holder'];
+    const held = rel(a, b)!.hurt;
+    fadeLedger(ctx, a);
+    expect(rel(a, b)!.hurt).toBeCloseTo(held);
+  });
+
+  it('only let a rival be confronted again over something new', () => {
+    const { ctx, cast } = aboard();
+    const [a, b] = cast as [Contestant, Contestant];
+    meet(ctx, a, b);
+    const r = rel(a, b)!;
+    expect(freshWound(ctx, r)).toBe(true); // never had it out
+    feel(ctx, a, b, 'affection', -15, 'insult');
+    airedOut(ctx, a, b);
+    expect(freshWound(ctx, r)).toBe(false);
+    expect(rel(b, a)!.aired).toBe(ctx.w.t);
+    ctx.w.t += 60;
+    feel(ctx, a, b, 'affection', -2, 'grating'); // an annoyance isn't a new grievance
+    expect(freshWound(ctx, r)).toBe(false);
+    feel(ctx, a, b, 'affection', -5, 'slight');
+    expect(freshWound(ctx, r)).toBe(true);
+  });
+
+  it('end couples for a reason: betrayal, falling out, hurt, a cooled spark or someone else', () => {
+    const { ctx, cast } = aboard();
+    const [a, b, c] = cast as [Contestant, Contestant, Contestant];
+    const B = data.romance.breakup;
+    meet(ctx, a, b);
+    meet(ctx, a, c);
+    a.thoughts = [];
+    Object.assign(rel(a, b)!, { label: 'dating', affection: 50, hurt: 0, attraction: 7 });
+    Object.assign(rel(a, c)!, { attraction: 7, flirts: 0 });
+    expect(breakupReason(ctx, a, b)).toBeNull();
+    rel(a, b)!.hurt = B.hurtAt;
+    expect(breakupReason(ctx, a, b)?.why).toBe('hurt');
+    rel(a, b)!.hurt = 0;
+    rel(a, b)!.attraction = B.cooledBelow - 0.1;
+    expect(breakupReason(ctx, a, b)?.why).toBe('cooled');
+    rel(a, b)!.attraction = 6;
+    Object.assign(rel(a, c)!, { attraction: 6 + B.wander.margin, flirts: 1 });
+    expect(breakupReason(ctx, a, b)).toEqual({ why: 'someone_else', for: c.id });
+    rel(a, b)!.affection = B.affectionBelow;
+    expect(breakupReason(ctx, a, b)?.why).toBe('fell_out');
+    breakUp(ctx, a, b);
+    expect(rel(b, a)!.label).toBe('ex');
+    expect(ctx.events.find((e) => e.type === 'breakup')!.data).toMatchObject({ from: 'dating', why: 'fell_out' });
   });
 });

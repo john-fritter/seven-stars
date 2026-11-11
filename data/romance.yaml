@@ -76,9 +76,18 @@ exclusive:
   # (10 − honest) × (10 − monogamy) ÷ 100.
 
 breakup:
-  # Possible once a label is flirting or beyond, when affection is at most affectionBelow or the
-  # asker feels betrayed by them. Both labels go to ex.
+  # Possible once a label is flirting or beyond, for one of these reasons (logged as `why`):
+  #   betrayed:      they feel betrayed by them
+  #   fell_out:      affection at most affectionBelow
+  #   hurt:          still hurting over them (social.yaml ledger.hurt) at hurtAt or more
+  #   cooled:        the spark's gone: their attraction to them has fallen under cooledBelow
+  #   someone_else:  they fancy someone else (aboard, met) by `margin` more than them, with a
+  #                  flirt that landed between them if `flirted`
+  # Both labels go to ex. Proposal (feelings that stick, Nov 10) apart from affectionBelow.
   affectionBelow: 0               # proposal
+  hurtAt: 40
+  cooledBelow: 5
+  wander: { margin: 1.5, flirted: true }
   dumped: dumped
 
 # Flirting while attached gets rarer for loyal people: romance moves toward someone other than

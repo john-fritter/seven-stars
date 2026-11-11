@@ -10,7 +10,7 @@ import { confessionalPull, confide } from './confessionals.js';
 import { accessRank, canEnter, dayOf, effectOn, effectsToday, inRanks, isNightFor, log, noisy, timeOfDay, type Ctx } from './context.js';
 import { gathering } from './schedule.js';
 import { gainsOf, personalityOf, tagMult } from './derived.js';
-import { feel, rel } from './ledger.js';
+import { airedOut, feel, freshWound, rel } from './ledger.js';
 import { nothingLeft, seconds, serve, snackThere, takeSnack } from './pantry.js';
 import { addNeed, companyWant, freshness, needUrgency, sleepLine, wearThin } from './needs.js';
 import { between, chance, pick, weightedIndex } from './rng.js';
@@ -422,6 +422,8 @@ function confrontCandidate(ctx: Ctx, c: Contestant, rival: NonNullable<Wants['ri
   if (!def || !o || o.asleep || o.confined || o.breakdown || !o.activity || isGathering(o.activity.action) || !canEnter(ctx, c, o.room)) return;
   const walk = walkMinutes(ctx.st, c.room, o.room);
   if (walk > k.within) return;
+  // Only something new since they last had it out (wants.yaml rival.confront).
+  if (!freshWound(ctx, c.ledger[o.id]!)) return;
   const fresh = Math.max(0, 1 - (c.tolerance[confrontKey(o.id)] ?? 0));
   const score = (rival.confront * fresh - walk * ctx.data.actions.walkCostPerMinute) * spice(ctx, c, def.tags) * moodMult(ctx, c, def.tags);
   if (score > 0) out.push({ def, object: null, room: o.room, confront: o.id, score, why: 'rival' });
@@ -654,6 +656,7 @@ function haveItOut(ctx: Ctx, c: Contestant, a: Activity): void {
   const id = chance(ctx.w.rng, k.insult) ? 'insult' : 'slight';
   log(ctx, 'confront', [c.id, o.id], c.room, { with: id });
   interact(ctx, c, o, ctx.data.social.interactions.find((d) => d.id === id)!);
+  airedOut(ctx, c, o);
 }
 
 /** Ends the current activity. Completion effects only apply when it finished properly. */

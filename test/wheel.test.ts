@@ -4,7 +4,7 @@ import { qualityFor } from '../src/core/booze.js';
 import { dayOf, timeOfDay } from '../src/core/context.js';
 import { pressOdds, revealButton, swapRanks } from '../src/core/events.js';
 import { step } from '../src/core/index.js';
-import { meet, relation } from '../src/core/ledger.js';
+import { landed, meet, relation } from '../src/core/ledger.js';
 import { spacings } from '../src/core/show.js';
 import { revealSecrets, spinWheel } from '../src/core/wheel.js';
 import type { Contestant, World } from '../src/core/types.js';
@@ -164,8 +164,9 @@ describe('the Wheel', () => {
     const other = order[1]!;
     meet(ctx, other, spinner);
     const before = relation(ctx, other, spinner).affection;
+    const lands = landed(ctx, { ...relation(ctx, other, spinner) }, -5, 'the wheel punished us');
     spinWheel(ctx, spinner, order);
-    expect(relation(ctx, other, spinner).affection).toBe(before - 5);
+    expect(relation(ctx, other, spinner).affection).toBeCloseTo(before + lands);
     const tomorrow = dayOf(w.t) + 1;
     expect(w.show.effects).toMatchObject({ cold_water: tomorrow, no_breakfast: tomorrow });
     w.t = (tomorrow - 1) * 1440 + data.schedule.meals[0]!.from; // 09:00 tomorrow
@@ -280,8 +281,9 @@ describe('the daily event', () => {
     const ctx = { data: d, st: aboard(21, d).ctx.st, w, events: [] };
     if (non && p) {
       const before = non.ledger[p.id]?.affection ?? 0;
+      const lands = non.ledger[p.id] ? landed(ctx, { ...non.ledger[p.id]! }, -10, 'pressed the button') : -10;
       revealButton(ctx);
-      expect(non.ledger[p.id]!.affection).toBeCloseTo(before - 10);
+      expect(non.ledger[p.id]!.affection).toBeCloseTo(before + lands);
     }
   });
 });
