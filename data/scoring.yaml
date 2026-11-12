@@ -79,6 +79,10 @@ modifiers:
 #   chance:       the chance of starting an interaction × 1 + chance × desperation
 #   shyness:      desperation overcomes shyness: for that chance, outgoing counts as
 #                 outgoing + (10 − outgoing) × shyness × desperation
+#   nerve:        desperation overcomes reluctance (proposal, Nov 11; john: the reserved die too soon):
+#                 in the pulls above, a taste under 1 counts as taste + (1 − taste) × nerve × desperation.
+#                 Facing the airlock, the shy start doing what pays, and since surprise (below) is
+#                 judged on who they are, not on their nerve, it pays them extra.
 # Points are the actor's share (each + actor) after the judge's boredom and their own repeats today.
 # pays: an interaction scored through another event's row, e.g. { proposition: lovin }. Left empty
 # (proposal): desperate singles propositioning for the cameras costs hookups within a couple.
@@ -90,6 +94,7 @@ ratings:
   interactions: 5
   chance: 1
   shyness: 0.5
+  nerve: 1      # proposal (Nov 11): see above
   pays: {}
   ignore: [breakup]   # proposal: nobody dumps someone for the cameras (it would only cost the couple targets)
 
@@ -99,6 +104,6 @@ ratings:
 # tags (proposal, Oct 30): an event judged against the taste for these action tags, when its data
 # says it was `loud` (a confessional that reveals something: the reserved saying something loud).
 surprise:
-  bonus: 1
+  bonus: 2       # was 1. Group 4 tuning (Nov 11): the quiet one's outburst is the clip of the week (× up to 3)
   acts: { rebuff: flirt }
   tags: { confessional: [performing] }

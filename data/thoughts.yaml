@@ -35,6 +35,12 @@ sourceCap: 20
 # on lowering the fear cap until later steps.
 caps: {}
 
+# Numbness (proposal, Nov 11; john: fear hits too hard, but no clumsy caps). You get used to it:
+# these thoughts hit × max(min, 1 − per × the deaths they've lived through aboard, any cause, heard
+# or seen). A newcomer's first spacing is a horror; a veteran's tenth is Tuesday. Grief for a friend,
+# relief and gloating aren't numbed: who died still matters, only the routine shock wears off.
+numb: { thoughts: [watched_execution, someone_died], per: 0.1, min: 0.3 }
+
 # Everyone carries this from the moment they arrive. Fear tuning (D-110, proposal): it eases from
 # `from` to `to` over their first `days` aboard, refreshed hourly.
 trapped: { thought: trapped, from: -5, to: -2, days: 7 }

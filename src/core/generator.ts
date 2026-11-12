@@ -87,6 +87,7 @@ export function rollContestant(data: GameData, rng: Rng, id: string, t: number, 
     breakdown: null,
     news: [],
     told: {},
+    deathsSeen: 0,
   };
   c.traits = rollTraits(data, rng, c);
   // How much company feels right: from outgoing, moved by traits (Loner).

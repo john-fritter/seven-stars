@@ -54,8 +54,13 @@ summons:
   expireHours: 3
 
 # Exposure (D-043: playing a confessional at dinner is a punishment). Anyone sentenced at the
-# ceremony has `chance` of their latest confessional from the last `days` days airing at the next
-# day's dinner, at `at`, to everyone awake in the dinner room (`room`) or in earshot of it. The speaker is
+# ceremony may have their latest confessional from the last `days` days aired at the next day's
+# dinner. The editors only air what's worth airing: the odds are what the tape paid (scoring.yaml
+# awards.confessional, by kind) ÷ `worth`, so a confession of cheating always makes the cut and a
+# plain vent seldom does; and only the juiciest `perDinner` tapes air on a night, the rest stay in
+# the can. Tuning (proposal, Nov 11; john: tapes aired almost every dinner): was a flat 0.5 chance
+# with every chosen tape aired, 66% of dinners, 40% of airings plain vents.
+# It airs at `at`, to everyone awake in the dinner room (`room`) or in earshot of it. The speaker is
 # humiliated (`speaker`), and what was said lands:
 #   about:  whoever they trashed (grudge, take) or named as the killer (suspicion), and the two they
 #           spilled about: affection toward the speaker, and a thought
@@ -66,7 +71,8 @@ summons:
 #   murder: everyone who hears a killer's own confession believes it (trials.yaml guilt, reopen)
 # Playback pays scoring.yaml awards.playback.
 playback:
-  chance: 0.5
+  worth: 30
+  perDinner: 1
   days: 3
   at: "19:30"
   room: lounge                  # where dinner is (schedule.yaml meals)

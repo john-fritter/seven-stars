@@ -144,6 +144,7 @@ export function space(ctx: Ctx, c: Contestant, cause: string, room = ctx.data.sc
  */
 export function kill(ctx: Ctx, c: Contestant, cause: string, room: string, witnesses: string[], killer?: string): void {
   log(ctx, 'death', [c.id], room, { cause, name: c.name, stay: ctx.w.t - c.arrivedAt, meter: c.meter, witnesses, ...(killer ? { killer } : {}) });
+  for (const o of ctx.w.contestants) if (o !== c) o.deathsSeen++;
   const rivalAt = ctx.data.social.ledger.rivalAt;
   const feelings: Body['feelings'] = {};
   for (const o of ctx.w.contestants) {

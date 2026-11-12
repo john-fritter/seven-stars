@@ -93,13 +93,33 @@ describe('the surprise bonus', () => {
     const plainInsult = log(ctx, 'insult', [a.id, b.id], 'cafe');
     expect(plainInsult.data!.surprise).toBeUndefined();
     expect((plainInsult.data!.awards as Record<string, number>)[a.id]).toBe(data.scoring.awards.insult!.actor!);
-    // A saint's insult: taste 0.1, so × 1 + 1 × 0.9.
+    // A saint's insult: taste 0.1, so × 1 + S × 0.9.
+    const S = 1 + data.scoring.surprise.bonus * 0.9;
     b.personality.kind = 10;
     w.show.today = {};
     w.show.pairs = {};
     w.show.mine = {};
     const saint = log(ctx, 'insult', [b.id, a.id], 'cafe');
-    expect(saint.data!.surprise).toBeCloseTo(1.9);
-    expect((saint.data!.awards as Record<string, number>)[b.id]).toBeCloseTo(data.scoring.awards.insult!.actor! * 1.9);
+    expect(saint.data!.surprise).toBeCloseTo(S);
+    expect((saint.data!.awards as Record<string, number>)[b.id]).toBeCloseTo(data.scoring.awards.insult!.actor! * S);
   });
 });
+
+describe('nerve', () => {
+  it('facing the airlock, a reluctant taste counts for more in the pull, a keen one no more', () => {
+    const { w, ctx, cast } = aboard();
+    const shy = plain(cast[0]!);
+    const o = plain(cast[1]!);
+    shy.personality.kind = 10; // a saint: insulting is far against type
+    w.show.today = {};
+    w.show.mine = {};
+    shy.meter = 0;
+    const taste = interactionTaste(ctx, shy, o, inter('insult'));
+    expect(taste).toBeLessThan(1);
+    const r = data.scoring.ratings;
+    const pts = data.scoring.awards.insult!.actor!;
+    const eased = taste + (1 - taste) * r.nerve;
+    expect(interactionBoost(ctx, shy, o, inter('insult'))).toBeCloseTo(1 + r.interactions * (pts / 10) * eased);
+  });
+});
+
