@@ -157,4 +157,29 @@ describe('confessionals', () => {
     expect(x.news.some((s) => (s.who === b.id && s.with === c.id) || (s.who === c.id && s.with === b.id))).toBe(true);
     expect(w.show.tapes[a.id]).toBeUndefined();
   });
+
+  it('the editors air one tape a dinner, the juiciest, and seldom a plain vent', () => {
+    const { w, ctx, a, b } = cast();
+    const p = ctx.data.confessionals.playback;
+    const day = dayOf(w.t);
+    w.show.tapes[a.id] = { t: w.t, kind: 'vent', about: [] };
+    w.show.tapes[b.id] = { t: w.t, kind: 'cheating', about: [] };
+    w.show.playback = [{ who: a.id, day: day + 1 }, { who: b.id, day: day + 1 }];
+    w.t = (day + 1) * 1440 + p.at;
+    playbackMinute(ctx);
+    const aired = ctx.events.filter((ev) => ev.type === 'playback');
+    expect(aired.map((e) => e.actors[0])).toEqual([b.id]);
+    expect(w.show.playback).toEqual([]);
+    // What a tape is worth decides the odds it's picked at sentencing.
+    const odds = (kind: string) => {
+      let n = 0;
+      for (let i = 0; i < 400; i++) {
+        w.show.playback = [];
+        w.show.tapes[a.id] = { t: w.t, kind, about: [] };
+        if (exposure(ctx, a)) n++;
+      }
+      return n / 400;
+    };
+    expect(odds('cheating')).toBeGreaterThan(odds('vent') * 2);
+  });
 });
