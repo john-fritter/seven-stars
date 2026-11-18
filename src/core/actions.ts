@@ -18,7 +18,7 @@ import { bedtime, labelOf, lovinArrive, morning } from './romance.js';
 import { along, canSee, nextDoor, walkMinutes, type ObjectInstance } from './station.js';
 import { actionPull, desperateEase, ownRepeats } from './ratings.js';
 import { caughtIn, infraction, sneakCost } from './show.js';
-import { askToShare, available, companyPull, expectedKnockOdds, guestOf, inPassing, interact, knock, occupants, personPull, talkOdds } from './social.js';
+import { askToShare, available, companyPull, expectedKnockOdds, guestOf, inPassing, interact, knock, occupants, personPull, talkOdds, wariness } from './social.js';
 import { discomfortAt, preferredSetting, setThermostat, situationComfort } from './temperature.js';
 import { think } from './thoughts.js';
 import { CARD_CHEAT, knownFor } from './news.js';
@@ -366,7 +366,7 @@ function talkCandidates(ctx: Ctx, c: Contestant, w: Wants, out: Candidate[]): vo
     if (walk > k.within) continue;
     const fresh = Math.max(0.1, 1 - (c.tolerance[talkKey(o.id)] ?? 0));
     const want = wanted(ctx, c, w, def, o.room, o.id);
-    const score = ((k.pull + want.pull) * fresh + personPull(ctx, c, o, o.room) + companyFit(ctx, c, o.room, def, true) - walk * ctx.data.actions.walkCostPerMinute) * pm * talkOdds(ctx, o, c);
+    const score = ((k.pull + want.pull) * fresh + personPull(ctx, c, o, o.room) + companyFit(ctx, c, o.room, def, true) - walk * ctx.data.actions.walkCostPerMinute) * pm * talkOdds(ctx, o, c) * (1 - wariness(ctx, c, o));
     if (score > 0) out.push({ def, object: null, room: o.room, talkTo: o.id, score, ...(want.why ? { why: want.why } : {}) });
   }
 }

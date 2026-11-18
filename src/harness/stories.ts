@@ -35,6 +35,7 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
   const n = s.n;
   const world = createWorld(data, seed);
   const kissed = new Set<string>();
+  const snubbed = new Set<string>(); // pair|day: one snub line a day is enough
   const flirted = new Set<string>();
   const cagePairs = new Map<string, number>();
   const names = new Map<string, number>();
@@ -186,6 +187,7 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
         case 'killer_known':
           add(n, 'killerKnown');
           add(n, 'killerBelievers', e.actors.length - 1);
+          if (data.how === 'gossip') add(n, 'killerHeard', e.actors.length - 1);
           known.add(a!);
           if (killers.has(a!) && !foundOut.has(a!)) {
             foundOut.add(a!);
@@ -207,6 +209,18 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
           break;
         case 'murder_confession':
           add(n, data.kept ? 'murderConfessionKept' : `murderConfession_${data.how}`);
+          break;
+        case 'warned':
+          add(n, 'warned');
+          break;
+        case 'disbelieved':
+          add(n, 'disbelieved');
+          break;
+        case 'snub':
+          add(n, 'snubs');
+          break;
+        case 'caught_on_tape':
+          add(n, 'caughtOnTape');
           break;
         case 'blurted':
           add(n, 'blurted');
@@ -448,13 +462,15 @@ export function storyReport(seeds: StorySeed[]): string[] {
   const mu = n('murders');
   line(`  ${mu} murders (one every ${mu ? Math.round(days / mu) : '—'} days), ${n('trials')} trials, ${n('wrongVerdicts')} wrong verdicts, ${n('trialImmunities')} saved by an immunity`);
   line(`  killers lived on ${n('killerDays').toFixed(1)} days in all after their murders; ${n('knownKillerDays')} of those days somebody knew`);
-  line(`  someone came to believe a killer did it ${n('killerKnown')} times (${n('killerBelievers')} believers)`);
+  line(`  someone came to believe a killer did it ${n('killerKnown')} times (${n('killerBelievers')} believers, ${n('killerHeard')} of them on someone's word)`);
+  line(`  warnings about a killer: ${n('warned')} (${n('disbelieved')} times a loyal friend of theirs wouldn't hear it); snubs of a believed killer's warmth: ${n('snubs')}`);
   const rm = n('remorse');
   line(`  remorse at the kill (${rm}): none ${pct(n('remorseNone'), rm)}, light ${pct(n('remorseLight'), rm)}, heavy ${pct(n('remorseHeavy'), rm)}, crushing (−16 or worse) ${pct(n('remorseCrushing'), rm)}; average ${per(n('remorseValue'), rm, 1)}`);
   line(`    the killer also grieved a friend ${pct(n('remorseFelt_grief'), rm)}, gloated over a rival ${pct(n('remorseFelt_gloat'), rm)}, was relieved ${pct(n('remorseFelt_relief'), rm)}`);
   const ev = n('killerEvenings');
   line(`  a living killer's evenings (${ev}): grieving their victim ${pct(n('killerGrieving'), ev)}, remorse ${pct(n('killerRemorseful'), ev)}, "got away with it" ${pct(n('killerGloating'), ev)}`);
   line(`  innocents spaced for a killer's murder: ${n('scapegoats')} (${n('scapegoatsFramed')} accused by the killer)`);
+  line(`  murders caught on the diary-room camera: ${n('caughtOnTape')}, ${n('murderConfession_footage')} of them aired at dinner`);
   line(`  confessions: ${n('diaryMurder')} to the diary camera, ${n('murderConfession_playback')} aired at dinner, ${n('murderConfession_drunk')} drunk to a friend (${n('murderConfessionKept')} more kept by a loyal friend), ${n('murderConfession_breakdown')} blurted out in a breakdown; ${n('blurted')} cheaters blurted out their cheating`);
   line(`  killers found out: ${n('killersFoundOut')} of ${n('killers')} (${pct(n('killersFoundOut'), n('killers'))}), ${n('foundOutByConfession')} through their own confession`);
   line(`  reopened: ${n('reopenedAccusations')} accusations of an old murder; at trial ${n('reopenedRight')} spaced the killer, ${n('reopenedWrong')} the accuser`);
@@ -495,6 +511,7 @@ function narrator(): { line: (e: SimEvent) => string[]; nm: (id: string | undefi
   const who = new Map<string, string>();
   const nm = (id: string | undefined) => (id ? (who.get(id) ?? id) : '?');
   const kissed = new Set<string>();
+  const snubbed = new Set<string>(); // pair|day: one snub line a day is enough
   let sentences: string[] = [];
   const line = (e: SimEvent): string[] => {
     const out: string[] = [];
@@ -619,7 +636,9 @@ function narrator(): { line: (e: SimEvent) => string[]; nm: (id: string | undefi
       case 'murder_confession':
         s = x.kept
           ? `${nm(a)}, drunk, tells ${nm(b)} they killed ${x.name}; ${nm(b)} keeps the secret`
-          : `CONFESSION: ${nm(a)} admits killing ${x.name} (${x.how})${e.actors.length > 1 ? `, heard by ${e.actors.slice(1).map(nm).join(', ')}` : ''}${at}`;
+          : x.how === 'footage'
+            ? `FOOTAGE: the room watches ${nm(a)} kill ${x.name}${e.actors.length > 1 ? `, seen by ${e.actors.slice(1).map(nm).join(', ')}` : ''}${at}`
+            : `CONFESSION: ${nm(a)} admits killing ${x.name} (${x.how})${e.actors.length > 1 ? `, heard by ${e.actors.slice(1).map(nm).join(', ')}` : ''}${at}`;
         break;
       case 'blurted':
         s = `${nm(a)} breaks down and confesses being with ${nm(b)}${at}`;
@@ -628,7 +647,22 @@ function narrator(): { line: (e: SimEvent) => string[]; nm: (id: string | undefi
         s = `trial for ${x.name}: ${nm(x.loser as string)} loses ${x.against}-${Object.keys(x.votes as object).length - (x.against as number)}${x.right ? ' (the killer)' : ' (innocent)'}`;
         break;
       case 'killer_known':
-        s = `${e.actors.slice(1).map(nm).join(', ')} now ${e.actors.length > 2 ? 'believe' : 'believes'} ${nm(a)} killed ${x.name} (${x.how})`;
+        s = `${e.actors.slice(1).map(nm).join(', ')} now ${e.actors.length > 2 ? 'believe' : 'believes'} ${nm(a)} killed ${x.name} (${x.from ? `${x.how}, from ${nm(x.from as string)}` : x.how})`;
+        break;
+      case 'warned':
+        s = `${nm(a)} warns ${nm(b)} about ${nm(c)}${at}`;
+        break;
+      case 'disbelieved':
+        s = `${nm(a)} won't hear a word against ${nm(b)}${at}`;
+        break;
+      case 'snub': {
+        const k = `${a}|${b}|${Math.floor(e.t / MINUTES_PER_DAY)}`;
+        s = snubbed.has(k) ? null : `${nm(a)} won't have ${x.offered} with ${nm(b)}, the killer${at}`;
+        snubbed.add(k);
+        break;
+      }
+      case 'caught_on_tape':
+        s = `THE CAMERAS SAW IT: ${nm(a)} killing ${nm(b)} in the diary room; the footage airs at dinner`;
         break;
       case 'immunity_spent':
         s = `${nm(a)} hands over an immunity (${x.cause})`;

@@ -64,6 +64,7 @@ export const roomsSchema = z.object({
       comfort: num.min(0).max(100),
       objects: z.record(z.string(), z.number().int().positive()),
       glass: z.string().optional(),
+      camera: z.boolean().default(false),
     }),
   ),
 });
@@ -377,6 +378,10 @@ export const rulesSchema = z.object({
     dislikedAt: num,
     disliked: z.string(),
     kindForgives: num,
+    // Losing a partner (by the labels the mourner believed in), and what ends when anyone dies:
+    // thoughts about the dead from these sources, and these thoughts.
+    partner: z.object({ thought: z.string(), labels: z.array(z.enum(['none', 'flirting', 'fling', 'dating', 'exclusive', 'ex'])) }),
+    ends: z.object({ sources: z.array(z.string()).default([]), thoughts: z.array(z.string()).default([]) }),
   }),
 });
 
@@ -667,6 +672,7 @@ export const breaksSchema = z.object({
     witnessFear: num,
     witnessThought: z.string(),
     feared: num,
+    glass: z.string(),
   }),
 });
 
@@ -723,6 +729,9 @@ export const newsSchema = z.object({
   gossip: z.object({ interactions: z.array(z.string()), sober: unit.default(0), halfLifeDays: num.positive(), juicy: num.min(0) }),
   protect: num.min(0),
   tipOff: z.object({ k: num.min(0) }),
+  // Killers: what people know about a killer spreads as news, weighted × weight when gossip picks,
+  // and a warning to a friend after any chat: odds base + affection ÷ 100 × affection.
+  killer: z.object({ what: z.string(), weight: num.min(0), warn: z.object({ base: unit, affection: num.min(0) }) }),
   scoop: z.object({ min: unit }),
   reputation: z.object({
     card_cheat: z.object({ refuse: unit, spot: num.min(0), wary: unit }),
@@ -793,15 +802,33 @@ export const eventsSchema = z.object({
 export const trialsSchema = z.object({
   foundThought: z.string(),
   nearMinutes: num.nonnegative(),
-  suspicion: z.object({ witnessed: num, dislike: num, fear: num, enemy: num, near: num }),
+  suspicion: z.object({ witnessed: num, dislike: num, fear: num, enemy: num, near: num, locked: num.default(0) }),
   accuseAt: num,
   accused: z.object({ thought: z.string(), affection: num }),
   fearNudge: num,
   testimony: z.object({ base: num, trust: num }),
   survivedThought: z.string(),
   memory: z.object({ affection: num, fear: num, friend: num, floor: num, thought: z.string(), near: z.string() }),
+  // Believing it on someone's word (news.yaml killer): smaller hits than seeing it.
+  hearsay: z.object({ affection: num, fear: num, doubt: z.object({ loyal: num }) }),
+  // Keeping a believed killer at arm's length: how far they shy from warm moves, either way.
+  wary: z.object({ known: unit, fear: num.min(0), braveK: num, mine: unit, warm: z.array(z.string()), snub: z.string() }),
   guilt: z.object({
     remorse: z.object({ thought: z.string(), base: num, perAffection: num }),
+    rush: z.string(),
+    dread: z.object({
+      thought: z.string(),
+      value: num,
+      unseen: unit,
+      seen: unit,
+      accused: unit,
+      snubbed: unit,
+      confessed: unit,
+      otherAccused: unit,
+      cleared: unit,
+      halfLifeDays: num.positive(),
+      min: unit,
+    }),
     haunted: z.string(),
     scapegoat: z.object({ thought: z.string(), framed: num }),
     gotAway: z.string(),

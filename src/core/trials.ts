@@ -8,17 +8,19 @@ import { TRIAL } from './actions.js';
 import { axis } from './booze.js';
 import { dayOf, log, timeOfDay, type Ctx } from './context.js';
 import { feel, relation } from './ledger.js';
+import { canSee } from './station.js';
 import { shuffle } from './rng.js';
-import { reopen, verdict } from './guilt.js';
+import { alarm, ease, reopen, verdict } from './guilt.js';
+import { learnRep } from './news.js';
 import { mourn, rollCall, space } from './show.js';
 import { think } from './thoughts.js';
 import type { Body, Contestant, Trial } from './types.js';
 
-/** Every minute while there are bodies: anyone awake who walks in on one finds it. The killer doesn't count. */
+/** Every minute while there are bodies: anyone awake who walks in on one, or can see it (glass, an arch), finds it. The killer doesn't count. */
 export function findBodies(ctx: Ctx): void {
   const show = ctx.w.show;
   for (const body of [...show.bodies]) {
-    const finder = ctx.w.contestants.find((c) => c.room === body.room && !c.asleep && c.id !== body.killer && c.activity?.phase !== 'walk');
+    const finder = ctx.w.contestants.find((c) => canSee(ctx.st, c.room, body.room) && !c.asleep && c.id !== body.killer && c.activity?.phase !== 'walk');
     if (finder) found(ctx, body, finder);
   }
 }
@@ -48,23 +50,48 @@ export function found(ctx: Ctx, body: Body, finder: Contestant | null): void {
  * victim's friends, down to the floor at least, a thought, and a dislike that won't fade past the
  * floor (ledger.ts).
  */
-export function believe(ctx: Ctx, who: Contestant, ids: string[], body: Pick<Body, 'id' | 'name' | 'feelings'>, how: string): void {
+export function believe(ctx: Ctx, who: Contestant, ids: string[], body: Pick<Body, 'id' | 'name' | 'feelings'>, how: string, from?: Contestant): void {
   const m = ctx.data.trials.memory;
+  const h = ctx.data.trials.hearsay;
+  const hearsay = how === 'gossip';
   const friendAt = ctx.data.social.ledger.friendAt;
   const believers: Contestant[] = [];
   for (const id of ids) {
     const b = ctx.w.contestants.find((c) => c.id === id);
-    if (!b || b === who || b.ledger[who.id]?.killer) continue;
-    feel(ctx, b, who, 'affection', m.affection, `killed ${body.name}`);
-    feel(ctx, b, who, 'fear', m.fear, `killed ${body.name}`);
-    if ((body.feelings[b.id]?.affection ?? 0) >= friendAt) feel(ctx, b, who, 'affection', m.friend, `killed my friend ${body.name}`);
+    if (!b || b === who) continue;
+    const before = b.ledger[who.id];
+    const mine = (body.feelings[b.id]?.affection ?? 0) >= friendAt;
+    // Already believed (on someone's word, a fresh certainty still lands). A second murder, of
+    // someone they loved, still shuts them out for good.
+    if (before?.killer && (hearsay || !before.hearsay)) {
+      if (mine && !before.mine) {
+        before.mine = true;
+        feel(ctx, b, who, 'affection', m.friend, `killed my friend ${body.name}`);
+      }
+      continue;
+    }
+    const already = !!before?.killer;
+    if (!already) {
+      feel(ctx, b, who, 'affection', hearsay ? h.affection : m.affection, `killed ${body.name}`);
+      feel(ctx, b, who, 'fear', hearsay ? h.fear : m.fear, `killed ${body.name}`);
+    } else {
+      // They'd heard it; now they know: the rest of the shock.
+      feel(ctx, b, who, 'affection', m.affection - h.affection, `killed ${body.name}`);
+      feel(ctx, b, who, 'fear', m.fear - h.fear, `killed ${body.name}`);
+    }
+    if (mine && !already) feel(ctx, b, who, 'affection', m.friend, `killed my friend ${body.name}`);
     const r = relation(ctx, b, who);
     if (r.affection > m.floor) feel(ctx, b, who, 'affection', m.floor - r.affection, `killed ${body.name}`); // a rival, at least
     r.killer = body.name;
-    think(ctx, b, m.thought, who.id);
+    if (mine) r.mine = true;
+    if (hearsay) r.hearsay = true;
+    else delete r.hearsay;
+    if (!already) think(ctx, b, m.thought, who.id);
+    // It's news, and the fastest kind (news.yaml killer).
+    learnRep(ctx, b, who, ctx.data.news.killer.what, ctx.w.t, body.id);
     believers.push(b);
   }
-  if (believers.length) log(ctx, 'killer_known', [who.id, ...believers.map((b) => b.id)], undefined, { victim: body.id, name: body.name, how });
+  if (believers.length) log(ctx, 'killer_known', [who.id, ...believers.map((b) => b.id)], undefined, { victim: body.id, name: body.name, how, ...(from ? { from: from.id } : {}) });
 }
 
 /**
@@ -78,6 +105,7 @@ export function suspicion(ctx: Ctx, body: Body, i: Contestant, j: Contestant): n
   let v = s.dislike * Math.max(0, -(r?.affection ?? 0)) + s.fear * (r?.fear ?? 0);
   if (body.feelings[j.id]?.enemy) v += s.enemy;
   if (body.near.includes(i.id) && body.near.includes(j.id)) v += s.near;
+  if (body.locked?.includes(j.id)) v += s.locked;
   return Math.min(v, s.witnessed - 1);
 }
 
@@ -108,6 +136,13 @@ export function schedule(ctx: Ctx, body: Pick<Body, 'id' | 'name' | 'killer' | '
   const trial: Trial = { day, victim: body.id, name: body.name, killer: body.killer, accuser: accuser.id, accused: accused.id, witnesses, feelings: body.feelings, ...(reopened ? { reopened } : {}) };
   ctx.w.show.trials.push(trial);
   ctx.w.show.cases.find((k) => k.victim === body.id)?.accusers.push(accuser.id);
+  // The killer feels the net tighten, or loosen when it's someone else in the dock.
+  const d = ctx.data.trials.guilt.dread;
+  if (accused.id === body.killer) alarm(ctx, body.killer, d.accused, body.id);
+  else {
+    const k = ctx.w.show.cases.find((x) => x.victim === body.id && x.killer === body.killer);
+    if (k) ease(ctx, k, d.otherAccused);
+  }
   log(ctx, 'accusation', [accuser.id, accused.id], accuser.room, { victim: body.id, name: body.name, suspicion: Math.round(suspicion), day, right: accused.id === body.killer, ...(reopened ? { reopened } : {}) });
   think(ctx, accused, tr.accused.thought, accuser.id);
   feel(ctx, accused, accuser, 'affection', tr.accused.affection, 'accused me of murder');

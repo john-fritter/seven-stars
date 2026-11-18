@@ -11,9 +11,9 @@ import { addNeed } from './needs.js';
 import { chance } from './rng.js';
 import { feel } from './ledger.js';
 import { addMeter } from './scoring.js';
-import { think } from './thoughts.js';
+import { think, updateMood } from './thoughts.js';
 import { found } from './trials.js';
-import type { Body, Contestant } from './types.js';
+import type { Body, Contestant, Label, Thought } from './types.js';
 import { canSee } from './station.js';
 
 /** Logs an infraction and holds it for the ceremony. `scored` is what the act itself earned them. */
@@ -150,15 +150,21 @@ export function kill(ctx: Ctx, c: Contestant, cause: string, room: string, witne
   for (const o of ctx.w.contestants) {
     if (o === c) continue;
     const affection = o.ledger[c.id]?.affection ?? 0;
-    feelings[o.id] = { affection, enemy: affection <= rivalAt || (c.ledger[o.id]?.affection ?? 0) <= rivalAt };
+    feelings[o.id] = { affection, enemy: affection <= rivalAt || (c.ledger[o.id]?.affection ?? 0) <= rivalAt, label: o.ledger[c.id]?.label ?? 'none' };
   }
   if (cause === 'murder' && killer) {
     const t = ctx.w.t;
     const left = ctx.w.show.seen[room] ?? {};
     const window = ctx.data.trials.nearMinutes;
     const near = ctx.w.contestants.filter((o) => o !== c && (o.room === room || (left[o.id] ?? -Infinity) >= t - window)).map((o) => o.id);
-    const body: Body = { id: c.id, name: c.name, room, t, killer, witnesses, near, feelings };
-    ctx.w.show.cases.push({ victim: c.id, name: c.name, killer, room, t, feelings, knew: [...witnesses], accusers: [], kept: [] });
+    // Locked in a glass cell with the victim: whoever finds the body sees who's in there with it.
+    const locked = ctx.st.room.get(room)?.glass ? ctx.w.contestants.filter((o) => o !== c && o.room === room && o.confined).map((o) => o.id) : [];
+    const body: Body = { id: c.id, name: c.name, room, t, killer, witnesses, near, feelings, ...(locked.length ? { locked } : {}) };
+    const dread = ctx.data.trials.guilt.dread;
+    // A murder on camera (the diary room) is on tape, and the killer knows it.
+    const camera = ctx.st.room.get(room)?.camera ?? false;
+    ctx.w.show.cases.push({ victim: c.id, name: c.name, killer, room, t, feelings, knew: [...witnesses], accusers: [], kept: [], dread: witnesses.length || camera ? dread.seen : dread.unseen, dreadAt: t });
+    if (camera) caughtOnTape(ctx, killer, c.id);
     remove(ctx, c);
     if (witnesses.length) found(ctx, body, null);
     else ctx.w.show.bodies.push(body);
@@ -166,6 +172,18 @@ export function kill(ctx: Ctx, c: Contestant, cause: string, room: string, witne
   }
   mourn(ctx, c.id, feelings);
   remove(ctx, c);
+}
+
+/**
+ * The cameras caught it: the footage is the killer's tape, and it airs at the next dinner
+ * (confessionals.yaml playback), today's if dinner hasn't aired yet, ahead of any other tape.
+ */
+function caughtOnTape(ctx: Ctx, killer: string, victim: string): void {
+  const show = ctx.w.show;
+  show.tapes[killer] = { t: ctx.w.t, kind: 'murder', about: [victim], caught: true };
+  const day = dayOf(ctx.w.t) + (timeOfDay(ctx.w.t) < ctx.data.confessionals.playback.at ? 0 : 1);
+  show.playback = [{ who: killer, day }, ...show.playback.filter((x) => x.who !== killer)];
+  log(ctx, 'caught_on_tape', [killer, victim], undefined, { day });
 }
 
 /**
@@ -177,18 +195,25 @@ export function mourn(ctx: Ctx, id: string, feelings: Body['feelings'], killer?:
   const n = { grief: 0, gloat: 0, relief: 0, shaken: 0 };
   for (const o of ctx.w.contestants) {
     if (o.id === id || o.id === killer) continue;
-    n[grieve(ctx, o, id, feelings[o.id]?.affection ?? 0, false)]++;
+    n[grieve(ctx, o, id, feelings[o.id]?.affection ?? 0, false, feelings[o.id]?.label)]++;
   }
   log(ctx, 'mourned', [id], undefined, n);
 }
 
 /**
  * How one person takes a death, by how they felt about the dead. Someone who caused it (`own`)
- * grieves a friend and gloats over a rival like anyone, but isn't shaken by it.
+ * grieves a friend and gloats over a rival like anyone, but isn't shaken by it. A partner (by the
+ * label they believed in) grieves as a partner, unless they'd come to hate them. Either way, their
+ * romance with the dead ends (rules.yaml spacing.ends).
  */
-export function grieve(ctx: Ctx, o: Contestant, id: string, aff: number, own: boolean): 'grief' | 'gloat' | 'relief' | 'shaken' {
+export function grieve(ctx: Ctx, o: Contestant, id: string, aff: number, own: boolean, label: Label = 'none'): 'grief' | 'gloat' | 'relief' | 'shaken' {
   const sp = ctx.data.rules.spacing;
   const l = ctx.data.social.ledger;
+  endWith(ctx, o, id);
+  if (sp.partner.labels.includes(label) && aff >= 0) {
+    think(ctx, o, sp.partner.thought, id);
+    return 'grief';
+  }
   if (aff >= l.friendAt) {
     think(ctx, o, sp.friend, id);
     return 'grief';
@@ -202,6 +227,16 @@ export function grieve(ctx: Ctx, o: Contestant, id: string, aff: number, own: bo
     think(ctx, o, sp.died, id, Math.min(0, died + sp.diedPerAffection * Math.max(aff, l.rivalAt)));
   }
   return 'shaken';
+}
+
+/** Their thoughts about the dead that end with them: romance, pining, missing them (rules.yaml spacing.ends). */
+function endWith(ctx: Ctx, o: Contestant, id: string): void {
+  const e = ctx.data.rules.spacing.ends;
+  const th = ctx.data.thoughts.thoughts;
+  const ends = (x: Thought) => x.about === id && (e.thoughts.includes(x.id) || e.sources.includes(th[x.id]!.source));
+  if (!o.thoughts.some(ends)) return;
+  o.thoughts = o.thoughts.filter((x) => !ends(x));
+  updateMood(ctx, o);
 }
 
 /** Takes a contestant out of the world: their objects, their guests, and others' feelings about them. */

@@ -156,6 +156,20 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Which NanoGPT models.
 - [ ] A real name.
 
+**Proposed for murders and their aftermath (Nov 18).** john asked for the killer to feel catharsis, remorse and fear of punishment by personality (the fear tracking whether they think they were caught), for killer suspicion to spread fastest of all gossip, and for the fishbowl and diary-room murders to be investigated first. DESIGN.md Part two, Murders and their aftermath.
+
+- [ ] A kill ends the break with "felt good to hurt {who}" (+18, × cruelty and volatility) instead of catharsis. Remorse unchanged.
+- [ ] Fear of being caught: −14 × how sure they are (1 if seen or on camera, 0.4 if not; at least 1 when accused or heard confessing, 0.6 when snubbed; × 0.5 when someone else is accused, × 0.4 when they walk free), halving every 3 days. Fear source, so the brave feel it least.
+- [ ] Losing a partner (dating or exclusive, not disliked): "Lost {who}" −20 for ten days, instead of the friend's −12 for a week. Romance thoughts, pining, missing them and "won't commit" about the dead end once someone knows.
+- [ ] Wariness of a believed killer: 0.4 + fear ÷ 100 × the brave factor, up to 1; 1 if they killed someone you loved. It scales starting anything warm with them, saying yes to a conversation, and turns down their warm moves at those odds (a snub). Insults and confrontations aren't gated.
+- [ ] Killer news: believing it is news, × 6 when gossip picks, and a warning after any chat at 0.3 + 0.5 × affection ÷ 100 × willingness. On someone's word: affection −15, fear 10 (not −30 and 20). A loyal 7+ friend of the accused (affection 30+) won't hear it; only believers pass it on.
+- [ ] Summoned confessionals only talk about the moment: their take, or a topic about the other one in it.
+- [ ] The fishbowl is locked from outside: an attack on a prisoner becomes raging at them through the glass. Cellmates can still fight.
+- [ ] Bodies are found by anyone awake who can see them; a cellmate locked in with the victim gets suspicion +60.
+- [ ] The diary room is a camera: a murder there is on tape, the killer knows, and the footage airs at the next dinner ahead of any tape.
+- [ ] Not built: "sleep on it" (it cut murders by a third but didn't move them off breakfast). Breakfast is still murder hour (65% of murders 07:00–10:00, before and after); the cause is good thoughts wearing off overnight.
+- [ ] Side effects (200 × 30): all 11 targets pass. Deaths 2.35 → 2.30 a week, stay 2.83 → 2.91 weeks, breaks 2.03 → 2.11 a day, hookups 5.20 → 5.31 a week; murders 0.44 → 0.43 a week (stories); trials 0.42 → 0.46 a week, killer spaced 0.32 → 0.38; killers found out 74% → 86%.
+
 **Proposed for group 4 tuning: fear, the reserved, newcomers and playback (Nov 11).** john asked to fix fear hitting too hard, the reserved and newcomers dying sooner, and playback airing almost every dinner. DESIGN.md Part two, Group 4 tuning.
 
 - [ ] Numbness instead of a lower fear cap: "watched an execution" and "{who} died" × max(0.3, 1 − 0.1 × deaths they've lived through aboard). The fear cap stays −20. Grief, relief, gloating, bodies and murders aren't numbed.

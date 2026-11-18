@@ -67,3 +67,10 @@ spacing:
   dislikedAt: -15
   disliked: relieved_died
   kindForgives: 8
+  # Proposal (Nov 18: lovers grieved like friends, and romance thoughts about the dead lived on).
+  # Someone they believed they were dating or exclusive with dies: `partner.thought` instead of the
+  # friend's grief (grief is × loyal and × kind, so a cold, disloyal partner still grieves, just
+  # less). Anyone who dies: once someone knows, their thoughts about the dead from `ends.sources`
+  # and the `ends.thoughts` end (no more glow from last night's lovin' with a corpse).
+  partner: { thought: partner_died, labels: [dating, exclusive] }
+  ends: { sources: [romance], thoughts: [pining, missing_them, not_exclusive] }

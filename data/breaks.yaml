@@ -74,6 +74,9 @@ kinds:
   blowup:          { label: "has a screaming, sobbing blowup in front of everyone", room: target, target: about, minutes: 30, airs: true, insults: 6 }
   panic:           { label: "panics", room: here, minutes: 30 }
   insult_spree:    { label: "goes on an insulting spree", room: target, target: about, minutes: 60, insults: 10 }
+  # Proposal (Nov 18): the fishbowl is locked from outside. An attack on someone inside it becomes
+  # this: banging on the glass and screaming at them through it (passion.glass).
+  rage_glass:      { label: "rages at them through the fishbowl glass", room: target, target: about, minutes: 20, insults: 4 }
   wreck:           { label: "wrecks someone's things", room: target_bed, target: about, minutes: 15, infraction: damage,
                      wreck: { thought: wrecked, affection: -15 } }
   attack:          { label: "goes for someone", room: target, target: about, minutes: 10, attack: true, orElse: tantrum }
@@ -116,3 +119,8 @@ passion:
   witnessFear: 30         # proposal: witnesses' fear of a killer
   witnessThought: saw_murder
   feared: 10              # proposal: the least fear that makes someone "the feared person"
+  # Proposal (Nov 18: 5 in 113 murders were an attacker walking into the robots-only fishbowl).
+  # An attack on someone locked in a glass cell, from outside it, becomes this kind instead: they go
+  # to the room round the cell and insult them through the glass. Two prisoners locked in together
+  # can still come to blows.
+  glass: rage_glass

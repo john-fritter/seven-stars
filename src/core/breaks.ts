@@ -13,7 +13,7 @@ import { feel } from './ledger.js';
 import { addNeed } from './needs.js';
 import { chance, pick } from './rng.js';
 import { infraction, kill } from './show.js';
-import { brawl, interact } from './social.js';
+import { brawl, interact, throughGlass } from './social.js';
 import { airIt, pourOut } from './news.js';
 import { grievance, think } from './thoughts.js';
 import { traitFx } from './traits.js';
@@ -137,6 +137,13 @@ export function startBreak(ctx: Ctx, c: Contestant, level: Level, source: string
   }
   let target = targetFor(ctx, c, kind, about);
   let room = roomFor(ctx, c, kind, target);
+  // The fishbowl is locked from outside: an attack on a prisoner rages at them through the glass.
+  const cell = target?.confined && !c.confined ? ctx.st.room.get(target.room)?.glass : undefined;
+  if (kind.attack && cell) {
+    id = b.passion.glass;
+    kind = b.kinds[id]!;
+    room = cell;
+  }
   // In the fishbowl, with nobody to take it out on, or a bender for someone who never drinks, it
   // becomes its `orElse` (an attack with nobody to attack smashes the set), or else the fallback.
   const cant = (k: Kind, t: Contestant | null, r: string | null) => (k.target && !t) || r === null || (c.confined && r !== c.room) || (k.drinks && traitFx(ctx.data, c).drink === 0);
@@ -209,8 +216,10 @@ export function breakMinute(ctx: Ctx, c: Contestant): void {
   if (ctx.w.t < bd.next) return;
   if (kind.insults) {
     const target = ctx.w.contestants.find((o) => o.id === bd.target);
-    const insult = ctx.data.social.interactions.find((d) => d.id === 'insult');
-    if (target && insult && target.room === c.room && !target.asleep) interact(ctx, c, target, insult);
+    // Face to face an insult; at a prisoner, a jeer through the glass.
+    const glass = target && target.room !== c.room && throughGlass(ctx, c, target);
+    const insult = ctx.data.social.interactions.find((d) => d.id === (glass ? 'glass_mock' : 'insult'));
+    if (target && insult && (target.room === c.room || glass) && !target.asleep) interact(ctx, c, target, insult);
     bd.next = ctx.w.t + kind.insults;
     return;
   }
@@ -230,12 +239,14 @@ export function breakMinute(ctx: Ctx, c: Contestant): void {
   }
 }
 
-/** The break is over, however it ended: catharsis. */
+/** The break is over, however it ended: catharsis, or after a kill, the rush. */
 export function endBreak(ctx: Ctx, c: Contestant): void {
   const bd = c.breakdown;
   if (!bd) return;
   c.breakdown = null;
-  think(ctx, c, ctx.data.breaks.catharsis);
+  // A break that ended in a death: the rush of it, by how cruel they are (trials.yaml guilt.rush).
+  if (bd.killed) think(ctx, c, ctx.data.trials.guilt.rush, bd.killed);
+  else think(ctx, c, ctx.data.breaks.catharsis);
   log(ctx, 'break_end', [c.id], c.room, { kind: bd.kind, minutes: ctx.w.t - bd.since });
 }
 
@@ -249,10 +260,15 @@ export function attack(ctx: Ctx, c: Contestant, target: Contestant): void {
   // One murder mystery at a time (D-050): while a body lies unfound or a trial is pending, nobody dies of it.
   const open = p.oneAtATime && (ctx.w.show.bodies.length > 0 || ctx.w.show.trials.length > 0);
   const before = c.ledger[target.id]?.affection ?? 0; // how they felt about them, before the blows
+  const label = c.ledger[target.id]?.label ?? 'none';
   const killChance = open ? 0 : (p.base + p.perStrength * Math.max(0, c.strength - target.strength)) * (p.weapons[room] ?? 1);
   const fight = brawl(ctx, c, target, {
     firstBlow: p.firstBlow,
-    lethal: (winner) => winner === c && chance(ctx.w.rng, killChance),
+    lethal: (winner) => {
+      const dies = winner === c && chance(ctx.w.rng, killChance);
+      if (dies && c.breakdown) c.breakdown.killed = target.id; // the break ends in the brawl: with the rush
+      return dies;
+    },
   });
   if (!fight.killed) return;
   const dead = fight.loser;
@@ -262,6 +278,6 @@ export function attack(ctx: Ctx, c: Contestant, target: Contestant): void {
     feel(ctx, w, c, 'fear', p.witnessFear, 'saw a murder');
     think(ctx, w, p.witnessThought, c.id);
   }
-  remorse(ctx, c, dead.id, before);
+  remorse(ctx, c, dead.id, before, label);
   kill(ctx, dead, 'murder', room, witnesses.map((w) => w.id), c.id);
 }

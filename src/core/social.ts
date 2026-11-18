@@ -9,6 +9,7 @@ import { learn, looseLips } from './news.js';
 import { askExclusive, attachedMult, breakUp, kiss, invite, moveAllowed, piningMult, proposition } from './romance.js';
 import { boldness, chanceBoost, interactionBoost } from './ratings.js';
 import { witnessesOf } from './scoring.js';
+import { alarm } from './guilt.js';
 import { infraction } from './show.js';
 import { feel, meet, rel, relation, warm } from './ledger.js';
 import { addNeed, axisFactor, companyWant, needUrgency } from './needs.js';
@@ -59,12 +60,36 @@ function sociable(ctx: Ctx, c: Contestant): boolean {
   return !!def && (def.company || def.tags.includes('social') || def.tags.includes('crowd'));
 }
 
-/** Odds `o` says yes to a conversation with `c`: base + affection, less when they've had enough people. */
+/** Odds `o` says yes to a conversation with `c`: base + affection, less when they've had enough people, and less from someone they believe is a killer. */
 export function talkOdds(ctx: Ctx, o: Contestant, c: Contestant): number {
   const k = ctx.data.social.company.talk.odds;
   const aff = o.ledger[c.id]?.affection ?? 0;
   const tired = 1 + k.tired * Math.min(0, companyWant(ctx, o));
-  return clamp((k.base + (aff / 100) * k.affection) * tired, k.min, 1);
+  return clamp((k.base + (aff / 100) * k.affection) * tired, k.min, 1) * (1 - wariness(ctx, o, c));
+}
+
+/**
+ * How far `o` shies from anything warm with `c`, 0..1 (trials.yaml wary): only if they believe `c`
+ * is a killer, more the more they fear them (less if brave), and completely if it was someone they loved.
+ */
+export function wariness(ctx: Ctx, o: Contestant, c: Contestant): number {
+  const r = o.ledger[c.id];
+  if (!r?.killer) return 0;
+  const k = ctx.data.trials.wary;
+  if (r.mine) return k.mine;
+  return clamp(k.known + ((k.fear * r.fear) / 100) * axisFactor(k.braveK, axis(ctx, o, 'brave')), 0, 1);
+}
+
+/** `o` won't have it from someone they believe is a killer: a snub instead (trials.yaml wary). */
+function snubbed(ctx: Ctx, c: Contestant, o: Contestant, def: InteractionDef): boolean {
+  const k = ctx.data.trials.wary;
+  if (!k.warm.includes(def.id)) return false;
+  const x = wariness(ctx, o, c);
+  if (x <= 0 || !chance(ctx.w.rng, x)) return false;
+  think(ctx, c, ctx.data.social.company.talk.refused, o.id);
+  log(ctx, k.snub, [o.id, c.id], c.room, { offered: def.id });
+  alarm(ctx, c.id, ctx.data.trials.guilt.dread.snubbed);
+  return true;
 }
 
 /** The pull of one person: liking, attraction (more somewhere private when they fancy them), fear. */
@@ -190,6 +215,8 @@ export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: I
   }
   if (def.move && def.move !== 'gift' && def.move !== 'breakup') w *= attachedMult(ctx, c, o) * piningMult(ctx, c, o);
   w *= interactionBoost(ctx, c, o, def); // what it would pay, as the meter falls
+  // Nothing warm for someone they believe is a killer (trials.yaml wary).
+  if (ctx.data.trials.wary.warm.includes(def.id)) w *= 1 - wariness(ctx, c, o);
   for (const s of def.scale) {
     const k = s.k ?? 1;
     let f: number;
@@ -239,6 +266,7 @@ export function moodInteraction(ctx: Ctx, c: Contestant, id: string): number {
 }
 
 export function interact(ctx: Ctx, c: Contestant, o: Contestant, def: InteractionDef): void {
+  if (snubbed(ctx, c, o, def)) return;
   const rc = relation(ctx, c, o);
   const ro = relation(ctx, o, c);
   addNeed(c, 'social', def.social * stageMult(ctx, c, 'social'));

@@ -14,7 +14,7 @@ import { grieve } from './show.js';
 import { canHear } from './station.js';
 import { condition, think, thoughtValue, updateMood } from './thoughts.js';
 import { believe, found, schedule } from './trials.js';
-import type { Case, Contestant, News, Trial } from './types.js';
+import type { Case, Contestant, Label, News, Trial } from './types.js';
 
 const aboard = (ctx: Ctx, id: string) => ctx.w.contestants.find((x) => x.id === id);
 
@@ -37,13 +37,50 @@ export function guiltShare(ctx: Ctx, c: Contestant): number {
  * At the kill (breaks.ts attack): remorse by how they felt about the victim just before, × honest
  * and kind; grief for a friend or gloating over a rival like anyone else, but not shaken.
  */
-export function remorse(ctx: Ctx, killer: Contestant, victim: string, affection: number): void {
+export function remorse(ctx: Ctx, killer: Contestant, victim: string, affection: number, label: Label = 'none'): void {
   const r = ctx.data.trials.guilt.remorse;
   const base = Math.min(0, r.base - r.perAffection * affection);
   const value = base < 0 ? thoughtValue(ctx, killer, r.thought, base) : 0;
   if (value < 0) think(ctx, killer, r.thought, victim, base);
-  const felt = grieve(ctx, killer, victim, affection, true);
+  const felt = grieve(ctx, killer, victim, affection, true, label);
   log(ctx, 'remorse', [killer.id, victim], killer.room, { value: Math.round(value * 10) / 10, affection: Math.round(affection), felt });
+}
+
+/** How sure the killer is now that they'll be caught for this one, 0..1 (trials.yaml guilt.dread). */
+export function dreadOf(ctx: Ctx, k: Case): number {
+  return k.dread * Math.pow(0.5, (ctx.w.t - k.dreadAt) / (ctx.data.trials.guilt.dread.halfLifeDays * 1440));
+}
+
+/** Something makes the killer surer they'll be caught: at least `level` now. */
+export function alarm(ctx: Ctx, killer: string, level: number, victim?: string): void {
+  for (const k of ctx.w.show.cases) {
+    if (k.killer !== killer || (victim && k.victim !== victim)) continue;
+    k.dread = Math.max(dreadOf(ctx, k), level);
+    k.dreadAt = ctx.w.t;
+  }
+  const c = aboard(ctx, killer);
+  if (c) dread(ctx, c);
+}
+
+/** Something takes the heat off: × `factor`. */
+export function ease(ctx: Ctx, k: Case, factor: number): void {
+  k.dread = dreadOf(ctx, k) * factor;
+  k.dreadAt = ctx.w.t;
+  const c = aboard(ctx, k.killer);
+  if (c) dread(ctx, c);
+}
+
+/** Hourly: the fear of being caught, by how exposed they feel over their likeliest-caught murder. */
+export function dread(ctx: Ctx, c: Contestant): void {
+  const d = ctx.data.trials.guilt.dread;
+  let worst: Case | null = null;
+  let level = 0;
+  for (const k of ctx.w.show.cases) {
+    if (k.killer !== c.id) continue;
+    const x = dreadOf(ctx, k);
+    if (x > level) [worst, level] = [k, x];
+  }
+  condition(ctx, c, d.thought, worst && level >= d.min ? d.value * level : null, worst?.victim ?? null);
 }
 
 /** Every ten minutes: back in the room where they did it, while the remorse lasts. */
@@ -74,7 +111,10 @@ export function verdict(ctx: Ctx, trial: Trial, loser: Contestant, spaced: boole
     think(ctx, killer, g.scapegoat.thought, loser.id, base);
     log(ctx, 'scapegoat', [killer.id, loser.id], killer.room, { victim: k.victim, name: k.name, framed, value: Math.round(thoughtValue(ctx, killer, g.scapegoat.thought, base) * 10) / 10 });
   }
-  if (spaced || loser !== killer) think(ctx, killer, g.gotAway);
+  if (spaced || loser !== killer) {
+    think(ctx, killer, g.gotAway);
+    ease(ctx, k, g.dread.cleared);
+  }
   reopen(ctx, k);
 }
 
@@ -88,6 +128,7 @@ export function confess(ctx: Ctx, c: Contestant, hearers: Contestant[], how: str
   const ids = hearers.filter((h) => h !== c).map((h) => h.id);
   log(ctx, 'murder_confession', [c.id, ...ids], c.room, { victim: k.victim, name: k.name, how });
   if (!ids.length) return true;
+  alarm(ctx, c.id, ctx.data.trials.guilt.dread.confessed, k.victim);
   for (const id of ids) if (!k.knew.includes(id)) k.knew.push(id);
   const show = ctx.w.show;
   const body = show.bodies.find((b) => b.id === k.victim);
