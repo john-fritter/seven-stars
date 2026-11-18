@@ -11,7 +11,8 @@ nearMinutes: 60         # proposal
 # Each contestant's suspicion of each other one, 0..100:
 #   witnessed the murder: `witnessed` on the killer, nothing on anyone else
 #   otherwise: dislike × −affection (if negative) + fear × fear + `enemy` if the suspect and the
-#   victim were rivals (either way) + `near` if both were seen near the victim
+#   victim were rivals (either way; only if they know of it, plots.yaml grudges) + `near` if both
+#   were seen near the victim + `heard` if they've been told this one did it
 suspicion: { witnessed: 100, dislike: 0.3, fear: 0.3, enemy: 30, near: 40, locked: 60, heard: 50 }   # proposal
 # Proposal (Nov 18): `locked` more on anyone who was locked in a glass cell with the victim (two
 # prisoners in the fishbowl): whoever finds the body sees who's in there with it. A body is found by

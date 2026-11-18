@@ -504,4 +504,4 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] The lover who kills for you: a timid contestant with a motive may ask a loving, willing partner; yes at 0.2 + (affection − 60) ÷ 100.
 - [ ] Sober confiding to a close friend; kept secrets can slip out drunk, and a keeper who falls out with the killer turns.
 - [ ] The cameras' teaser: an unsolved murder nobody has accused anyone over gets one clue at the ceremony naming three, the killer among them.
-
+- [ ] Accusations need a reason (john asked, Nov 18): 45+ of evidence (seen 100, known bad blood 30, seen near 40, cellmate 60, camera clue 35, told this one did it 50), not dislike; and they accuse only if they expect 0.5 − 0.1 × (brave − 5) ÷ 5 of the room to side with them.
