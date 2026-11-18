@@ -21,6 +21,8 @@ export function thoughtValue(ctx: Ctx, c: Contestant, id: string, base?: number)
   const of = (a: Axis | 'modesty') => (a === 'modesty' ? c.modesty : c.personality[a]);
   for (const s of def.scale) v *= axisFactor(s.k, of(s.axis));
   for (const s of th.sources[def.source] ?? []) v *= axisFactor(s.k, of(s.axis));
+  // Numbness: the station's routine horrors land softer on someone who's lived through a lot of them.
+  if (th.numb.thoughts.includes(id)) v *= Math.max(th.numb.min, 1 - th.numb.per * c.deathsSeen);
   const fx = traitFx(ctx.data, c);
   return v * (fx.thoughts[id] ?? 1) * (fx.sources[def.source] ?? 1);
 }

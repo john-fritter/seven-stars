@@ -331,6 +331,7 @@ export const scoringSchema = z.object({
     interactions: num.nonnegative(),
     chance: num.nonnegative(),
     shyness: unit.default(0),
+    nerve: unit.default(0),
     pays: z.record(z.string(), z.string()).default({}),
     ignore: z.array(z.string()).default([]),
   }),
@@ -534,6 +535,8 @@ export const thoughtsSchema = z.object({
   sourceCap: num.min(0),
   // Per-source caps that replace sourceCap (proposal, fear tuning: fear's is lower).
   caps: z.record(z.string(), num.min(0)).default({}),
+  // Numbness (proposal, Nov 11): these thoughts hit × max(min, 1 − per × deaths they've lived through).
+  numb: z.object({ thoughts: z.array(z.string()), per: unit, min: unit }).default({ thoughts: [], per: 0, min: 1 }),
   // "Trapped here" from arrival, easing from `from` to `to` over their first `days` aboard.
   trapped: z.object({ thought: z.string(), from: num, to: num, days: num.positive() }),
   // `side` (social only): the row applies only below (`under`) or above (`over`) their comfortable company point.
@@ -933,7 +936,8 @@ export const confessionalsSchema = z.object({
   cautious: unit,
   summons: z.object({ perDay: z.number().int().min(0), minPoints: num, events: z.array(z.string()), expireHours: num.positive() }),
   playback: z.object({
-    chance: unit,
+    worth: num.positive(),
+    perDinner: z.number().int().min(1),
     days: num.positive(),
     at: clock,
     room: z.string(),

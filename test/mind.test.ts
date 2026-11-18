@@ -44,6 +44,23 @@ describe('thoughts', () => {
     expect(thoughtValue(ctx, c, 'rebuffed')).toBeCloseTo(-4);
   });
 
+  it('numbness: the routine shock of a death shrinks with every death they have lived through, down to a floor', () => {
+    const { ctx, cast } = aboard();
+    const c = cast[0]!;
+    c.species = 'human';
+    c.personality = flat(5);
+    c.traits = [];
+    const n = ctx.data.thoughts.numb;
+    c.deathsSeen = 0;
+    expect(thoughtValue(ctx, c, 'watched_execution')).toBeCloseTo(-8);
+    c.deathsSeen = 3;
+    expect(thoughtValue(ctx, c, 'watched_execution')).toBeCloseTo(-8 * (1 - 3 * n.per));
+    c.deathsSeen = 100;
+    expect(thoughtValue(ctx, c, 'watched_execution')).toBeCloseTo(-8 * n.min);
+    // Grief for a friend isn't numbed.
+    expect(thoughtValue(ctx, c, 'friend_died')).toBeCloseTo(-12);
+  });
+
   it('come and go with conditions: low needs and the cold', () => {
     const { w, ctx, cast } = aboard();
     const c = cast[0]!;

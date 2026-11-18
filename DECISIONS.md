@@ -156,6 +156,16 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Which NanoGPT models.
 - [ ] A real name.
 
+**Proposed for group 4 tuning: fear, the reserved, newcomers and playback (Nov 11).** john asked to fix fear hitting too hard, the reserved and newcomers dying sooner, and playback airing almost every dinner. DESIGN.md Part two, Group 4 tuning.
+
+- [ ] Numbness instead of a lower fear cap: "watched an execution" and "{who} died" × max(0.3, 1 − 0.1 × deaths they've lived through aboard). The fear cap stays −20. Grief, relief, gloating, bodies and murders aren't numbed.
+- [ ] Nerve: in the ratings pull a taste under 1 counts as taste + (1 − taste) × desperation, so the desperate shy do what pays. Surprise bonus S 1 → 2.
+- [ ] Newcomers: no change. Compared fairly (daily odds by week of stay), they're about 15–20% likelier to die than the first cast in week one and the same after. The harness prints that table.
+- [ ] Playback: odds of what the tape paid ÷ 30, and one tape a dinner, the juiciest. 7.7 → 2.8 a week.
+- [ ] Meter drain 1.4 → 1.5.
+- [ ] Killers found out (~79%) left as it is: most are seen doing it.
+- [ ] Side effects (200 × 30): all 11 targets pass. Reserved stay 2.20 → 2.60 weeks (others ~3.0 / 2.8); deaths 2.41 → 2.35 a week; murders 0.49 → 0.43 a week; breaks 2.17 → 2.03 a day; breakups 1.30 → 1.37 a week; average fear −10.0 → −9.1.
+
 **Proposed for killer guilt and unsolved murders (Nov 11).** john asked for guilt that depends on personality and circumstances rather than a flat "a killer doesn't grieve their victim", and for murders pinned on the wrong person to come back. All numbers in `data/trials.yaml` guilt and reopen; DESIGN.md Part two, Guilt and unsolved murders.
 
 - [ ] Remorse at the kill: "I killed {who}" for a week, −10 − 0.1 × affection for the victim just before (never above 0), source guilt (× honest, × kind, × volatility). The killer grieves a friend and gloats over a rival like anyone, but isn't shaken by the death, and others' mourning doesn't reach them.

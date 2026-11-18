@@ -48,6 +48,7 @@ export interface SeedStats {
   fearAtNight: number; // fear thoughts' total at each day's end (capped as mood counts it), summed
   traits: Record<string, { days: number; mood: number; deaths: number; arrivals: number }>; // by trait
   traitCounts: Record<string, number>; // arrivals by how many traits they rolled
+  survival: Record<string, number>; // `days.<group>.<week of stay>` contestant-days aboard, `deaths.<group>.<week>` deaths
   surprise: Record<string, number>; // acts that scored a surprise bonus, by type, and the extra points ("+type")
   people: Record<string, number>; // sampled hourly while awake: "hours", each people thought's value, and mood and hours by friends aboard ("mood.<band>", "hours.<band>")
   reactions: Record<string, number>; // reactions to deaths, by kind
@@ -102,12 +103,14 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
     wakeMinutes: { owl: [], other: [] },
     fearAtNight: 0,
     traits: {},
+    survival: {},
     traitCounts: {},
     surprise: {},
     people: {},
     reactions: {},
   };
   const traitsOf = new Map<string, string[]>();
+  const cohorts = new Map<string, string[]>(); // contestant -> [first cast | newcomers, reserved | the rest]
   const owls = new Set<string>();
   const wokeToday = new Set<string>();
   const stage = new Map<string, { stage: string; since: number }>();
@@ -137,6 +140,7 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
         for (const id of ts) traitRow(s, id).arrivals++;
         // Outgoing bands ride along in the trait table: how the reserved fare.
         const c = world.contestants.find((x) => x.id === e.actors[0]);
+        cohorts.set(e.actors[0]!, [e.t >= MINUTES_PER_DAY ? 'newcomers' : 'first cast', c && c.personality.outgoing <= 3 ? 'reserved' : 'the rest']);
         if (c) {
           const band = outgoingBand(c.personality.outgoing);
           ts.push(band);
@@ -145,6 +149,7 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
         if (ts.some((id) => (data.traits.traits[id]?.nightShift ?? 0) > 0)) owls.add(e.actors[0]!);
       }
       if (e.type === 'death') for (const id of traitsOf.get(e.actors[0]!) ?? []) traitRow(s, id).deaths++;
+      if (e.type === 'death') for (const g of cohorts.get(e.actors[0]!) ?? []) add(s.survival, `deaths.${g}.${stayWeek(e.data!.stay as number)}`);
       // The first wake after a night, each day: when do night owls get up?
       const m = e.t % MINUTES_PER_DAY;
       if (e.type === 'wake' && (e.data!.slept as number) >= data.thoughts.sleepMinutes && m >= 180 && m < 840 && !wokeToday.has(e.actors[0]!)) {
@@ -172,7 +177,7 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
     }
     if (isNotable) s.notableDays++;
     if (sentenced) s.sentenceDays++;
-    endOfDay(s, world, data, d, together);
+    endOfDay(s, world, data, d, together, cohorts);
   }
   if (bottom !== null) s.bottomStreaks.push(streak);
   for (const prev of stage.values()) if (prev.stage !== 'sober') add(s.intoxMinutes, prev.stage, world.t - prev.since);
@@ -182,6 +187,11 @@ export function runSeed(data: GameData, seed: number, days: number): SeedStats {
 /** A pseudo-trait for the trait table: reserved (0–3), middling (4–6) or outgoing (7–10). */
 function outgoingBand(v: number): string {
   return v <= 3 ? '(outgoing 0-3)' : v >= 7 ? '(outgoing 7-10)' : '(outgoing 4-6)';
+}
+
+/** Week of their stay, for the survival table: 0, 1, or 2 for the third week on. */
+function stayWeek(minutes: number): number {
+  return Math.min(2, Math.floor(minutes / (MINUTES_PER_DAY * 7)));
 }
 
 function traitRow(s: SeedStats, id: string) {
@@ -313,11 +323,12 @@ function sampleHour(s: SeedStats, w: World, data: GameData): void {
   }
 }
 
-function endOfDay(s: SeedStats, w: World, data: GameData, day: number, together: Map<string, number>): void {
+function endOfDay(s: SeedStats, w: World, data: GameData, day: number, together: Map<string, number>, cohorts: Map<string, string[]>): void {
   const now = new Set<string>();
   s.contestantDays += w.contestants.length;
   const l = data.social.ledger;
   for (const c of w.contestants) {
+    for (const g of cohorts.get(c.id) ?? []) add(s.survival, `days.${g}.${stayWeek(w.t - c.arrivedAt)}`);
     for (const [k, v] of Object.entries(c.needs)) add(s.needsAtNight, k, v);
     s.moodAtNight += c.mood;
     for (const id of [...c.traits, outgoingBand(c.personality.outgoing)]) {
@@ -395,6 +406,8 @@ export interface Report {
   needsAtNight: Record<string, number>;
   moodAtNight: number;
   fearAtNight: number; // average fear thoughts' total, as mood counts it
+  /** Chance of dying on a given day, by group and week of their stay (0, 1, 2 = third week on): deaths ÷ contestant-days. */
+  survival: Record<string, (number | null)[]>;
   /** By trait: share of arrivals with it, mood at night with it, contestant-weeks aboard per death. */
   traits: { shareOfArrivals: Record<string, number>; mood: Record<string, number>; stayWeeks: Record<string, number | null>; perContestant: Record<string, number> };
   knockYesShare: number | null;
@@ -525,6 +538,12 @@ export function report(data: GameData, seeds: SeedStats[]): Report {
     needsAtNight: Object.fromEntries(Object.entries(needs).map(([k, v]) => [k, v / cDays])),
     moodAtNight: seeds.reduce((a, s) => a + s.moodAtNight, 0) / cDays,
     fearAtNight: seeds.reduce((a, s) => a + s.fearAtNight, 0) / cDays,
+    survival: (() => {
+      const all = sum((s) => s.survival);
+      const out: Record<string, (number | null)[]> = {};
+      for (const g of ['first cast', 'newcomers', 'reserved', 'the rest']) out[g] = [0, 1, 2].map((wk) => (all[`days.${g}.${wk}`] ? (all[`deaths.${g}.${wk}`] ?? 0) / all[`days.${g}.${wk}`]! : null));
+      return out;
+    })(),
     traits: (() => {
       const rows: Record<string, { days: number; mood: number; deaths: number; arrivals: number }> = {};
       for (const s of seeds) {

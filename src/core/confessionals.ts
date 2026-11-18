@@ -22,7 +22,7 @@ import { gathering } from './schedule.js';
 import { canHear } from './station.js';
 import { think, updateMood } from './thoughts.js';
 import { traitFx } from './traits.js';
-import type { Activity, Contestant, Thought } from './types.js';
+import type { Activity, Contestant, Tape, Thought } from './types.js';
 
 /** Something they could say to the camera. */
 export interface Topic {
@@ -199,7 +199,8 @@ export function exposure(ctx: Ctx, c: Contestant): boolean {
   const p = ctx.data.confessionals.playback;
   const tape = ctx.w.show.tapes[c.id];
   if (!tape || tape.t < ctx.w.t - p.days * 1440 || ctx.w.show.playback.some((x) => x.who === c.id)) return false;
-  if (!chance(ctx.w.rng, p.chance)) return false;
+  // The editors only air what's worth airing: odds of what the tape paid ÷ worth.
+  if (!chance(ctx.w.rng, Math.min(1, tapePays(ctx, tape) / p.worth))) return false;
   ctx.w.show.playback.push({ who: c.id, day: dayOf(ctx.w.t) + 1 });
   return true;
 }
@@ -211,7 +212,20 @@ export function playbackMinute(ctx: Ctx): void {
   const day = dayOf(ctx.w.t);
   const due = show.playback.filter((x) => x.day <= day);
   show.playback = show.playback.filter((x) => x.day > day);
-  for (const x of due) air(ctx, x.who);
+  // Only the juiciest `perDinner` air (the first queued wins a tie); the rest stay in the can.
+  const worth = (who: string) => {
+    const tape = show.tapes[who];
+    return tape ? tapePays(ctx, tape) : -1;
+  };
+  const ranked = due.map((x, i) => ({ who: x.who, i, v: worth(x.who) })).sort((a, b) => b.v - a.v || a.i - b.i);
+  for (const x of ranked.slice(0, ctx.data.confessionals.playback.perDinner)) air(ctx, x.who);
+}
+
+/** What a tape paid when it was said (its scoring.yaml confessional case), before modifiers. */
+function tapePays(ctx: Ctx, tape: Tape): number {
+  const row = ctx.data.scoring.awards[ctx.data.confessionals.event];
+  const k = row?.cases[tape.kind] ?? row;
+  return (k?.actor ?? 0) + (k?.each ?? 0);
 }
 
 /** The announcer plays their confessional at dinner: they're humiliated, and what they said lands. */

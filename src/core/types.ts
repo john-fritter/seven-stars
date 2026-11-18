@@ -86,6 +86,7 @@ export interface Contestant {
   breakdown: Breakdown | null; // in the middle of a mental break
   news: News[]; // what they know (news.ts): who's been with whom, who's known for what
   told: Record<string, number>; // what they've told the diary-room camera (confessionals.ts) -> when
+  deathsSeen: number; // deaths aboard since they arrived (thoughts.yaml numb: you get used to it)
 }
 
 /**

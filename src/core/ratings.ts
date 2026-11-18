@@ -67,7 +67,10 @@ function pull(ctx: Ctx, c: Contestant, type: string | undefined, taste: number, 
   if (!type || !k) return 0;
   const d = desperation(ctx, c);
   if (!d) return 0;
-  return k * traitFx(ctx.data, c).ratingsPull * d * (expectedPoints(ctx, c, type) / 10) * taste;
+  // Nerve: facing the airlock, what they'd never normally do starts to look worth it. A taste
+  // under 1 rises toward 1 by nerve × desperation (scoring.yaml ratings.nerve).
+  const t = taste < 1 ? taste + (1 - taste) * ctx.data.scoring.ratings.nerve * d : taste;
+  return k * traitFx(ctx.data, c).ratingsPull * d * (expectedPoints(ctx, c, type) / 10) * t;
 }
 
 /** The extra score an action gets for what it would pay: only actions that log a scoring event. */

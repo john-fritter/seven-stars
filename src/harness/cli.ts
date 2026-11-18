@@ -91,6 +91,11 @@ function printReport(r: Report, ms: number): void {
   console.log(top(r.needsAtNight, 10, (v) => v.toFixed(0)));
   console.log(`  ${'(mood)'.padEnd(16)} ${r.moodAtNight.toFixed(0)}`);
   console.log(`  ${'(fear)'.padEnd(16)} ${r.fearAtNight.toFixed(1)}  (fear thoughts' total, as mood counts it)`);
+  // Late arrivals can only die early inside a run, so "share of deaths in the first week" flatters
+  // nobody: this compares the daily odds at the same point in a stay.
+  console.log('\nChance of dying on a given day, by week of their stay');
+  console.log(`  ${''.padEnd(16)} ${'week 1'.padStart(7)} ${'week 2'.padStart(7)} ${'week 3+'.padStart(7)}`);
+  for (const [g, v] of Object.entries(r.survival)) console.log(`  ${g.padEnd(16)} ${v.map((x) => (x === null ? '—' : pct(x)).padStart(7)).join(' ')}`);
   const tr = r.traits;
   console.log(`\nTraits: ${Object.entries(tr.perContestant).map(([n, v]) => `${n} trait${n === '1' ? '' : 's'} ${pct(v)}`).join(', ')}`);
   console.log(`  ${'trait'.padEnd(16)} ${'arrivals'.padStart(8)}  ${'mood'.padStart(5)}  ${'stay (wk)'.padStart(9)}`);
