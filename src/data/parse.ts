@@ -127,6 +127,17 @@ function crossCheck(d: GameData, dir: string): void {
     if (x.step > r.sentences.length) errors.push(`${dir}/rules.yaml: infractions.${id}.step: the ladder only has ${r.sentences.length} sentences`);
   }
 
+  // Planned murders (plots.yaml)
+  thought(d.plots.notice.thought, 'plots.yaml: notice.thought');
+  thought(d.plots.nerve.thought, 'plots.yaml: nerve.thought');
+  thought(d.plots.proxy.granted, 'plots.yaml: proxy.granted');
+  for (const id of d.plots.grudges.aired) if (!d.social.interactions.some((x) => x.id === id)) errors.push(`${dir}/plots.yaml: grudges.aired: no interaction "${id}" in social.yaml`);
+  const traitIds = new Set(Object.keys(d.traits.traits ?? {}));
+  const pl = d.plots;
+  for (const [at, ids] of [['grudge.traitDays', Object.keys(pl.grudge.traitDays)], ['desperate.easiest', pl.desperate.easiest], ['willing.traits', Object.keys(pl.willing.traits)], ['willing.never', pl.willing.never], ['notice.hide', Object.keys(pl.notice.hide)]] as const) {
+    for (const id of ids) if (!traitIds.has(id)) errors.push(`${dir}/plots.yaml: ${at}: no trait "${id}" in traits.yaml`);
+  }
+
   // Thoughts, breaks, booze and romance
   const th = d.thoughts;
   thought(th.trapped.thought, 'thoughts.yaml: trapped.thought');

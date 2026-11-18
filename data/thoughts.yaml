@@ -260,6 +260,12 @@ thoughts:
                    scale: [{ axis: kind, k: -0.8 }] }                     # ×1.8 at kind 0, ×0.2 at kind 10
   fear_caught:   { label: "They'll find out about {who}", value: -14, hours: 1.5, stack: 1, source: fear }  # value set by trials.yaml guilt.dread
   keeping_secret: { label: "Keeping {who}'s secret", value: -4, hours: 72, stack: 1, source: fear }
+  # Proposals (Nov 18, plots.yaml): planned murders.
+  being_watched: { label: "{who} keeps staring at me", value: -4, hours: 48, stack: 1, source: fear }
+  lost_nerve:    { label: "Couldn't go through with it", value: -3, hours: 12, stack: 1, source: humiliation,
+                   scale: [{ axis: brave, k: 0.5 }] }
+  wish_granted:  { label: "{who} is gone, and I wished it", value: 8, hours: 36, stack: 1, source: catharsis,
+                   scale: [{ axis: kind, k: -0.8 }] }
 
   # The Wheel, the daily event and trials (all proposals)
   spun_wheel:    { label: "Had to spin the Wheel", value: -5, hours: 24, stack: 1, source: fear, needs: { fun: -10 } }

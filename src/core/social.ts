@@ -9,6 +9,7 @@ import { learn, looseLips } from './news.js';
 import { askExclusive, attachedMult, breakUp, kiss, invite, moveAllowed, piningMult, proposition } from './romance.js';
 import { boldness, chanceBoost, interactionBoost } from './ratings.js';
 import { witnessesOf } from './scoring.js';
+import { aired } from './plots.js';
 import { alarm } from './guilt.js';
 import { infraction } from './show.js';
 import { feel, meet, rel, relation, warm } from './ledger.js';
@@ -309,6 +310,7 @@ export function interact(ctx: Ctx, c: Contestant, o: Contestant, def: Interactio
       return swipeSnack(ctx, c, o);
   }
   const e = log(ctx, def.id, [c.id, o.id], c.room);
+  if (ctx.data.plots.grudges.aired.includes(def.id)) aired(ctx, c, o, c.room);
   looseLips(ctx, c, o, def.id);
   if (def.witnessThought) for (const id of witnessesOf(ctx, e)) think(ctx, ctx.w.contestants.find((x) => x.id === id)!, def.witnessThought, c.id);
   // A Hothead can come out swinging over less than an insult.
@@ -426,6 +428,9 @@ export function brawl(ctx: Ctx, swinger: Contestant, other: Contestant, opts: Br
     ...(opts.firstBlow ? { attack: true } : {}),
     ...(killed ? { killed: true } : {}),
   });
+  // Bad blood, out in the open, both ways (plots.yaml grudges).
+  aired(ctx, insulted, insulter, room);
+  aired(ctx, insulter, insulted, room);
   if (f.witnessThought) for (const id of witnesses) think(ctx, ctx.w.contestants.find((x) => x.id === id)!, f.witnessThought, insulted.id);
   if (outsideCage) {
     // Fighting outside the cage is an infraction; what the fight scored can earn a rule-of-cool

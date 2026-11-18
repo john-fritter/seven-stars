@@ -1,0 +1,160 @@
+# Planned murders, known grudges, confiding and accomplices. DESIGN.md Part two, Planned murders.
+# All proposals (Nov 18, john approved the design doc "Planned murders: design" with his markup;
+# DECISIONS.md Open). No AI: motive, plan and nerve are all sim state.
+#
+# Crimes of passion (breaks.yaml passion) stay as they are. A plan is the slow route: a motive and
+# the personality to act on it become a hidden intention on one person, then days of stewing and
+# watching until the target is alone and unseen, then a roll of nerve.
+
+# Once a day, at this time, everyone looks at their grudges and their meter.
+check: "08:00"
+
+# Motive one: a grudge that won't heal. Someone they hate (affection at or under `affection`) who
+# keeps hurting them (hurt or fear at least `hurt`), at this many daily checks running. Traits in
+# `traitDays` qualify sooner (a grudge holder after one).
+grudge:
+  affection: -50
+  hurt: 30
+  days: 2
+  traitDays: { grudge_holder: 1 }
+
+# Motive two: the show is going to kill me. The meter under `meter` (one bad day from zero), and a
+# kill pays 40 (scoring.yaml murder): everyone knows the operator rewards murder (D-050, D-052; john
+# Nov 18: yes, they know). The target is whoever they like least, never anyone they like `spare` or
+# more. Traits in `easiest` (the ice cold) pick the easiest mark instead: the weakest.
+desperate:
+  meter: 15
+  spare: 30
+  easiest: [ice_cold]
+  harder: 2
+
+# Who would actually do it. A willingness score:
+#   kind × (5 − kind) + brave × (brave − 5) + calm × (calm − 5) − honest × (honest − 5)
+#   − loyal × (loyal − 5) + the traits below
+# They plan only at `at` or more (killing for ratings rather than hate takes `desperate.harder`
+# more), never above `kindMax` kindness, and never with a trait in `never`
+# (hotheads snap, they don't plan; the forgiving and peacemakers let it go).
+willing:
+  kind: 1
+  brave: 0.5
+  calm: 0.3
+  honest: 0.3
+  loyal: 0.2
+  traits: { ice_cold: 2, grudge_holder: 0.5 }
+  kindMax: 5
+  never: [hothead, forgiving, peacemaker]
+  at: 2.5
+
+# How strong the intention is (it feeds the nerve roll):
+#   grudge: how far past the grudge line, (grudge.affection − affection) ÷ −grudge.affection, + the
+#     bigger of hurt and fear ÷ 100
+#   desperate: base + (meter line − meter) ÷ meter line
+#   for love (an accomplice, below): base + (affection for the one who asked − loveAt) ÷ 40
+strength: { desperate: 0.5, love: 0.5 }
+
+# Letting it go, at the daily check: a grudge once affection climbs back over `affection`;
+# desperation once the meter is back over `meter`; for love once they no longer love the one who
+# asked (affection under social.yaml friendAt); any plan after `days` days.
+letGo: { affection: -30, meter: 30, days: 7 }
+
+# Watching: a want (wants.yaml) to be where the target is, awake, hanging back. It's `pull` on
+# anything in a room the target is in, and it cancels the rival want's avoiding and confronting
+# for that one person: a planner bides their time.
+watch: { pull: 0.6 }
+
+# Only the target may feel watched (john Nov 18: not the whole room). Each hour both are awake
+# and can see each other, the target notices at odds `chance` (× the planner's trait in `hide`).
+# Noticing: `thought` about the planner, `fear` of them, and they know the planner has it in for
+# them (a known grudge, below), which they may tell friends. While the thought lasts, any option
+# where they'd be alone costs `alone` (not chores or sleep): they keep company.
+notice:
+  chance: 0.08
+  hide: { ice_cold: 0.3 }
+  thought: being_watched
+  fear: 10
+  alone: 0.6
+
+# The moment: the target is in a room or corridor nobody else is in or can see into (asleep
+# people in other rooms don't count), not locked in a glass cell, within `reach` minutes' walk,
+# and the planner can walk in at their rank (or is brave enough, `sneakBrave`, to sneak in: the
+# cameras log it as an infraction). Never while a body lies unfound or a trial is pending
+# (breaks.yaml passion.oneAtATime). Nor before the first lights-dim after the plan forms: they wait
+# for dark. A planner asleep in their night stirs each hour at odds `stir` (× how strong the
+# intention is, at most 1) and lies awake long enough to see whether this is the moment.
+moment: { reach: 8, sneakBrave: 8, stir: 0.3 }
+
+# Nerve, once per moment: base + willing × (willingness − willing.at) + strength × intention,
+#   − heard if anyone awake could hear it through a wall or an arch,
+#   − camera in a camera room (the diary room: it airs at dinner),
+#   − spaced if a killer was spaced by a trial in the last `spacedDays` days,
+#   − busy × the share of everyone else who's awake (anyone could walk in),
+#   + weapon in a room with a weapon (breaks.yaml passion.weapons), + asleep if the target is.
+# A moment whose odds are under `consider` isn't a moment at all: they let it pass and wait for a
+# better one, without losing anything. Losing it: `thought`, the intention weakens by `loss`, no new moment for `cooldown` minutes; at
+# `losses` they give up.
+nerve:
+  base: 0.4
+  willing: 0.08
+  strength: 0.15
+  heard: 0.25
+  camera: 0.5
+  spaced: 0.25
+  spacedDays: 7
+  busy: 0.4
+  consider: 0.2
+  weapon: 0.15
+  asleep: 0.15
+  thought: lost_nerve
+  loss: 0.3
+  cooldown: 120
+  losses: 4
+
+# The strike: they walk over (`action`), and if the target is still alone when they arrive, it's an
+# ambush: the crime-of-passion fight with `firstBlow` (more by `asleep` if the target is asleep;
+# john Nov 18: yes, sleepers can be killed, offscreen, and can wake and fight back) and the same
+# kill chance and weapons, × `armed` (they came prepared). A kill brings the killer's rush (trials.yaml guilt.rush). A failed one
+# leaves the survivor knowing who tried (fear and a grudge) and the fighting infraction; no trial
+# without a body (john Nov 18).
+ambush: { action: ambush, firstBlow: 6, asleep: 4, armed: 1.6 }
+
+# The lover who kills for you (john Nov 18). Someone with a motive but not the willingness, whose
+# partner (social labels in `labels`, either way) loves them (affection at least `loveAt`) and has
+# the willingness they lack, asks them in private (nobody else in or seeing the room), at most once
+# a plan. Yes at odds base + (affection − loveAt) ÷ 100 × affection. Yes: the partner takes the plan
+# on; the one who asked keeps the secret like a confidant (below) and gets `granted` if it's done.
+# No: the partner knows they wanted the target dead (a known grudge) and likes them `refused` less.
+proxy:
+  labels: [dating, exclusive]
+  loveAt: 60
+  odds: { base: 0.2, affection: 1 }
+  refused: -10
+  granted: wish_granted
+
+# Confiding (john Nov 18: the murderer who thinks they can trust their friend). Sober, after a deep
+# talk with a close friend (affection `closeAt`+, trust `trustAt`+), a killer may unburden
+# themselves at odds `chance` × how heavy their guilt is (trials.yaml guilt.full). A loyal friend
+# keeps it (trials.yaml guilt.keep); anyone else now knows.
+confide: { closeAt: 60, trustAt: 50, chance: 0.15 }
+
+# A kept secret can still come out: drunk, after a chat, at the drink stage's lips × `slip`, told
+# on someone's word (hearsay); and the moment a keeper stops liking the killer (affection under
+# social.yaml friendAt) they turn and know it for certain (they can accuse, trials.yaml reopen).
+secrets: { slip: 0.5 }
+
+# Known grudges (john Nov 18: evidence from knowing who had a grudge). Who has it in for whom is
+# something people know, not something the trial reads off the ledger: anyone who sees it aired
+# (these interactions, a fight, a confrontation, a scene, an attack break) learns it, and it spreads
+# in gossip: after a chat, at odds `tell` (× 2 if drunk), they mention a grudge from the last
+# `freshDays` days the listener doesn't know. Forgotten after `forgetDays`.
+grudges:
+  aired: [insult, glass_mock]
+  tell: 0.05
+  freshDays: 7
+  forgetDays: 14
+
+# The cameras (john Nov 18: footage in some circumstances; D-055: the announcer may divulge). At the
+# evening ceremony, a murder still unsolved (nobody has accused anyone over it) from before today
+# gets one teaser: the cameras put one of `size` people near it, the killer among them (the others
+# from those seen near the victim first, then by lot). Everyone there suspects them `suspicion` more
+# over it, and someone may now dare to accuse. Once per murder.
+clue: { size: 3, suspicion: 35 }

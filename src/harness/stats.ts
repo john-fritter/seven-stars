@@ -279,6 +279,7 @@ function tally(s: SeedStats, e: SimEvent): void {
       break;
     case 'murder':
       if ((d.witnesses as unknown[]).length) add(s.murders, 'witnessed');
+      if (d.planned) add(s.murders, 'planned');
       break;
     case 'body_found':
       add(s.murders, d.announced ? 'announced' : 'found');

@@ -87,6 +87,32 @@ export interface Contestant {
   news: News[]; // what they know (news.ts): who's been with whom, who's known for what
   told: Record<string, number>; // what they've told the diary-room camera (confessionals.ts) -> when
   deathsSeen: number; // deaths aboard since they arrived (thoughts.yaml numb: you get used to it)
+  plot?: Plot | null; // a murder they mean to commit (plots.ts), hidden from everyone aboard
+  brood?: Record<string, number>; // someone they hate -> daily checks running the grudge has held (plots.yaml grudge)
+  grudges?: Grudge[]; // who they know has it in for whom (plots.yaml grudges)
+}
+
+/** A planned murder (plots.yaml): who, why, how strongly, and how it's going. */
+export interface Plot {
+  target: string;
+  motive: 'grudge' | 'desperate' | 'love';
+  for?: string; // love: whoever asked them to do it
+  since: number;
+  strength: number;
+  losses: number; // times they've lost their nerve
+  calm: number; // no new moment before this (after losing their nerve)
+  noticed?: boolean; // the target has felt watched
+  asked?: boolean; // they've asked their partner to do it for them (plots.yaml proxy)
+  going?: boolean; // walking over to strike
+  window?: boolean; // the target is alone and unseen right now, and they've already rolled for it
+  via?: string; // not the stomach for it: the partner they mean to ask (plots.yaml proxy)
+}
+
+/** Something someone knows: `who` has it in for `at`, last seen or heard at `t`. */
+export interface Grudge {
+  who: string;
+  at: string;
+  t: number;
 }
 
 /**
@@ -171,6 +197,10 @@ export interface Case {
   knew: string[]; // who knows for certain: saw it, or heard the killer confess
   accusers: string[]; // who has accused the killer over it
   kept: string[]; // friends the killer confided in who kept the secret
+  near?: string[]; // seen in the room shortly before (for a later accusation: plots.yaml clue)
+  planned?: boolean; // a planned murder (plots.ts)
+  accomplice?: string; // whoever asked the killer to do it (plots.yaml proxy)
+  clued?: string[]; // the announcer's teaser: one of these did it (plots.yaml clue)
   dread: number; // 0..1: how sure the killer is they'll be caught, as of `dreadAt` (trials.yaml guilt.dread)
   dreadAt: number;
 }
@@ -216,6 +246,7 @@ export interface ShowState {
   summons: Summons[]; // the operator's calls to the diary room, waiting for them to be free
   called: { day: number; ids: string[] }; // who's been summoned today
   playback: { who: string; day: number }[]; // confessionals to air at that day's dinner
+  killerSpaced?: number; // when a trial last spaced a killer (plots.yaml nerve.spaced)
 }
 
 /** A confessional on tape: what was said, about whom. */

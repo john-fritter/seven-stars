@@ -18,6 +18,8 @@ import { clampTemp, driftRooms } from './temperature.js';
 import { cardsRound } from './cards.js';
 import { callSummons, playbackMinute, watchMoments } from './confessionals.js';
 import { fadeTraining } from './wants.js';
+import { dailyPlots, keepersTurn, noticeHour, plotMinute } from './plots.js';
+import { timeOfDay } from './context.js';
 import type { SimEvent, World } from './types.js';
 
 // The world stays plain data; the game data it runs on is attached here, outside it.
@@ -65,6 +67,7 @@ function tick(ctx: Ctx): void {
   const from = ctx.events.length;
   runSchedule(ctx);
   playbackMinute(ctx);
+  if (timeOfDay(ctx.w.t) === ctx.data.plots.check) dailyPlots(ctx);
   const tenth = ctx.w.t % 10 === 0;
   if (tenth) driftRooms(ctx);
   const critical = ctx.data.needs.bladder.criticalBelow;
@@ -96,10 +99,13 @@ function tick(ctx: Ctx): void {
         sleepwalk(ctx, c);
         recover(ctx, c);
         fadeTraining(ctx, c);
+        noticeHour(ctx, c);
       }
       c.health = Math.min(100, c.health + ctx.data.social.health.recoverPerHour / 6);
     }
   }
+  plotMinute(ctx);
+  if (ctx.w.t % 60 === 0) keepersTurn(ctx);
   if (ctx.w.t % ctx.data.social.every === 0) socialRound(ctx);
   cardsRound(ctx);
   // The operator calls people to the diary room after big moments.

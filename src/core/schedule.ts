@@ -4,6 +4,7 @@ import { actionDef, CEREMONY, endActivity, EVENT, onToilet, openMeals, PASSED_OU
 import { canEnter, dayOf, isNightFor, log, nightShift, timeOfDay, type Ctx } from './context.js';
 import { announceBill, eventToday, openEvent, resolveEvent, revealButton } from './events.js';
 import { announceBodies, findBodies, holdTrials, trialsToday } from './trials.js';
+import { airClues } from './plots.js';
 import { spinWheel, unswapBeds } from './wheel.js';
 import { fadeLedger } from './ledger.js';
 import { cast } from './generator.js';
@@ -182,6 +183,7 @@ export function rankOrder(ctx: Ctx, cast: Contestant[]): Contestant[] {
 function ceremony(ctx: Ctx): void {
   const w = ctx.w;
   if (w.show.bodies.length) announceBodies(ctx);
+  airClues(ctx);
   rollCall(ctx);
   const fishbowl = sentencing(ctx);
   spacings(ctx);

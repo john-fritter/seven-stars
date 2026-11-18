@@ -840,6 +840,43 @@ export const trialsSchema = z.object({
   reopen: z.boolean(),
 });
 
+// Planned murders, known grudges, confiding and accomplices (plots.yaml).
+const traitNums = z.record(z.string(), num).default({});
+export const plotsSchema = z.object({
+  check: clock,
+  grudge: z.object({ affection: num, hurt: num, days: z.number().int().positive(), traitDays: z.record(z.string(), z.number().int().positive()).default({}) }),
+  desperate: z.object({ meter: num.positive(), spare: num, easiest: z.array(z.string()).default([]), harder: num.default(0) }),
+  willing: z.object({ kind: num, brave: num, calm: num, honest: num, loyal: num, traits: traitNums, kindMax: num, never: z.array(z.string()).default([]), at: num }),
+  strength: z.object({ desperate: num, love: num }),
+  letGo: z.object({ affection: num, meter: num, days: num.positive() }),
+  watch: z.object({ pull: num.min(0) }),
+  notice: z.object({ chance: unit, hide: z.record(z.string(), unit).default({}), thought: z.string(), fear: num, alone: num.min(0) }),
+  moment: z.object({ reach: num.nonnegative(), sneakBrave: num, stir: unit }),
+  nerve: z.object({
+    base: num,
+    willing: num,
+    strength: num,
+    heard: num,
+    camera: num,
+    spaced: num,
+    spacedDays: num.nonnegative(),
+    busy: num,
+    consider: unit,
+    weapon: num,
+    asleep: num,
+    thought: z.string(),
+    loss: num.min(0),
+    cooldown: num.nonnegative(),
+    losses: z.number().int().positive(),
+  }),
+  ambush: z.object({ action: z.string(), firstBlow: num, asleep: num, armed: num.positive().default(1) }),
+  proxy: z.object({ labels: z.array(z.string()), loveAt: num, odds: z.object({ base: num, affection: num }), refused: num, granted: z.string() }),
+  confide: z.object({ closeAt: num, trustAt: num, chance: unit }),
+  secrets: z.object({ slip: unit }),
+  grudges: z.object({ aired: z.array(z.string()), tell: unit, freshDays: num.positive(), forgetDays: num.positive() }),
+  clue: z.object({ size: z.number().int().min(1), suspicion: num }),
+});
+
 const leanBy = z.union([axisEnum, z.enum(['modesty', 'drinking', 'monogamy'])]);
 const mults = z.record(z.string(), num.min(0)).default({});
 
@@ -1008,6 +1045,7 @@ export const fileSchemas = {
   activities: activitiesSchema,
   confessionals: confessionalsSchema,
   news: newsSchema,
+  plots: plotsSchema,
 } as const;
 
 export type GameData = { [K in keyof typeof fileSchemas]: z.output<(typeof fileSchemas)[K]> };

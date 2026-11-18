@@ -70,8 +70,12 @@ describe('suspicion and accusations', () => {
     relation(ctx, i, j).affection = -50;
     relation(ctx, i, j).fear = 40;
     expect(suspicion(ctx, body({ killer: k.id }), i, j)).toBeCloseTo(s.dislike * 50 + s.fear * 40);
+    // Bad blood between suspect and victim counts only if they know of it (plots.yaml grudges).
     const full = body({ killer: k.id, near: [i.id, j.id], feelings: { [j.id]: { affection: -40, enemy: true } } });
+    expect(suspicion(ctx, full, i, j)).toBeCloseTo(s.dislike * 50 + s.fear * 40 + s.near);
+    i.grudges = [{ who: j.id, at: 'dead', t: ctx.w.t }];
     expect(suspicion(ctx, full, i, j)).toBeCloseTo(s.dislike * 50 + s.fear * 40 + s.enemy + s.near);
+    i.grudges = [];
     // Only seen near if the suspector was there to see it.
     expect(suspicion(ctx, body({ killer: k.id, near: [j.id] }), i, j)).toBeCloseTo(s.dislike * 50 + s.fear * 40);
   });

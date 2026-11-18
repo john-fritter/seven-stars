@@ -11,6 +11,7 @@
 //
 //   weight  = 0.5^(age ÷ halfLife) × (juicy for the listener ? juicy : 1)   which piece comes to mind
 //   willing = Π over the people in it (1 − protect × loyal/10 × affection/100)   the odds they say it
+import { aired, confideMurder, slipSecret, tellGrudge } from './plots.js';
 import { drunkConfession } from './guilt.js';
 import { believe } from './trials.js';
 import { axis, stageOf } from './booze.js';
@@ -254,8 +255,11 @@ export function looseLips(ctx: Ctx, c: Contestant, o: Contestant, id: string): v
     }
   }
   if (drunkConfession(ctx, c, o)) return;
+  if (id === 'deep_talk' && confideMurder(ctx, c, o)) return;
+  if (slipSecret(ctx, c, o)) return;
   if (warn(ctx, c, o)) return;
   if (tipOff(ctx, c, o)) return;
+  if (tellGrudge(ctx, c, o)) return;
   if (!st.lips || !chance(ctx.w.rng, st.lips)) return;
   const n = pickNews(ctx, c, o);
   if (!n) return;
@@ -283,6 +287,7 @@ export function airIt(ctx: Ctx, c: Contestant, target: Contestant): void {
   const other = n.who === target.id ? n.with! : n.who;
   const heard = ctx.w.contestants.filter((x) => x !== c && x.id !== target.id && x.id !== other && canHear(ctx.st, x.room, c.room) && !x.asleep);
   log(ctx, 'scene', [c.id, target.id, other], c.room, { heard: heard.map((x) => x.id) });
+  aired(ctx, c, target, c.room);
   for (const x of heard) hear(ctx, x, n, 'scene');
 }
 

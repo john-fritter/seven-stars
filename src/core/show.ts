@@ -163,7 +163,7 @@ export function kill(ctx: Ctx, c: Contestant, cause: string, room: string, witne
     const dread = ctx.data.trials.guilt.dread;
     // A murder on camera (the diary room) is on tape, and the killer knows it.
     const camera = ctx.st.room.get(room)?.camera ?? false;
-    ctx.w.show.cases.push({ victim: c.id, name: c.name, killer, room, t, feelings, knew: [...witnesses], accusers: [], kept: [], dread: witnesses.length || camera ? dread.seen : dread.unseen, dreadAt: t });
+    ctx.w.show.cases.push({ victim: c.id, name: c.name, killer, room, t, feelings, near, knew: [...witnesses], accusers: [], kept: [], dread: witnesses.length || camera ? dread.seen : dread.unseen, dreadAt: t });
     if (camera) caughtOnTape(ctx, killer, c.id);
     remove(ctx, c);
     if (witnesses.length) found(ctx, body, null);

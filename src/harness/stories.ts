@@ -45,6 +45,7 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
   const known = new Set<string>(); // killers someone believes did it
   const victims = new Map<string, string>(); // living killers -> their latest victim
   const foundOut = new Set<string>(); // killers someone came to believe did it
+  const plannedKillers = new Set<string>(); // killers whose murder was planned
   let booked = false;
   const confronted = new Map<string, number>(); // pair -> when one last confronted the other
   const confrontCount = new Map<string, number>(); // pair -> confrontations between them
@@ -177,12 +178,50 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
           if (data.kind === 'catatonic') add(n, 'catatonic');
           if (b && known.has(b)) add(n, 'killerTargeted');
           break;
-        case 'murder':
+        case 'murder': {
+          const h = Math.floor((e.t % MINUTES_PER_DAY) / 60);
+          if (h >= 7 && h < 11) add(n, 'murdersMorning');
+          if (data.planned) add(n, 'murdersPlanned');
+          if (data.planned) plannedKillers.add(a!);
+          if (!(data.witnesses as unknown[]).length) add(n, 'murdersUnseen');
           add(n, 'murders');
           add(n, 'killers');
           today.add('murder');
           killers.set(a!, e.t);
           victims.set(a!, b!);
+          break;
+        }
+        case 'intent':
+          add(n, `plans_${data.via ? 'via' : data.motive}`);
+          break;
+        case 'nerve_lost':
+          add(n, 'nerveLost');
+          if (data.gaveUp) add(n, 'gaveUp');
+          break;
+        case 'let_go':
+          add(n, 'letGo');
+          break;
+        case 'ambush':
+          add(n, data.killed ? 'ambushKilled' : 'ambushFailed');
+          if (data.asleep) add(n, 'ambushAsleep');
+          break;
+        case 'creeped_out':
+          add(n, 'creepedOut');
+          break;
+        case 'asked_to_kill':
+          add(n, data.yes ? 'askedYes' : 'askedNo');
+          break;
+        case 'clue':
+          add(n, 'clues');
+          break;
+        case 'secret_slipped':
+          add(n, 'secretsSlipped');
+          break;
+        case 'secret_turned':
+          add(n, 'secretsTurned');
+          break;
+        case 'grudge_told':
+          add(n, 'grudgesTold');
           break;
         case 'killer_known':
           add(n, 'killerKnown');
@@ -192,6 +231,7 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
           if (killers.has(a!) && !foundOut.has(a!)) {
             foundOut.add(a!);
             add(n, 'killersFoundOut');
+            if (plannedKillers.has(a!)) add(n, 'plannedFoundOut');
             if (data.how === 'drunk' || data.how === 'breakdown' || data.how === 'playback') add(n, 'foundOutByConfession');
           }
           break;
@@ -472,7 +512,11 @@ export function storyReport(seeds: StorySeed[]): string[] {
   line(`  innocents spaced for a killer's murder: ${n('scapegoats')} (${n('scapegoatsFramed')} accused by the killer)`);
   line(`  murders caught on the diary-room camera: ${n('caughtOnTape')}, ${n('murderConfession_footage')} of them aired at dinner`);
   line(`  confessions: ${n('diaryMurder')} to the diary camera, ${n('murderConfession_playback')} aired at dinner, ${n('murderConfession_drunk')} drunk to a friend (${n('murderConfessionKept')} more kept by a loyal friend), ${n('murderConfession_breakdown')} blurted out in a breakdown; ${n('blurted')} cheaters blurted out their cheating`);
-  line(`  killers found out: ${n('killersFoundOut')} of ${n('killers')} (${pct(n('killersFoundOut'), n('killers'))}), ${n('foundOutByConfession')} through their own confession`);
+  line(`  killers found out: ${n('killersFoundOut')} of ${n('killers')} (${pct(n('killersFoundOut'), n('killers'))}), ${n('foundOutByConfession')} through their own confession; planned killers ${n('plannedFoundOut')} of ${n('murdersPlanned')} (${pct(n('plannedFoundOut'), n('murdersPlanned'))})`);
+  line(`  ${pct(n('murdersPlanned'), mu)} planned, ${pct(n('murdersUnseen'), mu)} unseen, ${pct(n('murdersMorning'), mu)} between 07:00 and 11:00`);
+  line(`  plans formed: ${n('plans_grudge')} over a grudge, ${n('plans_desperate')} for ratings, ${n('plans_love')} for a lover (${n('askedYes')} yes, ${n('askedNo')} no of ${n('plans_via')} who meant to ask); ${n('letGo')} let go, ${n('nerveLost')} lost nerves (${n('gaveUp')} gave up)`);
+  line(`  ambushes: ${n('ambushKilled')} killed, ${n('ambushFailed')} survived (${n('ambushAsleep')} of all ambushes on a sleeper); ${n('creepedOut')} targets felt watched`);
+  line(`  confided to a friend: ${n('murderConfession_confided')} told, ${n('secretsSlipped')} kept secrets slipped out drunk, ${n('secretsTurned')} keepers turned on the killer; ${n('clues')} camera teasers; ${per(n('grudgesTold') * 7, days, 1)} grudges gossiped a week`);
   line(`  reopened: ${n('reopenedAccusations')} accusations of an old murder; at trial ${n('reopenedRight')} spaced the killer, ${n('reopenedWrong')} the accuser`);
   line(`  aimed at a known killer afterwards: ${n('killerSnubbed')} insults or slights, ${n('killerTargeted')} breaks, ${n('killerCaged')} cage matches, ${n('killerFights')} brawls`);
   line();
@@ -619,7 +663,7 @@ function narrator(): { line: (e: SimEvent) => string[]; nm: (id: string | undefi
         s = x.level === 'extreme' || x.kind === 'steal_food' ? `${nm(a)} breaks (${x.level} ${x.kind}, over ${x.source})${b ? ` at ${nm(b)}` : ''}${at}` : null;
         break;
       case 'murder':
-        s = `MURDER: ${nm(a)} kills ${nm(b)}${at}, ${(x.witnesses as string[]).length ? `seen by ${(x.witnesses as string[]).map(nm).join(', ')}` : 'unseen'}`;
+        s = `MURDER${x.planned ? ' (planned)' : ''}: ${nm(a)} kills ${nm(b)}${at}, ${(x.witnesses as string[]).length ? `seen by ${(x.witnesses as string[]).map(nm).join(', ')}` : 'unseen'}`;
         break;
       case 'body_found':
         s = x.announced ? `the announcer declares ${x.name}'s body` : `${nm(a)} finds ${x.name}'s body${at}`;
@@ -635,13 +679,43 @@ function narrator(): { line: (e: SimEvent) => string[]; nm: (id: string | undefi
         break;
       case 'murder_confession':
         s = x.kept
-          ? `${nm(a)}, drunk, tells ${nm(b)} they killed ${x.name}; ${nm(b)} keeps the secret`
+          ? `${nm(a)}, ${x.how === 'confided' ? 'in confidence' : 'drunk'}, tells ${nm(b)} they killed ${x.name}; ${nm(b)} keeps the secret`
           : x.how === 'footage'
             ? `FOOTAGE: the room watches ${nm(a)} kill ${x.name}${e.actors.length > 1 ? `, seen by ${e.actors.slice(1).map(nm).join(', ')}` : ''}${at}`
             : `CONFESSION: ${nm(a)} admits killing ${x.name} (${x.how})${e.actors.length > 1 ? `, heard by ${e.actors.slice(1).map(nm).join(', ')}` : ''}${at}`;
         break;
       case 'blurted':
         s = `${nm(a)} breaks down and confesses being with ${nm(b)}${at}`;
+        break;
+      case 'intent':
+        s = x.via ? `(hidden) ${nm(a)} wants ${nm(b)} dead and means to ask ${nm(c)} to do it` : x.for ? `(hidden) ${nm(a)} agrees to kill ${nm(b)} for ${nm(c)}` : `(hidden) ${nm(a)} has murder in their eyes for ${nm(b)} (${x.motive === 'desperate' ? 'for ratings' : 'a grudge'})`;
+        break;
+      case 'asked_to_kill':
+        s = `(hidden) ${nm(a)} asks ${nm(b)} to kill ${nm(c)}: ${x.yes ? 'yes' : 'no'}${at}`;
+        break;
+      case 'nerve_lost':
+        s = `(hidden) ${nm(a)} has ${nm(b)} alone and loses their nerve${x.gaveUp ? ', and gives up' : ''}${at}`;
+        break;
+      case 'let_go':
+        s = `(hidden) ${nm(a)} lets go of killing ${nm(b)} (${x.why})`;
+        break;
+      case 'stalk':
+        s = `${nm(a)} slips off after ${nm(b)}${x.asleep ? ', asleep' : ''}${at}`;
+        break;
+      case 'ambush':
+        s = x.killed ? null : `AMBUSH: ${nm(a)} goes for ${nm(b)}, who survives${at}`;
+        break;
+      case 'creeped_out':
+        s = `${nm(a)} notices ${nm(b)} keeps staring at them`;
+        break;
+      case 'clue':
+        s = `the announcer airs a clue about ${x.name}: one of ${e.actors.map(nm).join(', ')}`;
+        break;
+      case 'secret_slipped':
+        s = `${nm(a)}, drunk, lets slip to ${nm(b)} that ${nm(c)} killed ${x.name}`;
+        break;
+      case 'secret_turned':
+        s = `${nm(a)} turns on ${nm(b)}: they know who killed ${x.name}`;
         break;
       case 'trial':
         s = `trial for ${x.name}: ${nm(x.loser as string)} loses ${x.against}-${Object.keys(x.votes as object).length - (x.against as number)}${x.right ? ' (the killer)' : ' (innocent)'}`;

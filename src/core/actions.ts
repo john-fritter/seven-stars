@@ -6,6 +6,7 @@
 import type { ActionDef, MealDef, Need } from '../data/schema.js';
 import { drinkFun, drinkPull, finishDrink, hungoverFactor, qualityFor, soberFactor, stageMult } from './booze.js';
 import { breakArrive, breakMinute, endBreak } from './breaks.js';
+import { aired, ambushArrive } from './plots.js';
 import { confessionalPull, confide } from './confessionals.js';
 import { accessRank, canEnter, dayOf, effectOn, effectsToday, inRanks, isNightFor, log, noisy, timeOfDay, type Ctx } from './context.js';
 import { gathering } from './schedule.js';
@@ -642,6 +643,7 @@ function arrive(ctx: Ctx, c: Contestant): void {
   if (c.breakdown && a.action === c.breakdown.kind) breakArrive(ctx, c);
   if (def?.kind === 'sleep' && def.assigned) bedtime(ctx, c);
   if (a.action === ctx.data.wants.rival.confront.action) haveItOut(ctx, c, a);
+  if (a.action === ctx.data.plots.ambush.action) ambushArrive(ctx, c, a);
 }
 
 /**
@@ -655,6 +657,7 @@ function haveItOut(ctx: Ctx, c: Contestant, a: Activity): void {
   if (!o || o.room !== c.room || o.asleep || o.breakdown) return;
   const id = chance(ctx.w.rng, k.insult) ? 'insult' : 'slight';
   log(ctx, 'confront', [c.id, o.id], c.room, { with: id });
+  aired(ctx, c, o, c.room);
   interact(ctx, c, o, ctx.data.social.interactions.find((d) => d.id === id)!);
   airedOut(ctx, c, o);
 }

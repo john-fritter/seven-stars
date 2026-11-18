@@ -462,9 +462,9 @@ Whether the operator should also occasionally gift something more dangerous is o
 
 **Why it stays rare.** It needs the victim alone, a believed-private spot, the right object, and a victim who doesn't see it coming. Victims can resist or flee, and a failed attempt someone witnesses is its own huge story. Killing also hits most characters' mood hard, unless their traits say otherwise.
 
-**Two routes.** Planned: a reflection sets an intention to kill and the engine waits for the opportunity. Passion: an extreme mental break turns violent.
+**Two routes.** Planned: an intention to kill forms and the engine waits for the opportunity (built without AI in slice one, see Part two, Planned murders; the AI can later set intentions the same way). Passion: an extreme mental break turns violent.
 
-**Crimes of passion come from the sim (decided).** Certain mental breaks can end in murder, and the break type follows from its trigger, so rage aimed at a particular person comes from grievances against that person. The AI doesn't need to decide anyone attempts murder; a planned murder through AI intentions remains a possible addition.
+**Crimes of passion come from the sim (decided).** Certain mental breaks can end in murder, and the break type follows from its trigger, so rage aimed at a particular person comes from grievances against that person. The AI doesn't need to decide anyone attempts murder. Planned murders now come from the sim too (proposed Nov 18, Part two, Planned murders).
 
 **Evidence comes from the engine, never the LLM.** Door logs, who was where, what went missing (a knife, a vial), a wet floor, bruises from a struggle, when the body was found. The killer keeps a private alibi sheet so its lies hold up across conversations.
 
@@ -538,7 +538,7 @@ Slice one answers one question: does the mechanical station, left alone, produce
 - Arrivals, deaths and placeholder trials.
 - The fast-forward harness and a crude debug view.
 
-**Out:** AI of any kind, art, viewers and votes, the producer, clothing visuals, planned murders, confession content. See the last section.
+**Out:** AI of any kind, art, viewers and votes, the producer, clothing visuals, confession content. See the last section. (Planned murders were out; john brought simple ones in on Nov 18, see Planned murders.)
 
 **Success targets for a tuned run (first guesses):**
 
@@ -1093,7 +1093,7 @@ What it cost: with everyone earning more, the drain went 0.9 → 1.15 an hour to
 
 ### Murder
 
-Murder stays a crime of passion in slice one (planned murders are out of scope). One nudge: below the doom line, the violent-break cutoffs loosen by one point for that contestant (kind 4 or under, calm 3 or under), so a desperate, cruel or brave contestant is a little likelier to turn a break violent; the existing 40-point meter award does the rest. Killing deliberately for ratings waits for planned murders.
+Murder was a crime of passion only until Nov 18 (see Planned murders below for the cold-blooded route). One nudge: below the doom line, the violent-break cutoffs loosen by one point for that contestant (kind 4 or under, calm 3 or under), so a desperate, cruel or brave contestant is a little likelier to turn a break violent; the existing 40-point meter award does the rest. Killing deliberately for ratings is now a planned murder's second motive.
 
 **Tuned Oct 23** (john: a murder about every two weeks). With the old numbers there was one murder every 180 station days: 130 attacks in 24 seasons, 86 won by the attacker, 4 kills, because the kill chance needed the attacker to be stronger and half the winners weren't. Now the cutoffs are kind 4 and calm 4, the kill chance has a 60% base, attacks don't kill while another murder is unresolved, and jealousy aims person breaks at rivals. A 200-seed run has 0.44 murders a week (one every 16 days) and 0.38 trial deaths.
 
@@ -1355,11 +1355,42 @@ A second infraction the same day bumps the sentence up a step.
 - **The Button** odds = 0.3 × (1 − 0.5 (kind − 5) ÷ 5) × (1 − 0.5 (loyal − 5) ÷ 5) × (1 + 0.5 (brave − 5) ÷ 5) × (1 + (1 − meter ÷ 100)). Gains and losses go to the meter only, not lifetime points. The reveal is at 19:00.
 - **Scoring** for events and trials skips the witness multiplier, since everyone is watching.
 
+## Planned murders (proposed, Nov 18)
+
+john (Nov 18) approved simple planned murders without AI, from the design doc "Planned murders: design" with his markup: contestants know a kill pays; sleeping targets can be killed (offscreen) and can wake and fight; a failed ambush doesn't lead to a trial; and evidence should come from knowing who had a grudge or motive, maybe camera footage, not from the cast noticing a stare. He also asked for confessions: the drunk killer who tells someone, the murderer who trusts a friend, and the lover who kills for you. This overturns "planned murders wait for the AI" (DECISIONS.md Open). Numbers in `data/plots.yaml`; the code is `src/core/plots.ts`, with hooks in `breaks.ts` (attack), `trials.ts` (suspicion), `news.ts`, `social.ts`, `wants.ts`, `actions.ts`, `schedule.ts` and `world.ts`.
+
+**Why opportunity isn't the limiter.** Measured before building (20 seasons): a contestant is alone with nobody able to see them about 30% of the time, in windows of about 19 minutes. Motive, personality and nerve have to keep murder rare.
+
+**Motive,** checked once a day at 08:00:
+- **A grudge that won't heal.** Affection −50 or worse with hurt or fear 30+, at two daily checks running (a Grudge holder after one; never for the Forgiving or a Peacemaker). The target is the worst of them.
+- **The show is going to kill me.** The meter under 15, and a kill pays 40. The target is whoever they like least (never anyone they like 30+); the Ice cold pick the weakest.
+
+**Willingness:** kind × (5 − kind) + 0.5 × (brave − 5) + 0.3 × (calm − 5) − 0.3 × (honest − 5) − 0.2 × (loyal − 5), + 2 for Ice cold and + 0.5 for a Grudge holder. A plan forms at 2.5 or more (4.5 for a ratings kill, which takes more coldness than killing someone you hate), never above kind 5, never for a Hothead (they snap; the crime-of-passion route stays as it was). The plan is hidden from everyone aboard but logged (`intent`).
+
+**The plan.**
+1. **Stewing.** It waits for dark: nothing before the first lights-dim after it forms. It's let go when affection climbs back over −30, when the meter is back over 30 (ratings), or after 7 days. Its strength is (−affection − 50) ÷ 50 + the bigger of hurt and fear ÷ 100, or 0.5 + how far under 15 the meter is.
+2. **Watching.** A want (+0.6) to be in rooms where the target is awake, and the rival want's avoiding and confronting are off for that one person: a planner bides their time. Only the target can notice: each hour both are awake and in sight, 8% (× 0.3 for the Ice cold), once per plan. Noticing gives "{who} keeps staring at me" (−4, 2 days), fear 10, and the knowledge that the planner has it in for them, which they can gossip. While the thought lasts, options where they'd be alone cost 0.6 (not chores or sleep).
+3. **The moment.** The target is in a room or corridor nobody else is in and no other awake person can see into, not in a glass cell, within 8 minutes' walk, and the planner may walk in at their rank (or has brave 8+ and sneaks in, which the cameras log as an infraction). Never while a body lies unfound or a trial is pending. A planner asleep in their night stirs each hour at 30% × strength and lies awake to check.
+4. **Nerve,** once per moment: 0.4 + 0.08 × (willingness − 2.5) + 0.15 × strength, − 0.4 × the share of everyone else who's awake (anyone could walk in), − 0.25 if anyone awake could hear it, − 0.5 in a camera room, − 0.25 if a trial spaced a killer in the last week, + 0.15 with a weapon to hand, + 0.15 if the target's asleep. Under 0.2 it isn't a moment at all and passes. Losing it: "Couldn't go through with it" (−3, 12 hours, humiliation), strength − 0.3, no new moment for 2 hours; the fourth time they give up.
+5. **The ambush.** They walk over (`stalk`); if the target is still alone and unseen on arrival, it's the crime-of-passion fight with a first blow of 6 (+4 on a sleeper), the same kill chance and weapons × 1.6 (they came prepared). A kill brings the rush, remorse and dread as before, and the murder is marked planned. A target who survives knows who tried: fear 30, affection −30 and a known grudge; the attacker gets the usual fighting infraction; no trial without a body.
+
+**The lover who kills for you.** Someone with a motive but not the willingness, whose partner (dating or exclusive, both ways) loves them at 60+ and has the willingness, asks them once, in private. Yes at 0.2 + (affection − 60) ÷ 100: the partner takes the plan on (strength 0.5 + (affection − 60) ÷ 40), and if it's done the asker keeps the secret like a confidant and gets "{who} is gone, and I wished it" (+8, × cruelty). No: the partner likes them 10 less and knows they wanted the target dead.
+
+**Known grudges, not the ledger.** Suspicion used to add 30 whenever the suspect and victim were rivals, whether the suspector could know it or not. Now it counts only bad blood they know of: anyone who sees an insult, a jeer through the glass, a fight (either way), a confrontation, a scene or a wrecking learns who has it in for whom, and after any chat, at 5% (10% drunk), someone mentions a grudge from the last week the listener doesn't know. Forgotten after 14 days.
+
+**Secrets.** Sober, after a deep talk with a close friend (affection 60+, trust 50+), a guilty killer confides at 15% × how heavy their guilt is; a loyal friend keeps it (loyal 7+), anyone else now knows. A keeper drunk at a chat lets it slip at the stage's lips × 0.5 (believed on their word), and a keeper who stops liking the killer (affection under 30) turns: they know it for certain and can bring it back to trial.
+
+**The cameras.** At the evening ceremony, a murder from before today that nobody has accused anyone over gets one teaser: the cameras put one of three people near it, the killer among them (the others from those seen near the victim first). Everyone suspects those three 35 more, and someone may now dare to accuse. Once per murder.
+
+**Measured** (before → after; 60 seasons × 30 days `sim stories`, and 80 seasons of the plot counter for hours): murders 89 → 110 (0.35 → 0.43 a week), 29% of them planned; unseen 33% → 55%; 07:00–11:00 44% → 42% (planned murders run to breakfast too, when the target heads off alone before others are about; a busy-station nerve penalty pulled them from 60% of planned kills to about a third, and a third now come between 21:00 and 03:00). Killers found out 87% → 71% (planned killers 44%). Wrong verdicts 10 → 32 and innocents spaced for a murder 10 → 28: with a real whodunit, the room accuses whoever they know had it in for the victim, and sometimes the killer frames them. Plans formed: 50 over a grudge, 42 for ratings, 12 meant to ask a lover (2 said yes); 29 let go, 76 lost nerves (6 gave up). Ambushes: 32 kills, 9 survivors; 27 targets felt watched. Confided: 3 told, 1 slipped out drunk, 3 keepers turned. Camera teasers are rare (1 in 60 seasons), since someone nearly always dares to accuse once a body is found. "Got away with it" on a killer's evening 14% → 26%.
+
+200 seeds × 30 days, before → after: all 11 targets pass both times. Deaths 2.28 → 2.52 a week, stay 2.93 → 2.64 weeks, breaks 1.81 → 1.77 a day, fights 4.18 → 4.13 a week, hookups 5.45 → 5.05; trials 0.36 → 0.51 a week, spacing the killer 0.30 → 0.36 and an innocent 0.06 → 0.15.
+
 ## Arrivals, deaths and trials
 
 **Arrivals.** At 07:30, empty slots refill to seven through the casting step.
 
-**Ways to die in slice one:** at zero at the ceremony; the Wheel's spacing segment; losing a trial; a crime of passion. Planned murders wait for the AI.
+**Ways to die in slice one:** at zero at the ceremony; the Wheel's spacing segment; losing a trial; a crime of passion; a planned murder (proposed Nov 18).
 
 **After a death.** Everyone gets thoughts by relationship (friends grieve, rivals gloat, witnesses are shaken). A murder victim stays where they fell until someone finds them; the finder gets "found a body" (−10), the announcer declares it, and robots collect the body.
 
@@ -1437,7 +1468,7 @@ The sweep mode tries a range of values for one setting and shows which lands the
 
 ## Out of scope and open choices
 
-**Out of slice one:** AI (scenes, reflections, the LLM judge, confession content, the announcer's lines), art and the Phaser client, viewers and votes, the producer and recaps, clothing visuals (slice one uses a tier number per rank), planned murders, the arena beyond cage matches, and the hidden still's raiding rules.
+**Out of slice one:** AI (scenes, reflections, the LLM judge, confession content, the announcer's lines), art and the Phaser client, viewers and votes, the producer and recaps, clothing visuals (slice one uses a tier number per rank), the arena beyond cage matches, and the hidden still's raiding rules.
 
 **Choices to confirm (proposed defaults in the sections above):**
 

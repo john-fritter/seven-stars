@@ -14,6 +14,7 @@ import { alarm, ease, reopen, verdict } from './guilt.js';
 import { learnRep } from './news.js';
 import { mourn, rollCall, space } from './show.js';
 import { think } from './thoughts.js';
+import { knowsGrudge } from './plots.js';
 import type { Body, Contestant, Trial } from './types.js';
 
 /** Every minute while there are bodies: anyone awake who walks in on one, or can see it (glass, an arch), finds it. The killer doesn't count. */
@@ -103,7 +104,10 @@ export function suspicion(ctx: Ctx, body: Body, i: Contestant, j: Contestant): n
   if (body.witnesses.includes(i.id)) return j.id === body.killer ? s.witnessed : 0;
   const r = i.ledger[j.id];
   let v = s.dislike * Math.max(0, -(r?.affection ?? 0)) + s.fear * (r?.fear ?? 0);
-  if (body.feelings[j.id]?.enemy) v += s.enemy;
+  // Bad blood they know of between the suspect and the victim (plots.yaml grudges), either way.
+  if (knowsGrudge(ctx, i, j.id, body.id)) v += s.enemy;
+  // The cameras' teaser put them among a few (plots.yaml clue).
+  if (ctx.w.show.cases.find((k) => k.victim === body.id)?.clued?.includes(j.id)) v += ctx.data.plots.clue.suspicion;
   if (body.near.includes(i.id) && body.near.includes(j.id)) v += s.near;
   if (body.locked?.includes(j.id)) v += s.locked;
   return Math.min(v, s.witnessed - 1);
@@ -226,6 +230,7 @@ function hold(ctx: Ctx, trial: Trial, present: Contestant[]): void {
   });
   think(ctx, winner, ctx.data.trials.survivedThought);
   const spaced = space(ctx, loser, 'trial', room);
+  if (spaced && loser.id === trial.killer) ctx.w.show.killerSpaced = ctx.w.t;
   // An accused who walks out alive, cleared or saved by an immunity, is a killer to everyone who
   // wanted them spaced, apart from the real killer, who knows better.
   const survivor = spaced ? winner : loser;

@@ -9,6 +9,7 @@ import { axis } from './booze.js';
 import { log, timeOfDay, type Ctx } from './context.js';
 import { axisFactor } from './needs.js';
 import { traitFx } from './traits.js';
+import { uneasy } from './plots.js';
 import type { Booking, Contestant } from './types.js';
 
 type Scale = readonly { axis: Parameters<typeof axis>[2]; k: number }[];
@@ -26,6 +27,8 @@ export interface Wants {
   troubled: Map<string, number>; // friend in trouble id -> strength
   match: { skill: 'fight' | 'dance'; k: number } | null;
   status: number;
+  prey: string | null; // a planned murder's target (plots.yaml watch)
+  uneasy: number; // feeling watched: the cost of being alone (plots.yaml notice)
 }
 
 /** Whether they're in trouble (wants.yaml friend): down, and the meter nearly out, or dumped, grieving, rebuffed. */
@@ -68,11 +71,14 @@ export function wantsOf(ctx: Ctx, c: Contestant): Wants {
   }
   // A crush counts only for someone without a partner.
   if (crush && partners.size === 0) partners.set(crush.id, pk * k.partner.crush);
+  const prey = c.plot && !c.plot.via ? c.plot.target : null;
   if (rival) {
     rival.avoid = k.rival.avoid.base * scaled(ctx, c, k.rival.avoid.scale);
     rival.confront = k.rival.confront.base * scaled(ctx, c, k.rival.confront.scale);
+    // A planner bides their time: no avoiding, no having it out with the one they mean to kill.
+    if (rival.id === prey) rival.avoid = rival.confront = 0;
   }
-  return { partners, rival, troubled, match: matchWant(ctx, c), status: statusWant(ctx, c) };
+  return { partners, rival, troubled, match: matchWant(ctx, c), status: statusWant(ctx, c), prey, uneasy: uneasy(ctx, c) };
 }
 
 /** Training for a booked match, growing as it nears (wants.yaml match). */
@@ -128,6 +134,10 @@ export function wantPull(ctx: Ctx, c: Contestant, w: Wants, def: ActionDef, room
   if (def.tags.includes('status')) add(w.status, 'status');
   if (w.match && def.trains === w.match.skill) add(w.match.k, 'match');
   if (w.rival && !chore && talkTo !== w.rival.id && awakeIn(ctx, w.rival.id, room)) pull -= w.rival.avoid;
+  // Keeping an eye on the one they mean to kill (plots.yaml watch).
+  if (w.prey && !chore && awakeIn(ctx, w.prey, room)) add(ctx.data.plots.watch.pull, 'watch');
+  // Feeling watched: they'd rather not be alone (plots.yaml notice).
+  if (w.uneasy && !chore && def.kind !== 'sleep' && !ctx.w.contestants.some((o) => o !== c && awakeIn(ctx, o.id, room))) pull -= w.uneasy;
   return { pull, why: top >= 0.3 ? why : undefined };
 }
 
