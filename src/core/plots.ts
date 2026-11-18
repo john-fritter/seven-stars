@@ -16,7 +16,7 @@ import { feel } from './ledger.js';
 import { chance, shuffle } from './rng.js';
 import { canHear, canSee, walkMinutes } from './station.js';
 import { think } from './thoughts.js';
-import { believe, schedule, suspicion } from './trials.js';
+import { believe, bestAccusation, schedule } from './trials.js';
 import type { Activity, Body, Case, Contestant, Plot } from './types.js';
 
 const aboard = (ctx: Ctx, id: string | undefined) => (id ? ctx.w.contestants.find((x) => x.id === id) : undefined);
@@ -458,18 +458,9 @@ export function airClues(ctx: Ctx): void {
   }
 }
 
-/** Like the accusation when a body is found (trials.ts accuse), with the teaser in everyone's mind. */
+/** Like the accusation when a body is found (trials.ts), with the teaser in everyone's mind. */
 function accuseOver(ctx: Ctx, body: Body, c: Case): void {
-  const tr = ctx.data.trials;
-  let best: { accuser: Contestant; accused: Contestant; suspicion: number; score: number } | null = null;
-  for (const i of ctx.w.contestants) {
-    for (const j of ctx.w.contestants) {
-      if (i === j) continue;
-      const s = suspicion(ctx, body, i, j);
-      const score = (s * axis(ctx, i, 'brave')) / 10;
-      if (score >= tr.accuseAt && (!best || score > best.score)) best = { accuser: i, accused: j, suspicion: s, score };
-    }
-  }
+  const best = bestAccusation(ctx, body);
   if (best) schedule(ctx, body, best.accuser, best.accused, body.witnesses, best.suspicion, false);
   else log(ctx, 'clue_unanswered', [], c.room, { victim: c.victim, name: c.name });
 }

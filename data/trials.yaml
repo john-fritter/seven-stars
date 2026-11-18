@@ -12,7 +12,7 @@ nearMinutes: 60         # proposal
 #   witnessed the murder: `witnessed` on the killer, nothing on anyone else
 #   otherwise: dislike × −affection (if negative) + fear × fear + `enemy` if the suspect and the
 #   victim were rivals (either way) + `near` if both were seen near the victim
-suspicion: { witnessed: 100, dislike: 0.3, fear: 0.3, enemy: 30, near: 40, locked: 60 }   # proposal
+suspicion: { witnessed: 100, dislike: 0.3, fear: 0.3, enemy: 30, near: 40, locked: 60, heard: 50 }   # proposal
 # Proposal (Nov 18): `locked` more on anyone who was locked in a glass cell with the victim (two
 # prisoners in the fishbowl): whoever finds the body sees who's in there with it. A body is found by
 # anyone awake who can see it (through glass or an arch), not only someone who walks in.
@@ -20,6 +20,16 @@ suspicion: { witnessed: 100, dislike: 0.3, fear: 0.3, enemy: 30, near: 40, locke
 # The contestant with the highest suspicion × brave ÷ 10 accuses their top suspect, if it's at
 # least this. Below it, nobody dares and there's no trial.
 accuseAt: 15            # proposal
+# Proposal (Nov 18, john: more reluctant to accuse without a good reason and a room they can
+# convince). Only what they could put to the room counts as a reason (`reason` or more of it):
+# what they saw, bad blood they know of, being seen near the victim, a cellmate, the cameras' clue,
+# or being told this one did it (`suspicion.heard`). Dislike and fear still pick the suspect and
+# add to the nerve score, but aren't a reason. And they read the room first: they accuse only if
+# they expect at least `convince.need` of the others to side with them (a voter their feelings
+# don't split counts half), less `convince.brave` × (brave − 5) ÷ 5: the brave chance worse odds.
+# Reopening an old murder needs the same read of the room.
+reason: 45
+convince: { need: 0.5, brave: 0.1 }
 
 accused: { thought: accused, affection: -30 }   # proposal: how the accused takes it
 

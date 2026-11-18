@@ -804,8 +804,10 @@ export const eventsSchema = z.object({
 export const trialsSchema = z.object({
   foundThought: z.string(),
   nearMinutes: num.nonnegative(),
-  suspicion: z.object({ witnessed: num, dislike: num, fear: num, enemy: num, near: num, locked: num.default(0) }),
+  suspicion: z.object({ witnessed: num, dislike: num, fear: num, enemy: num, near: num, locked: num.default(0), heard: num.default(0) }),
   accuseAt: num,
+  reason: num.default(0),
+  convince: z.object({ need: unit, brave: num }).default({ need: 0, brave: 0 }),
   accused: z.object({ thought: z.string(), affection: num }),
   fearNudge: num,
   testimony: z.object({ base: num, trust: num }),

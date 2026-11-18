@@ -103,29 +103,72 @@ export function suspicion(ctx: Ctx, body: Body, i: Contestant, j: Contestant): n
   const s = ctx.data.trials.suspicion;
   if (body.witnesses.includes(i.id)) return j.id === body.killer ? s.witnessed : 0;
   const r = i.ledger[j.id];
-  let v = s.dislike * Math.max(0, -(r?.affection ?? 0)) + s.fear * (r?.fear ?? 0);
+  const v = s.dislike * Math.max(0, -(r?.affection ?? 0)) + s.fear * (r?.fear ?? 0) + evidence(ctx, body, i, j);
+  return Math.min(v, s.witnessed - 1);
+}
+
+/**
+ * The part of `i`'s suspicion of `j` they could put to the room (trials.yaml reason): what they
+ * saw or know, not how they feel. A witness has all of it.
+ */
+export function evidence(ctx: Ctx, body: Body, i: Contestant, j: Contestant): number {
+  const s = ctx.data.trials.suspicion;
+  if (body.witnesses.includes(i.id)) return j.id === body.killer ? s.witnessed : 0;
+  let v = 0;
   // Bad blood they know of between the suspect and the victim (plots.yaml grudges), either way.
   if (knowsGrudge(ctx, i, j.id, body.id)) v += s.enemy;
   // The cameras' teaser put them among a few (plots.yaml clue).
   if (ctx.w.show.cases.find((k) => k.victim === body.id)?.clued?.includes(j.id)) v += ctx.data.plots.clue.suspicion;
   if (body.near.includes(i.id) && body.near.includes(j.id)) v += s.near;
   if (body.locked?.includes(j.id)) v += s.locked;
-  return Math.min(v, s.witnessed - 1);
+  // They've been told this one did it (news.yaml killer: on someone's word).
+  if (i.ledger[j.id]?.killer === body.name) v += s.heard;
+  return v;
+}
+
+/**
+ * How the accuser reads the room (trials.yaml convince): the share of the others aboard they expect
+ * to vote against the accused, from how the room treats each of them. A tie counts as half.
+ */
+export function expectedVotes(ctx: Ctx, body: Pick<Body, 'id' | 'name' | 'killer' | 'feelings'>, accuser: Contestant, accused: Contestant, witnesses: string[]): number {
+  const trial: Trial = { day: 0, victim: body.id, name: body.name, killer: body.killer, accuser: accuser.id, accused: accused.id, witnesses, feelings: body.feelings };
+  const voters = ctx.w.contestants.filter((v) => v !== accuser && v !== accused);
+  if (!voters.length) return 0.5;
+  let against = 0;
+  for (const v of voters) {
+    const x = leaning(ctx, trial, v, accuser, accused);
+    against += x === accused ? 1 : x === null ? 0.5 : 0;
+  }
+  return against / voters.length;
+}
+
+/** Whether they'd risk it: the vote they expect against what their nerve needs (trials.yaml convince). */
+export function wouldDare(ctx: Ctx, body: Pick<Body, 'id' | 'name' | 'killer' | 'feelings'>, accuser: Contestant, accused: Contestant, witnesses: string[]): boolean {
+  const k = ctx.data.trials.convince;
+  const need = k.need - (k.brave * (axis(ctx, accuser, 'brave') - 5)) / 5;
+  return expectedVotes(ctx, body, accuser, accused, witnesses) >= need;
+}
+
+/** The best accusation anyone dares over this body: a real reason, the nerve, and a room they expect to win. */
+export function bestAccusation(ctx: Ctx, body: Body): { accuser: Contestant; accused: Contestant; suspicion: number } | null {
+  const tr = ctx.data.trials;
+  let best: { accuser: Contestant; accused: Contestant; suspicion: number; score: number } | null = null;
+  for (const i of ctx.w.contestants) {
+    for (const j of ctx.w.contestants) {
+      if (i === j || evidence(ctx, body, i, j) < tr.reason) continue;
+      const s = suspicion(ctx, body, i, j);
+      const score = (s * axis(ctx, i, 'brave')) / 10;
+      if (score < tr.accuseAt || (best && score <= best.score)) continue;
+      if (!wouldDare(ctx, body, i, j, body.witnesses)) continue;
+      best = { accuser: i, accused: j, suspicion: s, score };
+    }
+  }
+  return best;
 }
 
 /** The contestant with the highest suspicion × brave ÷ 10 accuses their top suspect, if they dare. */
 function accuse(ctx: Ctx, body: Body): void {
-  const tr = ctx.data.trials;
-  const cast = ctx.w.contestants;
-  let best: { accuser: Contestant; accused: Contestant; suspicion: number; score: number } | null = null;
-  for (const i of cast) {
-    for (const j of cast) {
-      if (i === j) continue;
-      const s = suspicion(ctx, body, i, j);
-      const score = (s * axis(ctx, i, 'brave')) / 10;
-      if (score >= tr.accuseAt && (!best || score > best.score)) best = { accuser: i, accused: j, suspicion: s, score };
-    }
-  }
+  const best = bestAccusation(ctx, body);
   if (!best) {
     log(ctx, 'no_accusation', [], body.room, { victim: body.id, name: body.name });
     return;
@@ -170,6 +213,11 @@ export function holdTrials(ctx: Ctx): void {
 
 /** Which side `v` votes to condemn. */
 export function voteOf(ctx: Ctx, trial: Trial, v: Contestant, accuser: Contestant, accused: Contestant): Contestant {
+  return leaning(ctx, trial, v, accuser, accused) ?? tieLoser(ctx, accuser, accused); // no feelings either way: the show's numbers decide
+}
+
+/** Which side `v` leans to condemn, or null if their feelings don't split them. */
+function leaning(ctx: Ctx, trial: Trial, v: Contestant, accuser: Contestant, accused: Contestant): Contestant | null {
   // A witness votes the truth, when the killer is on trial.
   if (trial.witnesses.includes(v.id)) {
     if (trial.killer === accused.id) return accused;
@@ -185,7 +233,7 @@ export function voteOf(ctx: Ctx, trial: Trial, v: Contestant, accuser: Contestan
     b -= t.base + t.trust * (v.ledger[accuser.id]?.trust ?? 0);
   }
   if (a !== b) return a < b ? accuser : accused;
-  return tieLoser(ctx, accuser, accused); // no feelings either way: the show's numbers decide
+  return null;
 }
 
 /** A tie breaks on the meter, then lifetime points: the lower one loses. Then a coin. */

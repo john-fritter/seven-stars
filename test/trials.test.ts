@@ -4,7 +4,7 @@ import { dayOf } from '../src/core/context.js';
 import { createWorld, step } from '../src/core/index.js';
 import { meet, relation } from '../src/core/ledger.js';
 import { kill } from '../src/core/show.js';
-import { announceBodies, findBodies, holdTrials, suspicion, voteOf } from '../src/core/trials.js';
+import { announceBodies, bestAccusation, evidence, findBodies, holdTrials, suspicion, voteOf, wouldDare } from '../src/core/trials.js';
 import type { Body, Contestant, Trial } from '../src/core/types.js';
 import { aboard, alone, data } from './helpers.js';
 
@@ -78,6 +78,33 @@ describe('suspicion and accusations', () => {
     i.grudges = [];
     // Only seen near if the suspector was there to see it.
     expect(suspicion(ctx, body({ killer: k.id, near: [j.id] }), i, j)).toBeCloseTo(s.dislike * 50 + s.fear * 40);
+  });
+
+  it('dislike is no reason to accuse; known bad blood and being seen near are, if the room would side with them', () => {
+    const { ctx, cast } = aboard();
+    const [i, j, k] = cast as [Contestant, Contestant, Contestant];
+    introduce(ctx, cast);
+    for (const c of cast) c.personality.brave = 10;
+    const s = data.trials.suspicion;
+    relation(ctx, i, j).affection = -100;
+    const b = body({ killer: k.id });
+    expect(evidence(ctx, b, i, j)).toBe(0);
+    expect(bestAccusation(ctx, b)).toBeNull();
+    i.grudges = [{ who: j.id, at: 'dead', t: ctx.w.t }];
+    const near = body({ killer: k.id, near: [i.id, j.id] });
+    expect(evidence(ctx, near, i, j)).toBe(s.enemy + s.near);
+    // The room splits evenly over feelings they don't have: half counts as a coin, and the brave take it.
+    expect(wouldDare(ctx, near, i, j, [])).toBe(true);
+    expect(bestAccusation(ctx, near)?.accused).toBe(j);
+    // Everyone else loves the suspect and can't stand the accuser: they won't risk it.
+    for (const v of cast) {
+      if (v === i || v === j) continue;
+      relation(ctx, v, j).affection = 80;
+      relation(ctx, v, i).affection = -80;
+    }
+    expect(wouldDare(ctx, near, i, j, [])).toBe(false);
+    expect(bestAccusation(ctx, near)?.accuser).not.toBe(i);
+    i.grudges = [];
   });
 
   it('a witnessed murder is accused at once and tried the next morning', () => {

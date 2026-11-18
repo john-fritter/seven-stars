@@ -13,7 +13,7 @@ import { chance } from './rng.js';
 import { grieve } from './show.js';
 import { canHear } from './station.js';
 import { condition, think, thoughtValue, updateMood } from './thoughts.js';
-import { believe, found, schedule } from './trials.js';
+import { believe, found, schedule, wouldDare } from './trials.js';
 import type { Case, Contestant, Label, News, Trial } from './types.js';
 
 const aboard = (ctx: Ctx, id: string) => ctx.w.contestants.find((x) => x.id === id);
@@ -179,7 +179,7 @@ export function reopen(ctx: Ctx, k: Case): void {
     const c = aboard(ctx, id);
     if (!c || c === killer || k.accusers.includes(id)) continue;
     const score = (tr.suspicion.witnessed * axis(ctx, c, 'brave')) / 10;
-    if (score >= tr.accuseAt && (!best || score > best.score)) best = { c, score };
+    if (score >= tr.accuseAt && (!best || score > best.score) && wouldDare(ctx, { id: k.victim, name: k.name, killer: k.killer, feelings: k.feelings }, c, killer, k.knew.filter((x) => aboard(ctx, x)))) best = { c, score };
   }
   if (!best) return;
   const witnesses = k.knew.filter((id) => aboard(ctx, id));
