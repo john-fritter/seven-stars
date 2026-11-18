@@ -15,6 +15,7 @@ import { chance, pick } from './rng.js';
 import { infraction, kill } from './show.js';
 import { brawl, interact, throughGlass } from './social.js';
 import { airIt, pourOut } from './news.js';
+import { aired } from './plots.js';
 import { grievance, think } from './thoughts.js';
 import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
@@ -175,6 +176,7 @@ export function breakArrive(ctx: Ctx, c: Contestant): void {
   const target = bd.target ? ctx.w.contestants.find((o) => o.id === bd.target) : undefined;
   if (kind.infraction) infraction(ctx, c, kind.infraction, c.room);
   if (kind.wreck && target) {
+    aired(ctx, c, target, c.room);
     think(ctx, target, kind.wreck.thought, c.id);
     feel(ctx, target, c, 'affection', kind.wreck.affection, 'wrecked my things');
   }
@@ -254,30 +256,33 @@ export function endBreak(ctx: Ctx, c: Contestant): void {
  * A crime of passion: a fight where the attacker strikes first. If the attacker wins, the chance it
  * kills is (base + perStrength × their strength advantage) × the room's weapon.
  */
-export function attack(ctx: Ctx, c: Contestant, target: Contestant): void {
+export function attack(ctx: Ctx, c: Contestant, target: Contestant, opts: { firstBlow?: number; planned?: boolean; armed?: number } = {}): boolean {
   const p = ctx.data.breaks.passion;
   const room = c.room;
   // One murder mystery at a time (D-050): while a body lies unfound or a trial is pending, nobody dies of it.
   const open = p.oneAtATime && (ctx.w.show.bodies.length > 0 || ctx.w.show.trials.length > 0);
   const before = c.ledger[target.id]?.affection ?? 0; // how they felt about them, before the blows
   const label = c.ledger[target.id]?.label ?? 'none';
-  const killChance = open ? 0 : (p.base + p.perStrength * Math.max(0, c.strength - target.strength)) * (p.weapons[room] ?? 1);
+  const killChance = open ? 0 : (p.base + p.perStrength * Math.max(0, c.strength - target.strength)) * (p.weapons[room] ?? 1) * (opts.armed ?? 1);
   const fight = brawl(ctx, c, target, {
-    firstBlow: p.firstBlow,
+    firstBlow: opts.firstBlow ?? p.firstBlow,
     lethal: (winner) => {
       const dies = winner === c && chance(ctx.w.rng, killChance);
       if (dies && c.breakdown) c.breakdown.killed = target.id; // the break ends in the brawl: with the rush
       return dies;
     },
   });
-  if (!fight.killed) return;
+  if (!fight.killed) return false;
   const dead = fight.loser;
   const witnesses = ctx.w.contestants.filter((o) => o !== c && o !== dead && canSee(ctx.st, o.room, room) && !o.asleep);
-  log(ctx, 'murder', [c.id, dead.id], room, { name: dead.name, weapon: p.weapons[room] ? room : null, witnesses: witnesses.map((w) => w.id) });
+  log(ctx, 'murder', [c.id, dead.id], room, { name: dead.name, weapon: p.weapons[room] ? room : null, witnesses: witnesses.map((w) => w.id), ...(opts.planned ? { planned: true } : {}) });
   for (const w of witnesses) {
     feel(ctx, w, c, 'fear', p.witnessFear, 'saw a murder');
     think(ctx, w, p.witnessThought, c.id);
   }
   remorse(ctx, c, dead.id, before, label);
+  // A planned kill has no break to end: the rush comes now (trials.yaml guilt.rush).
+  if (opts.planned) think(ctx, c, ctx.data.trials.guilt.rush, dead.id);
   kill(ctx, dead, 'murder', room, witnesses.map((w) => w.id), c.id);
+  return true;
 }

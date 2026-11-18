@@ -4,7 +4,7 @@ import { dayOf } from '../src/core/context.js';
 import { createWorld, step } from '../src/core/index.js';
 import { meet, relation } from '../src/core/ledger.js';
 import { kill } from '../src/core/show.js';
-import { announceBodies, findBodies, holdTrials, suspicion, voteOf } from '../src/core/trials.js';
+import { announceBodies, bestAccusation, evidence, findBodies, holdTrials, suspicion, voteOf, wouldDare } from '../src/core/trials.js';
 import type { Body, Contestant, Trial } from '../src/core/types.js';
 import { aboard, alone, data } from './helpers.js';
 
@@ -70,10 +70,66 @@ describe('suspicion and accusations', () => {
     relation(ctx, i, j).affection = -50;
     relation(ctx, i, j).fear = 40;
     expect(suspicion(ctx, body({ killer: k.id }), i, j)).toBeCloseTo(s.dislike * 50 + s.fear * 40);
+    // Bad blood between suspect and victim counts only if they know of it (plots.yaml grudges).
     const full = body({ killer: k.id, near: [i.id, j.id], feelings: { [j.id]: { affection: -40, enemy: true } } });
+    expect(suspicion(ctx, full, i, j)).toBeCloseTo(s.dislike * 50 + s.fear * 40 + s.near);
+    i.grudges = [{ who: j.id, at: 'dead', t: ctx.w.t }];
     expect(suspicion(ctx, full, i, j)).toBeCloseTo(s.dislike * 50 + s.fear * 40 + s.enemy + s.near);
+    i.grudges = [];
     // Only seen near if the suspector was there to see it.
     expect(suspicion(ctx, body({ killer: k.id, near: [j.id] }), i, j)).toBeCloseTo(s.dislike * 50 + s.fear * 40);
+  });
+
+  it('spite needs a sure room; known bad blood and being seen near only need a fair one', () => {
+    const { ctx, cast } = aboard();
+    const [i, j, k] = cast as [Contestant, Contestant, Contestant];
+    introduce(ctx, cast);
+    for (const c of cast) c.personality.brave = 10;
+    const s = data.trials.suspicion;
+    relation(ctx, i, j).affection = -100;
+    const b = body({ killer: k.id });
+    expect(evidence(ctx, b, i, j)).toBe(0);
+    expect(bestAccusation(ctx, b)).toBeNull();
+    i.grudges = [{ who: j.id, at: 'dead', t: ctx.w.t }];
+    const near = body({ killer: k.id, near: [i.id, j.id] });
+    expect(evidence(ctx, near, i, j)).toBe(s.enemy + s.near);
+    // The room splits evenly over feelings they don't have: half counts as a coin, and the brave take it.
+    expect(wouldDare(ctx, near, i, j, [])).toBe(true);
+    expect(bestAccusation(ctx, near)?.accused).toBe(j);
+    // Everyone else loves the suspect and can't stand the accuser: they won't risk it.
+    for (const v of cast) {
+      if (v === i || v === j) continue;
+      relation(ctx, v, j).affection = 80;
+      relation(ctx, v, i).affection = -80;
+    }
+    expect(wouldDare(ctx, near, i, j, [])).toBe(false);
+    expect(bestAccusation(ctx, near)?.accuser).not.toBe(i);
+    i.grudges = [];
+    // Spite: no evidence at all, but the whole room can't stand the one they hate.
+    for (const v of cast) {
+      if (v === i || v === j) continue;
+      relation(ctx, v, j).affection = -80;
+      relation(ctx, v, i).affection = 20;
+    }
+    expect(evidence(ctx, b, i, j)).toBe(0);
+    expect(wouldDare(ctx, b, i, j, [], false)).toBe(true);
+    expect(bestAccusation(ctx, b)?.accused).toBe(j);
+  });
+
+  it('a killer who fears being caught frames whoever the room will condemn', () => {
+    const { w, ctx, cast } = aboard();
+    const [killer, victim, patsy] = cast as [Contestant, Contestant, Contestant];
+    alone(w);
+    introduce(ctx, cast);
+    for (const c of cast) c.personality.brave = 1; // nobody else dares
+    killer.personality.brave = 8;
+    for (const v of cast) if (v !== killer && v !== patsy) relation(ctx, v, patsy).affection = -60;
+    kill(ctx, victim, 'murder', 'spa', [], killer.id);
+    const b = w.show.bodies[0]!;
+    w.show.cases.find((x) => x.victim === victim.id)!.dread = 1;
+    const a = bestAccusation(ctx, b);
+    expect(a?.accuser).toBe(killer);
+    expect(a?.accused).toBe(patsy);
   });
 
   it('a witnessed murder is accused at once and tried the next morning', () => {

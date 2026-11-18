@@ -16,7 +16,7 @@ A death-game reality show on a space station, simulated RimWorld/Sims-style, wit
 
 Build the **headless mechanical simulation**, with no AI, no art and no viewers. It has to answer one question: does the station, left alone, produce a death game worth watching? The full scope, numbers and success targets are in DESIGN.md Part two.
 
-Out of scope for now, so don't build hooks or abstractions for these yet: LLM calls of any kind, the Phaser client, the Node server and SQLite, viewers and votes, the producer, clothing visuals (slice one only has a clothing tier number per rank), planned murders, confession content.
+Out of scope for now, so don't build hooks or abstractions for these yet: LLM calls of any kind, the Phaser client, the Node server and SQLite, viewers and votes, the producer, clothing visuals (slice one only has a clothing tier number per rank), confession content. (Simple planned murders without AI were brought in on Nov 18; see DESIGN.md Part two, Planned murders.)
 
 ## Architecture rules
 

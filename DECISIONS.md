@@ -493,3 +493,15 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Under rest 25, break lines +5 and fights × 1.5. Under hygiene 20, 1 point less attractive to everyone.
 - [ ] Ceremony, event and trial chimes wake sleepers above rest 20 (were 30, 30, 40).
 - [ ] Side effects: hookups 3.37 → 3.05 a week, deaths 2.29 → 2.55 a week (more fines for sneaking a hot shower), mood 48.9 → 48.7, extreme breaks 5.7 → 5.8 a week. Rest still barely separates the ranks; possible follow-up.
+
+**Proposed for planned murders (Nov 18).** john approved simple planned murders without AI (design doc "Planned murders: design" with his markup). This overturns DESIGN.md's earlier "planned murders wait for the AI". DESIGN.md Part two, Planned murders.
+
+- [ ] Planned murders exist in slice one, without AI. Motive: a grudge (affection −50, hurt or fear 30+, two daily checks running) or ratings desperation (meter under 15; contestants know a kill pays 40). Willingness from low kindness, bravery, calm, low honesty and loyalty, Ice cold; never above kind 5 or for a Hothead, Forgiving or Peacemaker.
+- [ ] A plan waits for dark, then for the target alone and unseen within reach; nerve rolls once per moment, lower the busier the station, near listeners, cameras or a recent spacing; under 0.2 it isn't a moment. Four losses and they give up.
+- [ ] Sleeping targets can be ambushed (john: yes), with a bigger first blow; they can wake and fight. A survivor knows who tried; no trial without a body (john: agreed).
+- [ ] Only the target can feel watched (john: not the whole room), and then avoids being alone.
+- [ ] Suspicion over bad blood counts only grudges the suspector saw aired or heard as gossip, not every rivalry.
+- [ ] The lover who kills for you: a timid contestant with a motive may ask a loving, willing partner; yes at 0.2 + (affection − 60) ÷ 100.
+- [ ] Sober confiding to a close friend; kept secrets can slip out drunk, and a keeper who falls out with the killer turns.
+- [ ] The cameras' teaser: an unsolved murder nobody has accused anyone over gets one clue at the ceremony naming three, the killer among them.
+- [ ] Accusations need a reason (john asked, Nov 18): 45+ of evidence (seen 100, known bad blood 30, seen near 40, cellmate 60, camera clue 35, told this one did it 50), not dislike; and they accuse only if they expect 0.5 − 0.1 × (brave − 5) ÷ 5 of the room to side with them. Spite still allowed: without a reason they need 0.2 more of the room. A killer who dreads being caught (0.3+) frames whoever the room will condemn.
