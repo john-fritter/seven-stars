@@ -80,7 +80,7 @@ describe('suspicion and accusations', () => {
     expect(suspicion(ctx, body({ killer: k.id, near: [j.id] }), i, j)).toBeCloseTo(s.dislike * 50 + s.fear * 40);
   });
 
-  it('dislike is no reason to accuse; known bad blood and being seen near are, if the room would side with them', () => {
+  it('spite needs a sure room; known bad blood and being seen near only need a fair one', () => {
     const { ctx, cast } = aboard();
     const [i, j, k] = cast as [Contestant, Contestant, Contestant];
     introduce(ctx, cast);
@@ -105,6 +105,31 @@ describe('suspicion and accusations', () => {
     expect(wouldDare(ctx, near, i, j, [])).toBe(false);
     expect(bestAccusation(ctx, near)?.accuser).not.toBe(i);
     i.grudges = [];
+    // Spite: no evidence at all, but the whole room can't stand the one they hate.
+    for (const v of cast) {
+      if (v === i || v === j) continue;
+      relation(ctx, v, j).affection = -80;
+      relation(ctx, v, i).affection = 20;
+    }
+    expect(evidence(ctx, b, i, j)).toBe(0);
+    expect(wouldDare(ctx, b, i, j, [], false)).toBe(true);
+    expect(bestAccusation(ctx, b)?.accused).toBe(j);
+  });
+
+  it('a killer who fears being caught frames whoever the room will condemn', () => {
+    const { w, ctx, cast } = aboard();
+    const [killer, victim, patsy] = cast as [Contestant, Contestant, Contestant];
+    alone(w);
+    introduce(ctx, cast);
+    for (const c of cast) c.personality.brave = 1; // nobody else dares
+    killer.personality.brave = 8;
+    for (const v of cast) if (v !== killer && v !== patsy) relation(ctx, v, patsy).affection = -60;
+    kill(ctx, victim, 'murder', 'spa', [], killer.id);
+    const b = w.show.bodies[0]!;
+    w.show.cases.find((x) => x.victim === victim.id)!.dread = 1;
+    const a = bestAccusation(ctx, b);
+    expect(a?.accuser).toBe(killer);
+    expect(a?.accused).toBe(patsy);
   });
 
   it('a witnessed murder is accused at once and tried the next morning', () => {

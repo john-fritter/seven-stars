@@ -21,16 +21,21 @@ suspicion: { witnessed: 100, dislike: 0.3, fear: 0.3, enemy: 30, near: 40, locke
 # The contestant with the highest suspicion × brave ÷ 10 accuses their top suspect, if it's at
 # least this. Below it, nobody dares and there's no trial.
 accuseAt: 15            # proposal
-# Proposal (Nov 18, john: more reluctant to accuse without a good reason and a room they can
-# convince). Only what they could put to the room counts as a reason (`reason` or more of it):
-# what they saw, bad blood they know of, being seen near the victim, a cellmate, the cameras' clue,
-# or being told this one did it (`suspicion.heard`). Dislike and fear still pick the suspect and
-# add to the nerve score, but aren't a reason. And they read the room first: they accuse only if
-# they expect at least `convince.need` of the others to side with them (a voter their feelings
-# don't split counts half), less `convince.brave` × (brave − 5) ÷ 5: the brave chance worse odds.
-# Reopening an old murder needs the same read of the room.
+# Proposal (Nov 18, john: reluctant to accuse without a good reason and a room they can convince,
+# but free to accuse someone just because they dislike them if they think they'll get away with
+# it). They read the room first: they accuse only if they expect at least `convince.need` of the
+# others to side with them (a voter their feelings don't split counts half), less `convince.brave`
+# × (brave − 5) ÷ 5 (the brave chance worse odds), plus `convince.spite` without a real reason.
+# A real reason is `reason` or more of what they could put to the room: what they saw, bad blood
+# they know of, being seen near the victim, a cellmate, the cameras' clue, or being told this one
+# did it (`suspicion.heard`); dislike and fear aren't. Reopening an old murder needs the same read.
 reason: 45
-convince: { need: 0.5, brave: 0.1 }
+convince: { need: 0.5, brave: 0.1, spite: 0.2 }
+# Proposal (Nov 18, john: keep the killer accusing someone else). A killer at least `dread` sure
+# they'll be caught (guilt.dread) accuses whoever they expect the room to condemn most readily, if
+# they expect at least what spite needs plus `margin`. It goes ahead of anyone else's accusation if
+# dread × 100 × brave ÷ 10 beats theirs.
+frame: { dread: 0.3, margin: 0.05 }
 
 accused: { thought: accused, affection: -30 }   # proposal: how the accused takes it
 

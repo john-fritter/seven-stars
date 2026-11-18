@@ -10,7 +10,7 @@ import { dayOf, log, timeOfDay, type Ctx } from './context.js';
 import { feel, relation } from './ledger.js';
 import { canSee } from './station.js';
 import { shuffle } from './rng.js';
-import { alarm, ease, reopen, verdict } from './guilt.js';
+import { alarm, dreadOf, ease, reopen, verdict } from './guilt.js';
 import { learnRep } from './news.js';
 import { mourn, rollCall, space } from './show.js';
 import { think } from './thoughts.js';
@@ -142,11 +142,15 @@ export function expectedVotes(ctx: Ctx, body: Pick<Body, 'id' | 'name' | 'killer
   return against / voters.length;
 }
 
-/** Whether they'd risk it: the vote they expect against what their nerve needs (trials.yaml convince). */
-export function wouldDare(ctx: Ctx, body: Pick<Body, 'id' | 'name' | 'killer' | 'feelings'>, accuser: Contestant, accused: Contestant, witnesses: string[]): boolean {
+/** The share of the room they need to expect on their side (trials.yaml convince): more without a real reason. */
+function needed(ctx: Ctx, accuser: Contestant, reason: boolean): number {
   const k = ctx.data.trials.convince;
-  const need = k.need - (k.brave * (axis(ctx, accuser, 'brave') - 5)) / 5;
-  return expectedVotes(ctx, body, accuser, accused, witnesses) >= need;
+  return k.need - (k.brave * (axis(ctx, accuser, 'brave') - 5)) / 5 + (reason ? 0 : k.spite);
+}
+
+/** Whether they'd risk it: the vote they expect against what their nerve needs (trials.yaml convince). */
+export function wouldDare(ctx: Ctx, body: Pick<Body, 'id' | 'name' | 'killer' | 'feelings'>, accuser: Contestant, accused: Contestant, witnesses: string[], reason = true): boolean {
+  return expectedVotes(ctx, body, accuser, accused, witnesses) >= needed(ctx, accuser, reason);
 }
 
 /** The best accusation anyone dares over this body: a real reason, the nerve, and a room they expect to win. */
@@ -155,15 +159,41 @@ export function bestAccusation(ctx: Ctx, body: Body): { accuser: Contestant; acc
   let best: { accuser: Contestant; accused: Contestant; suspicion: number; score: number } | null = null;
   for (const i of ctx.w.contestants) {
     for (const j of ctx.w.contestants) {
-      if (i === j || evidence(ctx, body, i, j) < tr.reason) continue;
+      if (i === j) continue;
       const s = suspicion(ctx, body, i, j);
       const score = (s * axis(ctx, i, 'brave')) / 10;
       if (score < tr.accuseAt || (best && score <= best.score)) continue;
-      if (!wouldDare(ctx, body, i, j, body.witnesses)) continue;
+      // Without a real reason it's spite: they go ahead only if they're sure the room is with them.
+      if (!wouldDare(ctx, body, i, j, body.witnesses, evidence(ctx, body, i, j) >= tr.reason)) continue;
       best = { accuser: i, accused: j, suspicion: s, score };
     }
   }
+  // The killer, afraid of being caught, may get in first: whoever the room is likeliest to condemn.
+  const frame = framing(ctx, body);
+  if (frame && (!best || frame.score > best.score)) return frame;
   return best;
+}
+
+/**
+ * The killer's move (trials.yaml frame): if they're sure enough they'll be caught (`dread`), they
+ * accuse whoever they expect the room to condemn most readily, if they expect to win by `margin`
+ * over what spite needs. Their score is their dread × 100 × brave ÷ 10.
+ */
+function framing(ctx: Ctx, body: Body): { accuser: Contestant; accused: Contestant; suspicion: number; score: number } | null {
+  const f = ctx.data.trials.frame;
+  const killer = ctx.w.contestants.find((c) => c.id === body.killer);
+  const k = ctx.w.show.cases.find((x) => x.victim === body.id && x.killer === body.killer);
+  if (!killer || !k) return null;
+  const dread = dreadOf(ctx, k);
+  if (dread < f.dread) return null;
+  let pick: { accused: Contestant; votes: number } | null = null;
+  for (const j of ctx.w.contestants) {
+    if (j === killer) continue;
+    const votes = expectedVotes(ctx, body, killer, j, body.witnesses);
+    if (!pick || votes > pick.votes) pick = { accused: j, votes };
+  }
+  if (!pick || pick.votes < needed(ctx, killer, false) + f.margin) return null;
+  return { accuser: killer, accused: pick.accused, suspicion: suspicion(ctx, body, killer, pick.accused), score: (dread * 100 * axis(ctx, killer, 'brave')) / 10 };
 }
 
 /** The contestant with the highest suspicion × brave ÷ 10 accuses their top suspect, if they dare. */
