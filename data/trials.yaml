@@ -12,7 +12,10 @@ nearMinutes: 60         # proposal
 #   witnessed the murder: `witnessed` on the killer, nothing on anyone else
 #   otherwise: dislike × −affection (if negative) + fear × fear + `enemy` if the suspect and the
 #   victim were rivals (either way) + `near` if both were seen near the victim
-suspicion: { witnessed: 100, dislike: 0.3, fear: 0.3, enemy: 30, near: 40 }   # proposal
+suspicion: { witnessed: 100, dislike: 0.3, fear: 0.3, enemy: 30, near: 40, locked: 60 }   # proposal
+# Proposal (Nov 18): `locked` more on anyone who was locked in a glass cell with the victim (two
+# prisoners in the fishbowl): whoever finds the body sees who's in there with it. A body is found by
+# anyone awake who can see it (through glass or an arch), not only someone who walks in.
 
 # The contestant with the highest suspicion × brave ÷ 10 accuses their top suspect, if it's at
 # least this. Below it, nobody dares and there's no trial.
@@ -41,6 +44,27 @@ survivedThought: survived_trial
 # trial's votes. Every ten minutes in a room with someone they believe is a killer: `near`.
 memory: { affection: -30, fear: 20, friend: -30, floor: -30, thought: knows_killer, near: near_killer }
 
+# Proposal (Nov 18, john: suspicion of a killer should spread fastest of all gossip; news.yaml
+# killer). Believing it on someone's word lands softer than seeing it: these instead of
+# memory.affection and memory.fear (the friend hit and the floor still apply). A loyal friend of the
+# accused (loyal at least doubt.loyal, affection friendAt or more) doesn't believe it.
+hearsay: { affection: -15, fear: 10, doubt: { loyal: 7 } }
+
+# Proposal (Nov 18, john: "people romance their partner's killer"). Someone who believes another
+# is a killer shies away from anything warm with them, both ways: they rarely start one of `warm`
+# with them (× 1 − wariness), and when the killer starts one, they turn it down at odds of their
+# wariness (logged as `snub`; the killer feels brushed off), and they say no to a conversation the
+# same way. Wariness = known + fear × their fear ÷ 100 × (1 + braveK × (brave − 5) ÷ 5), up to 1;
+# `mine` (1: never) if the one murdered was someone they loved (affection friendAt or more). Insults,
+# confrontations and accusations aren't warm: a brave or cruel person can still go and taunt them.
+wary:
+  known: 0.4
+  fear: 1
+  braveK: -0.5
+  mine: 1
+  warm: [chitchat, deep_talk, kind_words, flirt, gift, kiss, proposition, invite, ask_exclusive, glass_talk, pass_food, share_snack]
+  snub: snub
+
 # Proposals (Nov 11, john: "shouldn't there be guilt that depends on the personality and
 # circumstances?" rather than a flat rule that a killer never grieves their victim). Every guilt
 # thought here is source guilt, so it's × honest and × kind (thoughts.yaml sources) and × volatility:
@@ -51,6 +75,28 @@ guilt:
   # they hated (−100) nothing. Like anyone else, a killer who liked the victim grieves them too and a
   # cruel one gloats over a rival (show.ts mourn), but nobody is shaken by a death they caused.
   remorse: { thought: killed_them, base: -10, perAffection: 0.1 }
+  # Proposal (Nov 18, john: "there should be catharsis from a kill, but also remorse and fear of
+  # getting punished, all depending on personality"). The break that ends in a kill ends with
+  # `rush` instead of the usual catharsis: the cruel and the volatile feel it most, the kind barely.
+  rush: killing_rush
+  # Fear of being caught (`dread.thought`), by how sure they are someone knows, 0..1: `seen` if
+  # anyone saw it, `unseen` if nobody did. It jumps to at least `accused` when they're accused,
+  # `confessed` when someone hears them confess, and `snubbed` when someone who believes it turns them down; it drops × `otherAccused` when someone
+  # else is accused of it and × `cleared` when they walk free from a trial. Between, it halves every
+  # `halfLifeDays`: days without suspicion ease it. The thought is value × that, refreshed hourly,
+  # gone under `min`. It's fear, so the brave feel it least.
+  dread:
+    thought: fear_caught
+    value: -14
+    unseen: 0.4
+    seen: 1
+    accused: 1
+    snubbed: 0.6
+    confessed: 1
+    otherAccused: 0.5
+    cleared: 0.4
+    halfLifeDays: 3
+    min: 0.1
   # Back in the room where they did it, while the remorse lasts: `haunted`, refreshed every ten minutes.
   haunted: haunted
   # A trial spaces an innocent for their murder: `scapegoat` about them, `framed` worse if the killer

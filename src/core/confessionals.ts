@@ -119,14 +119,20 @@ export function confide(ctx: Ctx, c: Contestant, a: Activity): void {
     worst.vented = true;
     updateMood(ctx, c);
   }
-  const options = topics(ctx, c);
-  if (a.summoned) options.push({ kind: 'take', about: a.about && alive(ctx, a.about) ? [a.about] : [], key: null });
+  let options = topics(ctx, c);
+  // Summoned: they talk about what they were called in for. Their take on it, or anything they
+  // have to say about the other one in it (who they think the killer is, a grudge, their own crime).
+  if (a.summoned) {
+    options = a.about ? options.filter((t) => t.about.includes(a.about!)) : [];
+    options.push({ kind: 'take', about: a.about && alive(ctx, a.about) ? [a.about] : [], key: null });
+  }
   let said: Topic = { kind: 'vent', about: [], key: null };
   if (options.length) said = options[weightedIndex(ctx.w.rng, options.map((t) => Math.max(0.01, topicPoints(ctx, c, t.kind) * (t.worth ?? 1))))]!;
   const since = ctx.w.t - cf.told.hours * 60;
   for (const k of Object.keys(c.told)) if (c.told[k]! <= since) delete c.told[k];
   if (said.key) c.told[said.key] = ctx.w.t;
-  ctx.w.show.tapes[c.id] = { t: ctx.w.t, kind: said.kind, about: said.about, ...(said.when !== undefined ? { when: said.when, what: said.what! } : {}) };
+  // Footage of a murder stays their tape until it airs: nothing they say to the camera replaces it.
+  if (!ctx.w.show.tapes[c.id]?.caught) ctx.w.show.tapes[c.id] = { t: ctx.w.t, kind: said.kind, about: said.about, ...(said.when !== undefined ? { when: said.when, what: said.what! } : {}) };
   log(ctx, cf.event, [c.id], a.room, {
     kind: said.kind,
     loud: cf.topics[said.kind]?.loud ?? false,
@@ -215,7 +221,7 @@ export function playbackMinute(ctx: Ctx): void {
   // Only the juiciest `perDinner` air (the first queued wins a tie); the rest stay in the can.
   const worth = (who: string) => {
     const tape = show.tapes[who];
-    return tape ? tapePays(ctx, tape) : -1;
+    return tape ? (tape.caught ? Infinity : tapePays(ctx, tape)) : -1;
   };
   const ranked = due.map((x, i) => ({ who: x.who, i, v: worth(x.who) })).sort((a, b) => b.v - a.v || a.i - b.i);
   for (const x of ranked.slice(0, ctx.data.confessionals.playback.perDinner)) air(ctx, x.who);
@@ -271,7 +277,7 @@ function air(ctx: Ctx, who: string): void {
       break;
     }
     case 'murder':
-      confess(ctx, c, heard, 'playback');
+      confess(ctx, c, heard, tape.caught ? 'footage' : 'playback');
       break;
     case 'cheating': {
       const [other, partner] = about;

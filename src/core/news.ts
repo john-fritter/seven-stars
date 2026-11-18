@@ -12,6 +12,7 @@
 //   weight  = 0.5^(age ÷ halfLife) × (juicy for the listener ? juicy : 1)   which piece comes to mind
 //   willing = Π over the people in it (1 − protect × loyal/10 × affection/100)   the odds they say it
 import { drunkConfession } from './guilt.js';
+import { believe } from './trials.js';
 import { axis, stageOf } from './booze.js';
 import { log, type Ctx } from './context.js';
 import { chance, weightedIndex } from './rng.js';
@@ -49,6 +50,7 @@ export function knownFor(x: Contestant, who: string, what: string): boolean {
 
 /** Whether this would be news to `x`: they don't know it, or only a milder version. */
 export function isNews(ctx: Ctx, x: Contestant, n: News): boolean {
+  if (n.with === null && n.what === ctx.data.news.killer.what && x.ledger[n.who]?.killer) return false;
   if (n.with === null) return !knownFor(x, n.who, n.what);
   const k = newsOf(x, n.who, n.with);
   return !k || severity(ctx, n.what) > severity(ctx, k.what);
@@ -89,17 +91,42 @@ export function learn(ctx: Ctx, x: Contestant, who: Contestant, other: Contestan
 }
 
 /** `x` learns `who` is known for `what` (news.yaml reputation). Returns whether it was news. */
-export function learnRep(ctx: Ctx, x: Contestant, who: Contestant, what: string, t = ctx.w.t): boolean {
-  if (x === who || knownFor(x, who.id, what)) return false;
+export function learnRep(ctx: Ctx, x: Contestant, who: Contestant, what: string, t = ctx.w.t, victim?: string): boolean {
+  if (x === who) return false;
+  const known = x.news.find((n) => n.with === null && n.who === who.id && n.what === what);
+  if (known) {
+    // Old news, but keep the latest of it (a second murder is the one they'll pass on).
+    if (victim && t >= known.t) Object.assign(known, { t, victim });
+    return false;
+  }
   prune(ctx, x);
-  x.news.push({ who: who.id, with: null, what, t });
+  x.news.push({ who: who.id, with: null, what, t, ...(victim ? { victim } : {}) });
   return true;
 }
 
-/** Passes one piece of news on: `x` hears it (`how`: gossip, a scene, playback). */
-export function hear(ctx: Ctx, x: Contestant, n: News, how: string): boolean {
+/**
+ * `x` is told `who` is a killer (news.yaml killer), by `from`: they believe it on their word
+ * (trials.yaml hearsay), unless they're a loyal friend of the accused, who won't hear it.
+ */
+function hearKiller(ctx: Ctx, x: Contestant, who: Contestant, n: News, from?: Contestant): boolean {
+  if (x === who || x.ledger[who.id]?.killer) return false;
+  const doubt = ctx.data.trials.hearsay.doubt;
+  if (axis(ctx, x, 'loyal') >= doubt.loyal && (x.ledger[who.id]?.affection ?? 0) >= ctx.data.social.ledger.friendAt) {
+    log(ctx, 'disbelieved', [x.id, who.id, ...(from ? [from.id] : [])], x.room, { what: n.what });
+    learnRep(ctx, x, who, n.what, n.t, n.victim); // they've heard the rumor; they just don't buy it
+    return false;
+  }
+  const k = ctx.w.show.cases.find((c) => c.victim === n.victim);
+  const name = k?.name ?? from?.ledger[who.id]?.killer ?? 'someone';
+  believe(ctx, who, [x.id], { id: n.victim ?? '', name, feelings: k?.feelings ?? {} }, 'gossip', from);
+  return true;
+}
+
+/** Passes one piece of news on: `x` hears it (`how`: gossip, a scene, playback), from `from` if anyone. */
+export function hear(ctx: Ctx, x: Contestant, n: News, how: string, from?: Contestant): boolean {
   const who = aboard(ctx, n.who);
   if (!who) return false;
+  if (n.with === null && n.what === ctx.data.news.killer.what) return hearKiller(ctx, x, who, n, from);
   if (n.with === null) return learnRep(ctx, x, who, n.what, n.t);
   const other = aboard(ctx, n.with);
   return !!other && learn(ctx, x, who, other, n.what, n.t, how);
@@ -150,9 +177,11 @@ function pickNews(ctx: Ctx, c: Contestant, o: Contestant): News | null {
   for (const n of c.news) {
     if (n.who === c.id || n.with === c.id || n.who === o.id || n.with === o.id) continue;
     if (!aboard(ctx, n.who) || (n.with !== null && !aboard(ctx, n.with)) || !isNews(ctx, o, n)) continue;
+    if (n.with === null && n.what === ctx.data.news.killer.what && !c.ledger[n.who]?.killer) continue; // a rumor they don't believe
     const juicy = n.with !== null && (labelOf(o, aboard(ctx, n.who)!) !== 'none' || labelOf(o, aboard(ctx, n.with)!) !== 'none');
     options.push(n);
-    weights.push(freshness(ctx, n) * (juicy ? g.juicy : 1));
+    const killer = n.with === null && n.what === ctx.data.news.killer.what;
+    weights.push(freshness(ctx, n) * (juicy ? g.juicy : 1) * (killer ? ctx.data.news.killer.weight : 1));
   }
   if (!options.length) return null;
   // What comes to mind first; then whether they'll actually say it.
@@ -184,6 +213,26 @@ function tipOff(ctx: Ctx, c: Contestant, o: Contestant): boolean {
 }
 
 /**
+ * A warning (news.yaml killer.warn): `c` believes someone is a killer and `o` doesn't know it yet.
+ * Sober or not, they may tell them, the more so the more they care about them, unless they'd
+ * rather protect the killer.
+ */
+function warn(ctx: Ctx, c: Contestant, o: Contestant): boolean {
+  const kw = ctx.data.news.killer;
+  for (const n of [...c.news].reverse()) {
+    if (n.with !== null || n.what !== kw.what || n.who === o.id || n.who === c.id || !c.ledger[n.who]?.killer || !isNews(ctx, o, n)) continue;
+    const who = aboard(ctx, n.who);
+    if (!who) continue;
+    const aff = Math.max(0, c.ledger[o.id]?.affection ?? 0);
+    if (!chance(ctx.w.rng, Math.min(1, kw.warn.base + (aff / 100) * kw.warn.affection) * willing(ctx, c, n))) return false;
+    log(ctx, 'warned', [c.id, o.id, who.id], c.room, { victim: n.victim ?? null });
+    hear(ctx, o, n, 'warning', c);
+    return true;
+  }
+  return false;
+}
+
+/**
  * Loose lips, after a chat (news.yaml gossip.interactions): drink makes them confess their own
  * cheating to the one they're cheating on; a loyal friend tips them off about a straying partner;
  * or they blurt something they know, picked by worth. Sober, the playful and the dishonest
@@ -205,13 +254,14 @@ export function looseLips(ctx: Ctx, c: Contestant, o: Contestant, id: string): v
     }
   }
   if (drunkConfession(ctx, c, o)) return;
+  if (warn(ctx, c, o)) return;
   if (tipOff(ctx, c, o)) return;
   if (!st.lips || !chance(ctx.w.rng, st.lips)) return;
   const n = pickNews(ctx, c, o);
   if (!n) return;
   const juicy = n.with !== null && (labelOf(o, aboard(ctx, n.who)!) !== 'none' || labelOf(o, aboard(ctx, n.with)!) !== 'none');
   log(ctx, 'blab', [c.id, o.id, n.who, ...(n.with ? [n.with] : [])], c.room, { stage: st.id, juicy, what: n.what });
-  hear(ctx, o, n, 'gossip');
+  hear(ctx, o, n, 'gossip', c);
 }
 
 /** The latest romance `c` knows of between `target` and someone else aboard. */
@@ -241,5 +291,5 @@ export function pourOut(ctx: Ctx, c: Contestant, friend: Contestant): void {
   const n = pickNews(ctx, c, friend);
   if (!n) return;
   log(ctx, 'blab', [c.id, friend.id, n.who, ...(n.with ? [n.with] : [])], c.room, { venting: true, what: n.what });
-  hear(ctx, friend, n, 'gossip');
+  hear(ctx, friend, n, 'gossip', c);
 }

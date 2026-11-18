@@ -58,7 +58,7 @@ const mid = ([x1, y1, x2, y2]: readonly number[]): Point => [(x1! + x2!) / 2, (y
 function build(data: GameData): Station {
   const plan = data.plans.plans[data.plans.use]!;
   const cor = data.plans.corridor;
-  const corridors: RoomDef[] = plan.corridors.map((c) => ({ id: c.id, name: c.name, access: 'all', privacy: cor.privacy, temperature: cor.temperature, comfort: cor.comfort, objects: {} }));
+  const corridors: RoomDef[] = plan.corridors.map((c) => ({ id: c.id, name: c.name, access: 'all', privacy: cor.privacy, temperature: cor.temperature, comfort: cor.comfort, objects: {}, camera: false }));
   const rooms = [...data.rooms.rooms, ...corridors];
   const roomIndex = new Map(rooms.map((r, i) => [r.id, i]));
   const rect = new Map<string, readonly [number, number, number, number]>([...Object.entries(plan.rooms), ...plan.corridors.map((c) => [c.id, c.rect] as const)]);

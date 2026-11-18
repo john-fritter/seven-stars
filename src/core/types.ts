@@ -99,6 +99,7 @@ export interface News {
   with: string | null;
   what: string;
   t: number;
+  victim?: string; // a killer's reputation (news.yaml killer): who they're said to have killed
   felt?: boolean; // they've reacted to it (jealousy, betrayal): more of the same only stokes it
 }
 
@@ -111,6 +112,7 @@ export interface Breakdown {
   since: number;
   follows: number; // times they've chased a target who moved on
   next: number; // when the next insult or drink is due
+  killed?: string; // the attack ended in a death: who (the killer's rush instead of catharsis)
 }
 
 export interface Confinement {
@@ -151,7 +153,8 @@ export interface Body {
   killer: string;
   witnesses: string[];
   near: string[]; // seen in the room shortly before
-  feelings: Record<string, { affection: number; enemy: boolean }>; // everyone else, at the time of death
+  locked?: string[]; // locked in a glass cell with the victim (trials.yaml suspicion.locked)
+  feelings: Record<string, { affection: number; enemy: boolean; label?: Label }>; // everyone else, at the time of death
 }
 
 /**
@@ -168,6 +171,8 @@ export interface Case {
   knew: string[]; // who knows for certain: saw it, or heard the killer confess
   accusers: string[]; // who has accused the killer over it
   kept: string[]; // friends the killer confided in who kept the secret
+  dread: number; // 0..1: how sure the killer is they'll be caught, as of `dreadAt` (trials.yaml guilt.dread)
+  dreadAt: number;
 }
 
 /** An accusation waiting for the morning trial. */
@@ -220,6 +225,7 @@ export interface Tape {
   about: string[];
   when?: number; // a romance spilled or confessed: when it last happened
   what?: string; // ...and the worst of it
+  caught?: boolean; // not a confession: the cameras caught them at it (rooms.yaml camera)
 }
 
 /** "Sola to the confessional, please": after a big moment, once they're free. */
@@ -255,6 +261,8 @@ export interface Relation {
   kisses: number; // kisses that landed between them, either way
   lovin: number; // times they've had lovin'
   killer?: string; // the name of someone they believe the other one murdered (trials.ts believe)
+  mine?: boolean; // ...and the one murdered was someone they loved: nothing warm gets through (trials.yaml wary)
+  hearsay?: boolean; // ...and they only have it on someone's word (news.yaml killer)
   hurt: number; // 0..100: how much they're still hurting over what the other did (social.yaml ledger.hurt)
   aired?: number; // when they last had it out with each other (wants.yaml rival.confront)
 }

@@ -35,6 +35,15 @@ protect: 1.25
 # k × loyal/10 × affection/100 toward the listener, × their willingness to tell on the partner.
 tipOff: { k: 0.5 }
 
+# Proposal (Nov 18, john: suspicion of a killer should spread the fastest, faster than regular
+# gossip). Believing someone is a killer is news (`what`), about them and who they killed. When
+# gossip picks what to tell, it's × `weight` (a kiss is × 1, × juicy for the involved). And after
+# any chat (gossip.interactions), sober or not, someone who believes it warns the listener if they
+# don't already know, at odds base + affection ÷ 100 × affection toward them, × their willingness
+# to tell on the killer (a loyal friend of the killer keeps quiet). Hearing it is a belief on
+# someone's word (trials.yaml hearsay).
+killer: { what: killer, weight: 6, warn: { base: 0.3, affection: 0.5 } }
+
 # Scoops (confessionals.yaml): spilling a romance to the camera is worth its award × the share of
 # the others aboard who don't know it yet × their willingness to tell on them, and isn't on their
 # mind at all under `min`. Nobody's interested in what everyone knows.

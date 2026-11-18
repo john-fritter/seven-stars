@@ -9,7 +9,7 @@ import { maybeBreak } from './breaks.js';
 import { hammeredHour } from './booze.js';
 import { conditions, expireThoughts, trappedHere } from './thoughts.js';
 import { company, worries } from './people.js';
-import { haunt } from './guilt.js';
+import { dread, haunt } from './guilt.js';
 import { createRng } from './rng.js';
 import { drainMeter, fearTheMeter } from './scoring.js';
 import { runSchedule } from './schedule.js';
@@ -88,6 +88,7 @@ function tick(ctx: Ctx): void {
       haunt(ctx, c);
       if (hour) {
         fearTheMeter(ctx, c);
+        dread(ctx, c);
         trappedHere(ctx, c);
         worries(ctx, c);
         maybeBreak(ctx, c);

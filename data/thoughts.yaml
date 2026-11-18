@@ -44,6 +44,11 @@ numb: { thoughts: [watched_execution, someone_died], per: 0.1, min: 0.3 }
 # Everyone carries this from the moment they arrive. Fear tuning (D-110, proposal): it eases from
 # `from` to `to` over their first `days` aboard, refreshed hourly.
 trapped: { thought: trapped, from: -5, to: -2, days: 7 }
+# Proposal (murders and aftermath, Nov 18): yesterday carries into the morning. While asleep, the
+# clock stops on good feelings about people, status and romance that last half a day or less, so
+# kind words at dinner still warm you at breakfast. Without it these all ran out overnight and
+# 65% of murders came at breakfast.
+overnight: { sources: [person, status, romance], good: true, maxHours: 12 }
 
 # Proposal: low needs reach mood through these, refreshed every ten minutes while the need is
 # below the line ("hungry, exhausted, filthy, lonely, bored").
@@ -231,6 +236,8 @@ thoughts:
   watched_execution: { label: "Watched an execution", value: -8, hours: 48, stack: 3, source: fear, needs: { fun: -15 } }
   someone_died:  { label: "{who} died", value: -6, hours: 72, stack: 1, source: fear, needs: { fun: -10 } }
   friend_died:   { label: "My friend {who} died", value: -12, hours: 168, stack: 1, source: grief, needs: { social: -20, fun: -20 } }
+  # Proposal (Nov 18, rules.yaml spacing.partner): losing a partner, deeper and longer than a friend.
+  partner_died:  { label: "Lost {who}", value: -20, hours: 240, stack: 1, source: grief, needs: { social: -30, fun: -30 } }
   rival_died:    { label: "{who} got what was coming", value: 6, hours: 72, stack: 1, source: person,
                    scale: [{ axis: kind, k: -0.8 }] }      # proposal: the cruel gloat more
   relieved_died: { label: "Can't say I'll miss {who}", value: 3, hours: 48, stack: 1, source: person,
@@ -247,6 +254,11 @@ thoughts:
   got_away:      { label: "Got away with it", value: 5, hours: 72, stack: 1, source: catharsis,
                    scale: [{ axis: kind, k: -1 }, { axis: honest, k: -0.5 }] }   # nothing at kind 10
   haunted:       { label: "Back where I killed {who}", value: -4, hours: 0.5, stack: 1, source: guilt }
+  # Proposals (Nov 18, trials.yaml guilt.rush and guilt.dread): the rush of the kill, by cruelty
+  # (and volatility, like every thought), and the fear of being caught, by how exposed they feel.
+  killing_rush:  { label: "Felt good to hurt {who}", value: 18, hours: 36, stack: 1, source: catharsis,
+                   scale: [{ axis: kind, k: -0.8 }] }                     # ×1.8 at kind 0, ×0.2 at kind 10
+  fear_caught:   { label: "They'll find out about {who}", value: -14, hours: 1.5, stack: 1, source: fear }  # value set by trials.yaml guilt.dread
   keeping_secret: { label: "Keeping {who}'s secret", value: -4, hours: 72, stack: 1, source: fear }
 
   # The Wheel, the daily event and trials (all proposals)
