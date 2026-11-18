@@ -544,6 +544,8 @@ export const thoughtsSchema = z.object({
   numb: z.object({ thoughts: z.array(z.string()), per: unit, min: unit }).default({ thoughts: [], per: 0, min: 1 }),
   // "Trapped here" from arrival, easing from `from` to `to` over their first `days` aboard.
   trapped: z.object({ thought: z.string(), from: num, to: num, days: num.positive() }),
+  // Murders and their aftermath (proposal, Nov 18): yesterday carries into the morning.
+  overnight: z.object({ sources: z.array(z.string()), good: z.boolean(), maxHours: num.positive() }).optional(),
   // `side` (social only): the row applies only below (`under`) or above (`over`) their comfortable company point.
   needs: z.array(z.object({ need: needEnum, below: num.optional(), above: num.optional(), thought: z.string(), side: z.enum(['under', 'over']).optional() }).refine((x) => (x.below === undefined) !== (x.above === undefined), 'give exactly one of below or above')),
   temperature: z.object({ cold: z.string(), hot: z.string(), perDegree: num, max: num }),

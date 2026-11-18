@@ -110,8 +110,15 @@ export function trappedHere(ctx: Ctx, c: Contestant): void {
 }
 
 /** Drops expired thoughts. */
-export function expireThoughts(ctx: Ctx, c: Contestant): void {
+export function expireThoughts(ctx: Ctx, c: Contestant, minutes = 10): void {
   const t = ctx.w.t;
+  const on = ctx.data.thoughts.overnight;
+  if (on && c.asleep) {
+    for (const x of c.thoughts) {
+      const def = ctx.data.thoughts.thoughts[x.id]!;
+      if (def.hours <= on.maxHours && on.sources.includes(def.source) && (!on.good || x.value > 0)) x.until += minutes;
+    }
+  }
   if (!c.thoughts.some((x) => x.until <= t)) return;
   c.thoughts = c.thoughts.filter((x) => x.until > t);
   updateMood(ctx, c);

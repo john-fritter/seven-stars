@@ -167,7 +167,7 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] The fishbowl is locked from outside: an attack on a prisoner becomes raging at them through the glass. Cellmates can still fight.
 - [ ] Bodies are found by anyone awake who can see them; a cellmate locked in with the victim gets suspicion +60.
 - [ ] The diary room is a camera: a murder there is on tape, the killer knows, and the footage airs at the next dinner ahead of any tape.
-- [ ] Not built: "sleep on it" (it cut murders by a third but didn't move them off breakfast). Breakfast is still murder hour (65% of murders 07:00–10:00, before and after); the cause is good thoughts wearing off overnight.
+- [ ] Yesterday carries into the morning: while asleep, good feelings about people, status and romance lasting 12 hours or less don't fade. Murders 07:00–11:00 65% → 47%; murders 0.43 → 0.35 a week. Not built: "sleep on it" (softening grudges overnight cut murders by a third but didn't move them off breakfast).
 - [ ] Side effects (200 × 30): all 11 targets pass. Deaths 2.35 → 2.30 a week, stay 2.83 → 2.91 weeks, breaks 2.03 → 2.11 a day, hookups 5.20 → 5.31 a week; murders 0.44 → 0.43 a week (stories); trials 0.42 → 0.46 a week, killer spaced 0.32 → 0.38; killers found out 74% → 86%.
 
 **Proposed for group 4 tuning: fear, the reserved, newcomers and playback (Nov 11).** john asked to fix fear hitting too hard, the reserved and newcomers dying sooner, and playback airing almost every dinner. DESIGN.md Part two, Group 4 tuning.

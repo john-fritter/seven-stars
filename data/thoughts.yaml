@@ -44,6 +44,11 @@ numb: { thoughts: [watched_execution, someone_died], per: 0.1, min: 0.3 }
 # Everyone carries this from the moment they arrive. Fear tuning (D-110, proposal): it eases from
 # `from` to `to` over their first `days` aboard, refreshed hourly.
 trapped: { thought: trapped, from: -5, to: -2, days: 7 }
+# Proposal (murders and aftermath, Nov 18): yesterday carries into the morning. While asleep, the
+# clock stops on good feelings about people, status and romance that last half a day or less, so
+# kind words at dinner still warm you at breakfast. Without it these all ran out overnight and
+# 65% of murders came at breakfast.
+overnight: { sources: [person, status, romance], good: true, maxHours: 12 }
 
 # Proposal: low needs reach mood through these, refreshed every ten minutes while the need is
 # below the line ("hungry, exhausted, filthy, lonely, bored").

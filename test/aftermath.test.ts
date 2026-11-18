@@ -9,7 +9,7 @@ import { hear } from '../src/core/news.js';
 import { endBreak, startBreak } from '../src/core/breaks.js';
 import { grieve, kill } from '../src/core/show.js';
 import { interact, interactionWeight, talkOdds, wariness } from '../src/core/social.js';
-import { think } from '../src/core/thoughts.js';
+import { expireThoughts, think } from '../src/core/thoughts.js';
 import { believe, findBodies, schedule, suspicion } from '../src/core/trials.js';
 import type { Activity, Contestant } from '../src/core/types.js';
 import { aboard, alone, data } from './helpers.js';
@@ -260,5 +260,25 @@ describe('the fishbowl and the diary room', () => {
     Object.assign(passerby, { room: ctx.st.room.get('fishbowl')!.glass, asleep: false, activity: { action: 'idle', object: null, room: 'common', phase: 'do', startedAt: w.t, arriveAt: w.t, minutes: 10, endAt: w.t + 10 } });
     findBodies(ctx);
     expect(ctx.events.some((e) => e.type === 'body_found' && e.actors[0] === passerby.id)).toBe(true);
+  });
+});
+
+describe('yesterday carries into the morning', () => {
+  it("kind words don't run out while asleep; grudges still fade", () => {
+    const { w, ctx, cast } = aboard();
+    const [a, b] = cast as [Contestant, Contestant];
+    a.thoughts = [];
+    think(ctx, a, 'kind_words', b.id);
+    think(ctx, a, 'brushed_off', b.id);
+    const kind = has(a, 'kind_words')!.until;
+    const hurt = has(a, 'brushed_off')!.until;
+    a.asleep = true;
+    w.t += 10;
+    expireThoughts(ctx, a, 10);
+    expect(has(a, 'kind_words')!.until).toBe(kind + 10);
+    expect(has(a, 'brushed_off')!.until).toBe(hurt);
+    a.asleep = false;
+    expireThoughts(ctx, a, 10);
+    expect(has(a, 'kind_words')!.until).toBe(kind + 10);
   });
 });
