@@ -172,6 +172,9 @@ function unseen(ctx: Ctx, room: string, a: Contestant, b: Contestant): boolean {
   for (const x of ctx.w.contestants) {
     if (x === a || x === b) continue;
     if (x.room === room || (x.activity?.room === room && x.activity.phase === 'walk')) return false;
+    // Footsteps in the hall: anyone up and walking nearby could come through the door any second.
+    const steps = ctx.data.plots.moment.footsteps;
+    if (steps !== undefined && !x.asleep && x.activity?.phase === 'walk' && walkMinutes(ctx.st, x.room, room) <= steps) return false;
     if (!x.asleep && canSee(ctx.st, x.room, room)) return false;
   }
   return true;

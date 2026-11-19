@@ -88,6 +88,7 @@ export interface Contestant {
   told: Record<string, number>; // what they've told the diary-room camera (confessionals.ts) -> when
   deathsSeen: number; // deaths aboard since they arrived (thoughts.yaml numb: you get used to it)
   plot?: Plot | null; // a murder they mean to commit (plots.ts), hidden from everyone aboard
+  provoked?: { by: string; source: string } | null; // a blow that just landed, still to be answered this minute (breaks.yaml passion.moment)
   brood?: Record<string, number>; // someone they hate -> daily checks running the grudge has held (plots.yaml grudge)
   grudges?: Grudge[]; // who they know has it in for whom (plots.yaml grudges)
 }

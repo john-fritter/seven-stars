@@ -81,7 +81,10 @@ notice:
 # (breaks.yaml passion.oneAtATime). Nor before the first lights-dim after the plan forms: they wait
 # for dark. A planner asleep in their night stirs each hour at odds `stir` (× how strong the
 # intention is, at most 1) and lies awake long enough to see whether this is the moment.
-moment: { reach: 8, sneakBrave: 8, stir: 0.3 }
+# Proposal (breakfast murders, Nov 18): footsteps in the hall. Anyone awake walking within
+# `footsteps` minutes of the room could come through the door any second: not a moment. Without it
+# the wake chime's scatter was the planner's best chance (8 of 81 planned kills came 07:00–07:08).
+moment: { reach: 8, sneakBrave: 8, stir: 0.3, footsteps: 3 }
 
 # Nerve, once per moment: base + willing × (willingness − willing.at) + strength × intention,
 #   − heard if anyone awake could hear it through a wall or an arch,

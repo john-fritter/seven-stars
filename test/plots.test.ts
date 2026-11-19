@@ -5,6 +5,7 @@ import { timeOfDay } from '../src/core/context.js';
 import { kill } from '../src/core/show.js';
 import type { Contestant, Plot } from '../src/core/types.js';
 import type { GameData } from '../src/data/schema.js';
+import { canSee, walkMinutes } from '../src/core/station.js';
 import { aboard, alone, data } from './helpers.js';
 
 function introduce(ctx: Parameters<typeof meet>[0], cast: Contestant[]): void {
@@ -128,6 +129,26 @@ describe('the moment', () => {
     plotMinute(ctx);
     expect(ctx.events.some((e) => e.type === 'stalk')).toBe(false);
     w.show.bodies = [];
+    plotMinute(ctx);
+    expect(ctx.events.some((e) => e.type === 'stalk')).toBe(true);
+  });
+
+  it('no moment while someone up and walking nearby could come through the door (footsteps)', () => {
+    const { w, ctx, cast } = aboard(21, sure());
+    const [c, o, x] = cast as [Contestant, Contestant, Contestant];
+    alone(w, c, o, x);
+    introduce(ctx, cast);
+    killerish(c);
+    for (const y of [c, o]) Object.assign(y, { room: 'spa', asleep: false, activity: null, breakdown: null, confined: null });
+    // A room close by that can't see into the spa, and someone walking through it to elsewhere.
+    const near = ctx.st.rooms.map((r) => r.id).find((r) => r !== 'spa' && !canSee(ctx.st, r, 'spa') && walkMinutes(ctx.st, r, 'spa') <= data.plots.moment.footsteps!)!;
+    const far = ctx.st.rooms.map((r) => r.id).find((r) => r !== 'spa' && r !== near && !canSee(ctx.st, r, 'spa'))!;
+    Object.assign(x, { room: near, asleep: false, breakdown: null, confined: null, activity: { action: 'idle', object: null, room: far, phase: 'walk', startedAt: w.t, arriveAt: w.t + 30, minutes: 1, endAt: null } });
+    c.plot = plot(o.id);
+    plotMinute(ctx);
+    expect(ctx.events.some((e) => e.type === 'stalk')).toBe(false);
+    // Once they've sat down out of sight, the footsteps are gone.
+    x.activity = { action: 'idle', object: null, room: near, phase: 'do', startedAt: w.t, arriveAt: w.t, minutes: 30, endAt: w.t + 30 };
     plotMinute(ctx);
     expect(ctx.events.some((e) => e.type === 'stalk')).toBe(true);
   });

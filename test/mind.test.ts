@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { attack, breakLevel, breakLines, startBreak } from '../src/core/breaks.js';
+import { attack, breakLevel, breakLines, maybeBreak, snapMinute, startBreak } from '../src/core/breaks.js';
 import { createWorld, step } from '../src/core/index.js';
 import { meet, rel } from '../src/core/ledger.js';
 import { spacings } from '../src/core/show.js';
@@ -160,6 +160,51 @@ describe('breaks', () => {
     Object.assign(b, { room: 'cafe', asleep: false });
     startBreak(ctx, a, 'extreme', 'person', 'attack', b.id);
     expect(ctx.events.some((x) => x.type === 'fight' && x.data!.attack && x.actors[0] === a.id)).toBe(true);
+  });
+
+  it('a bad hour never turns violent: crimes of passion only come in the moment of a blow', () => {
+    const d = structuredClone(data);
+    d.breaks.chance.extreme = 1;
+    d.breaks.lines.minorBase = 1000; // everyone is past the extreme line
+    d.breaks.passion.moment = { chance: 1, blow: 3 };
+    const { w, ctx, cast } = aboard(31, d);
+    const [a, b] = cast as [Contestant, Contestant];
+    alone(w, a, b);
+    for (const x of [a, b]) Object.assign(x, { room: 'cafe', asleep: false, breakdown: null, confined: null, activity: { action: 'idle', object: null, room: 'cafe', phase: 'do', startedAt: w.t, arriveAt: w.t, minutes: 30, endAt: w.t + 30 } });
+    Object.assign(a, { personality: { ...flat(5), kind: 1 }, traits: [] });
+    a.thoughts = [];
+    for (let i = 0; i < 3; i++) think(ctx, a, 'insulted', b.id);
+    a.provoked = null; // yesterday's insults: not a blow landing now
+    expect(breakLevel(ctx, a)).toBe('extreme');
+    // The hourly roll: rage at b, but nothing just happened, so it comes out as a spree, not fists.
+    maybeBreak(ctx, a);
+    expect(a.breakdown?.kind).toBe('insult_spree');
+    a.breakdown = null;
+    a.activity = { action: 'idle', object: null, room: 'cafe', phase: 'do', startedAt: w.t, arriveAt: w.t, minutes: 30, endAt: w.t + 30 };
+    // A fresh insult while they're at the edge: they go for whoever said it, then and there.
+    think(ctx, a, 'insulted', b.id);
+    expect(a.provoked).toEqual({ by: b.id, source: 'person' });
+    snapMinute(ctx);
+    expect(a.provoked).toBeNull();
+    const brk = ctx.events.filter((e) => e.type === 'break' && e.actors[0] === a.id).at(-1)!;
+    expect(brk.data!.kind).toBe('attack');
+    expect(brk.actors[1]).toBe(b.id);
+    expect(ctx.events.some((e) => e.type === 'fight' && e.data!.attack && e.actors[0] === a.id)).toBe(true);
+  });
+
+  it("a blow above the extreme line doesn't make them snap", () => {
+    const d = structuredClone(data);
+    d.breaks.passion.moment = { chance: 1, blow: 3 };
+    const { w, ctx, cast } = aboard(31, d);
+    const [a, b] = cast as [Contestant, Contestant];
+    alone(w, a, b);
+    for (const x of [a, b]) Object.assign(x, { room: 'cafe', asleep: false, breakdown: null, confined: null });
+    a.thoughts = [];
+    updateMood(ctx, a);
+    think(ctx, a, 'insulted', b.id);
+    expect(breakLevel(ctx, a)).not.toBe('extreme');
+    snapMinute(ctx);
+    expect(a.breakdown).toBeNull();
   });
 
   it('fall back to moping when there is nobody to take it out on', () => {
