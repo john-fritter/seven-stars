@@ -15,7 +15,7 @@ import { knownFor, learnRep } from './news.js';
 import { traitFx } from './traits.js';
 import { mourn, rollCall, space } from './show.js';
 import { think } from './thoughts.js';
-import { knowsGrudge } from './plots.js';
+import { knowsGrudge, lastResort } from './plots.js';
 import type { Body, Case, Contestant, Trial } from './types.js';
 
 /** The reputation for lying at a trial (news.yaml reputation.liar). */
@@ -122,7 +122,10 @@ export function evidence(ctx: Ctx, body: Body, i: Contestant, j: Contestant): nu
   // Bad blood they know of between the suspect and the victim (plots.yaml grudges), either way.
   if (knowsGrudge(ctx, i, j.id, body.id)) v += s.enemy;
   // The cameras' teaser put them among a few (plots.yaml clue).
-  if (ctx.w.show.cases.find((k) => k.victim === body.id)?.clued?.includes(j.id)) v += ctx.data.plots.clue.suspicion;
+  const k = ctx.w.show.cases.find((x) => x.victim === body.id);
+  if (k?.clued?.includes(j.id)) v += ctx.data.plots.clue.suspicion;
+  // The victim had accused them, and the trial hadn't come yet: everyone heard it.
+  if (k?.accusing?.includes(j.id)) v += s.accusing;
   if (body.near.includes(i.id) && body.near.includes(j.id)) v += s.near;
   if (body.locked?.includes(j.id)) v += s.locked;
   // They've been told this one did it (news.yaml killer: on someone's word).
@@ -188,8 +191,17 @@ function caseAgainst(ctx: Ctx, body: Body, i: Contestant, j: Contestant): { said
  * little more of a hearing for looks.
  */
 export function presence(ctx: Ctx, c: Contestant): number {
-  const ch = Math.min(10, Math.max(0, c.charisma + traitFx(ctx.data, c).charisma));
-  return ch + ctx.data.trials.argue.beauty * looks(ctx, c);
+  return charismaOf(ctx, c) + ctx.data.trials.argue.beauty * looks(ctx, c);
+}
+
+/** Their charisma, with what their traits add or take, 0..10. */
+export function charismaOf(ctx: Ctx, c: Contestant): number {
+  return Math.min(10, Math.max(0, c.charisma + traitFx(ctx.data, c).charisma));
+}
+
+/** How much a smooth line helps whoever makes the move (romance.yaml charisma): × 1 + k × (charisma − 5). */
+export function smooth(ctx: Ctx, c: Contestant): number {
+  return Math.max(0, 1 + ctx.data.romance.charisma * (charismaOf(ctx, c) - 5));
 }
 
 /** The best accusation anyone dares over this body: a real reason, the nerve, and a room they expect to win. */
@@ -274,6 +286,7 @@ export function schedule(ctx: Ctx, body: Pick<Body, 'id' | 'name' | 'killer' | '
   log(ctx, 'accusation', [accuser.id, accused.id], accuser.room, { victim: body.id, name: body.name, suspicion: Math.round(suspicion), said: Math.round(said), day, right: accused.id === body.killer, ...(reopened ? { reopened } : {}), ...(plan?.lie ? { lie: true } : {}) });
   think(ctx, accused, tr.accused.thought, accuser.id);
   feel(ctx, accused, accuser, 'affection', tr.accused.affection, 'accused me of murder');
+  lastResort(ctx, body, accuser, accused, witnesses, said);
 }
 
 /** Trials waiting for this morning. */

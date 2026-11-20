@@ -170,7 +170,8 @@ export function kill(ctx: Ctx, c: Contestant, cause: string, room: string, witne
       const with_ = ctx.w.contestants.filter((p) => p !== o && p !== c && p.id !== killer && p.room === o.room && !p.asleep).map((p) => p.id);
       if (with_.length) alibi[o.id] = with_;
     }
-    ctx.w.show.cases.push({ victim: c.id, name: c.name, killer, room, t, feelings, near, knew: [...witnesses], accusers: [], kept: [], dread: witnesses.length || camera ? dread.seen : dread.unseen, dreadAt: t, alibi });
+    const accusing = ctx.w.show.trials.filter((x) => x.accuser === c.id).map((x) => x.accused);
+    ctx.w.show.cases.push({ victim: c.id, name: c.name, killer, room, t, feelings, near, knew: [...witnesses], accusers: [], kept: [], dread: witnesses.length || camera ? dread.seen : dread.unseen, dreadAt: t, alibi, ...(accusing.length ? { accusing } : {}) });
     if (camera) caughtOnTape(ctx, killer, c.id);
     remove(ctx, c);
     if (witnesses.length) found(ctx, body, null);

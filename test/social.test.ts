@@ -104,7 +104,11 @@ describe('flirts and fights', () => {
     const [a, b] = cast as [Contestant, Contestant];
     meet(ctx, a, b);
     rel(b, a)!.attraction = 7;
+    Object.assign(a, { charisma: 5, traits: [] });
     expect(flirtOdds(ctx, b, a)).toBeCloseTo(0.7);
+    // A smooth talker does better (romance.yaml charisma): × 1 + 0.05 × (charisma − 5).
+    a.charisma = 9;
+    expect(flirtOdds(ctx, b, a)).toBeCloseTo(0.7 * (1 + data.romance.charisma * 4));
   });
 
   it('turns an insult into a fight 4% of the time, ×1.5 for the fully volatile', () => {

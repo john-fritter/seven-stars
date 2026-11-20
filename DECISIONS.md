@@ -520,5 +520,7 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Lies (john: yes): honest 4 or below, made up when the case is thin; caught by anyone who was with the accused or accuser at the time; a liar reputation halves what they say at trials.
 - [ ] The vain overrate their own charm when reading the room (john: yes). Nerves cost an innocent accused a little (john: yes). Speeches pay by grade (john: yes). No character witnesses yet (john: not yet).
 - [ ] A low-charisma teller isn't always believed about a killer.
-- [ ] Open from john's notes (Nov 20): an accused who expects to lose killing the accuser before the trial ("a last resort"); charisma helping whoever starts a flirt; gender stays out of everything but pronouns and attraction (recommended).
+- [ ] The last resort (john: yes, Nov 20): an accused expecting 60%+ of the room against them, and willing enough, may plan to kill the accuser before the trial; the victim's pending accusation is then evidence against them (+40). It's an exception to D-050 (one mystery at a time): the accuser's death calls the pending trial off, so it replaces that trial rather than running beside it, but the old murder stays unsolved.
+- [ ] A smooth line (john: yes, Nov 20): the mover's odds on a flirt, kiss or proposition × 1 + 0.05 × (charisma − 5).
+- [ ] Gender sets pronouns and attraction only; no built-in tendencies (recommended Nov 20, awaiting john).
 

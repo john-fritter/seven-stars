@@ -21,7 +21,7 @@ import { think } from './thoughts.js';
 import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
 import { inTrouble, trainedEdge } from './wants.js';
-import { canPlead, plead } from './trials.js';
+import { canPlead, plead, smooth } from './trials.js';
 
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 
@@ -186,7 +186,9 @@ export function throughGlass(ctx: Ctx, a: Contestant, b: Contestant): boolean {
 
 /** Face to face, the ordinary interactions; through the glass, only the ones marked for it. */
 function interactionsFor(ctx: Ctx, c: Contestant, o: Contestant): InteractionDef[] {
-  const defs = ctx.data.social.interactions;
+  // Pleading only exists while there's a case to plead (not even as a zero weight, which would
+  // change the pick when every weight is zero).
+  const defs = ctx.data.social.interactions.filter((d) => !d.needs.trial || canPlead(ctx, c, o));
   if (o.room === c.room) return defs.filter((d) => !d.glass);
   const outside = !ctx.st.room.get(c.room)!.glass;
   return defs.filter((d) => d.glass === 'either' || (d.glass === 'outside' && outside));
@@ -339,7 +341,7 @@ function brokenUp(ctx: Ctx, a: Contestant, b: Contestant): boolean {
 
 /** Odds a flirt lands: the target's attraction back ÷ 10 × successScale. */
 export function flirtOdds(ctx: Ctx, target: Contestant, flirter: Contestant): number {
-  return clamp((((rel(target, flirter)?.attraction ?? 0) - grubbiness(ctx, flirter)) / 10) * ctx.data.social.flirt.successScale, 0, 1);
+  return clamp((((rel(target, flirter)?.attraction ?? 0) - grubbiness(ctx, flirter)) / 10) * ctx.data.social.flirt.successScale * smooth(ctx, flirter), 0, 1);
 }
 
 function flirt(ctx: Ctx, c: Contestant, o: Contestant): void {

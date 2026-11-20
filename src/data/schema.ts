@@ -684,6 +684,7 @@ export const breaksSchema = z.object({
 });
 
 export const romanceSchema = z.object({
+  charisma: num.default(0), // a smooth line: the mover's odds × 1 + charisma × (their charisma − 5)
   kiss: z.object({ successScale: num, label: z.enum(LABELS), datingAfter: z.number().int().positive(), thought: z.string(), rebuffed: z.string() }),
   proposition: z.object({
     attraction: num,
@@ -810,7 +811,7 @@ export const eventsSchema = z.object({
 export const trialsSchema = z.object({
   foundThought: z.string(),
   nearMinutes: num.nonnegative(),
-  suspicion: z.object({ witnessed: num, dislike: num, fear: num, enemy: num, near: num, locked: num.default(0), heard: num.default(0) }),
+  suspicion: z.object({ witnessed: num, dislike: num, fear: num, enemy: num, near: num, locked: num.default(0), heard: num.default(0), accusing: num.default(0) }),
   accuseAt: num,
   reason: num.default(0),
   convince: z.object({ need: unit, brave: num, spite: num.default(0) }).default({ need: 0, brave: 0, spite: 0 }),
@@ -896,6 +897,8 @@ export const plotsSchema = z.object({
   secrets: z.object({ slip: unit }),
   grudges: z.object({ aired: z.array(z.string()), tell: unit, freshDays: num.positive(), forgetDays: num.positive() }),
   clue: z.object({ size: z.number().int().min(1), suspicion: num }),
+  // The accused who expects to lose (Nov 20): a survival motive against the accuser, that night.
+  lastResort: z.object({ expect: unit, easier: num, strength: num }).optional(),
 });
 
 const leanBy = z.union([axisEnum, z.enum(['modesty', 'drinking', 'monogamy'])]);

@@ -97,7 +97,7 @@ export interface Contestant {
 /** A planned murder (plots.yaml): who, why, how strongly, and how it's going. */
 export interface Plot {
   target: string;
-  motive: 'grudge' | 'desperate' | 'love';
+  motive: 'grudge' | 'desperate' | 'love' | 'survival'; // survival: accused, and expecting to lose (plots.yaml lastResort)
   for?: string; // love: whoever asked them to do it
   since: number;
   strength: number;
@@ -205,6 +205,7 @@ export interface Case {
   clued?: string[]; // the announcer's teaser: one of these did it (plots.yaml clue)
   dread: number; // 0..1: how sure the killer is they'll be caught, as of `dreadAt` (trials.yaml guilt.dread)
   dreadAt: number;
+  accusing?: string[]; // whoever the victim had accused, with the trial still to come: everyone knows they had a reason (trials.yaml suspicion.accusing)
   alibi?: Record<string, string[]>; // who was awake in the same room as each contestant when it happened (trials.yaml argue alibi)
 }
 

@@ -213,6 +213,7 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
           break;
         case 'ambush':
           add(n, data.killed ? 'ambushKilled' : 'ambushFailed');
+          if (data.killed && data.motive === 'survival') add(n, 'survivalKills');
           if (data.asleep) add(n, 'ambushAsleep');
           break;
         case 'creeped_out':
@@ -564,7 +565,7 @@ export function storyReport(seeds: StorySeed[]): string[] {
   line(`  confessions: ${n('diaryMurder')} to the diary camera, ${n('murderConfession_playback')} aired at dinner, ${n('murderConfession_drunk')} drunk to a friend (${n('murderConfessionKept')} more kept by a loyal friend), ${n('murderConfession_breakdown')} blurted out in a breakdown; ${n('blurted')} cheaters blurted out their cheating`);
   line(`  killers found out: ${n('killersFoundOut')} of ${n('killers')} (${pct(n('killersFoundOut'), n('killers'))}), ${n('foundOutByConfession')} through their own confession; planned killers ${n('plannedFoundOut')} of ${n('murdersPlanned')} (${pct(n('plannedFoundOut'), n('murdersPlanned'))})`);
   line(`  ${pct(n('murdersPlanned'), mu)} planned, ${pct(n('murdersUnseen'), mu)} unseen, ${pct(n('murdersMorning'), mu)} between 07:00 and 11:00`);
-  line(`  plans formed: ${n('plans_grudge')} over a grudge, ${n('plans_desperate')} for ratings, ${n('plans_love')} for a lover (${n('askedYes')} yes, ${n('askedNo')} no of ${n('plans_via')} who meant to ask); ${n('letGo')} let go, ${n('nerveLost')} lost nerves (${n('gaveUp')} gave up)`);
+  line(`  plans formed: ${n('plans_grudge')} over a grudge, ${n('plans_desperate')} for ratings, ${n('plans_survival')} by the accused before their trial (${n('survivalKills')} carried out), ${n('plans_love')} for a lover (${n('askedYes')} yes, ${n('askedNo')} no of ${n('plans_via')} who meant to ask); ${n('letGo')} let go, ${n('nerveLost')} lost nerves (${n('gaveUp')} gave up)`);
   line(`  ambushes: ${n('ambushKilled')} killed, ${n('ambushFailed')} survived (${n('ambushAsleep')} of all ambushes on a sleeper); ${n('creepedOut')} targets felt watched`);
   line(`  confided to a friend: ${n('murderConfession_confided')} told, ${n('secretsSlipped')} kept secrets slipped out drunk, ${n('secretsTurned')} keepers turned on the killer; ${n('clues')} camera teasers; ${per(n('grudgesTold') * 7, days, 1)} grudges gossiped a week`);
   line('  trials, argued (trials.yaml argue):');

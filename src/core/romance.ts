@@ -18,6 +18,7 @@ import { think } from './thoughts.js';
 import { learn, twoTimer } from './news.js';
 import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
+import { smooth } from './trials.js';
 
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 const round2 = (x: number) => Math.round(x * 100) / 100;
@@ -65,7 +66,7 @@ function busy(ctx: Ctx, c: Contestant): boolean {
 export function kissOdds(ctx: Ctx, target: Contestant, kisser: Contestant): number {
   const r = rel(target, kisser);
   if (!r) return 0;
-  return clamp((attractionNow(ctx, target, r.attraction, kisser) / 10) * (1 + r.affection / 100) * ctx.data.romance.kiss.successScale * agreeMult(ctx, target) * wary(ctx, target, kisser), 0, 1);
+  return clamp((attractionNow(ctx, target, r.attraction, kisser) / 10) * (1 + r.affection / 100) * ctx.data.romance.kiss.successScale * agreeMult(ctx, target) * wary(ctx, target, kisser) * smooth(ctx, kisser), 0, 1);
 }
 
 /** A known two-timer (news.yaml reputation.two_timer) puts the monogamous off. */
@@ -101,7 +102,7 @@ export function propositionOdds(ctx: Ctx, target: Contestant, asker: Contestant)
   const r = rel(target, asker);
   const attraction = r ? attractionNow(ctx, target, r.attraction, asker) : 0;
   if (!r || attraction < p.attraction || r.affection < p.affection) return 0;
-  return clamp((attraction / 10) * p.successScale * attachedMult(ctx, target, asker) * agreeMult(ctx, target), 0, 1);
+  return clamp((attraction / 10) * p.successScale * attachedMult(ctx, target, asker) * agreeMult(ctx, target) * smooth(ctx, asker), 0, 1);
 }
 
 export function proposition(ctx: Ctx, c: Contestant, o: Contestant): void {

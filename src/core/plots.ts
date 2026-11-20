@@ -16,7 +16,7 @@ import { feel } from './ledger.js';
 import { chance, shuffle } from './rng.js';
 import { canHear, canSee, walkMinutes } from './station.js';
 import { think } from './thoughts.js';
-import { believe, bestAccusation, schedule } from './trials.js';
+import { believe, bestAccusation, expectedVotes, schedule } from './trials.js';
 import type { Activity, Body, Case, Contestant, Plot } from './types.js';
 
 const aboard = (ctx: Ctx, id: string | undefined) => (id ? ctx.w.contestants.find((x) => x.id === id) : undefined);
@@ -88,6 +88,27 @@ function proxyFor(ctx: Ctx, c: Contestant, target: string): Contestant | null {
   return best;
 }
 
+/** Whether `c` still stands accused by `accuser`, the trial still to come. */
+function facing(ctx: Ctx, c: Contestant, accuser: string): boolean {
+  return ctx.w.show.trials.some((t) => t.accused === c.id && t.accuser === accuser);
+}
+
+/**
+ * The last resort (plots.yaml lastResort): accused, and reading the room as against them, someone
+ * who could kill in cold blood means to get the accuser before the trial.
+ */
+export function lastResort(ctx: Ctx, body: Pick<Body, 'id' | 'name' | 'killer' | 'feelings'>, accuser: Contestant, accused: Contestant, witnesses: string[], said: number): void {
+  const lr = ctx.data.plots.lastResort;
+  // Someone already set on killing another keeps to it; one already after the accuser makes it urgent.
+  if (!lr || accused.plot?.motive === 'survival' || (accused.plot && accused.plot.target !== accuser.id)) return;
+  const expect = expectedVotes(ctx, body, accuser, accused, witnesses, said);
+  if (expect < lr.expect) return;
+  const w = willingness(ctx, accused);
+  if (w === null || w < ctx.data.plots.willing.at - lr.easier) return;
+  accused.plot = { target: accuser.id, motive: 'survival', strength: lr.strength, since: ctx.w.t, losses: 0, calm: nextDark(ctx) };
+  log(ctx, 'intent', [accused.id, accuser.id], accused.room, { motive: 'survival', strength: lr.strength, willing: round(w), expect: round(expect) });
+}
+
 /** Once a day (plots.yaml check): grudges brood, intentions form, fade or are let go. */
 export function dailyPlots(ctx: Ctx): void {
   const pl = ctx.data.plots;
@@ -116,7 +137,9 @@ export function dailyPlots(ctx: Ctx): void {
               ? 'safe'
               : plot.motive === 'love' && (!aboard(ctx, plot.for) || (c.ledger[plot.for!]?.affection ?? 0) < friendAt)
                 ? 'fell_out'
-                : null;
+                : plot.motive === 'survival' && !facing(ctx, c, plot.target)
+                  ? 'over'
+                  : null;
       if (why) {
         c.plot = null;
         log(ctx, 'let_go', [c.id, plot.target], c.room, { motive: plot.motive, why, losses: plot.losses });
@@ -192,11 +215,17 @@ export function plotMinute(ctx: Ctx): void {
     if (!plot || plot.going || c.asleep || tiedUp(c)) continue;
     const target = aboard(ctx, plot.target);
     if (!target) continue;
+    // The trial came and went: the last resort is over, one way or the other.
+    if (plot.motive === 'survival' && !facing(ctx, c, plot.target)) {
+      c.plot = null;
+      log(ctx, 'let_go', [c.id, plot.target], c.room, { motive: plot.motive, why: 'over', losses: plot.losses });
+      continue;
+    }
     if (plot.via) {
       if (!plot.asked) askPartner(ctx, c, plot);
       continue;
     }
-    if (ctx.w.t < plot.calm || mysteryOpen(ctx)) continue;
+    if (ctx.w.t < plot.calm || (mysteryOpen(ctx) && plot.motive !== 'survival')) continue;
     const room = target.room;
     const ok =
       !target.confined &&
@@ -252,7 +281,7 @@ export function ambushArrive(ctx: Ctx, c: Contestant, a: Activity): void {
   const target = aboard(ctx, a.partner);
   if (!plot || !target) return;
   plot.going = false;
-  if (target.room !== c.room || target.confined || !unseen(ctx, c.room, c, target) || mysteryOpen(ctx)) {
+  if (target.room !== c.room || target.confined || !unseen(ctx, c.room, c, target) || (mysteryOpen(ctx) && plot.motive !== 'survival')) {
     log(ctx, 'ambush_foiled', [c.id, target.id], c.room, {});
     return;
   }
@@ -261,7 +290,7 @@ export function ambushArrive(ctx: Ctx, c: Contestant, a: Activity): void {
   const motive = plot.motive;
   const accomplice = plot.for;
   c.plot = null;
-  const killed = attack(ctx, c, target, { firstBlow: pl.ambush.firstBlow + (asleep ? pl.ambush.asleep : 0), planned: true, armed: pl.ambush.armed });
+  const killed = attack(ctx, c, target, { firstBlow: pl.ambush.firstBlow + (asleep ? pl.ambush.asleep : 0), planned: true, armed: pl.ambush.armed, lastResort: motive === 'survival' });
   log(ctx, 'ambush', [c.id, target.id], c.room, { killed, asleep, motive, ...(accomplice ? { for: accomplice } : {}) });
   if (killed) {
     const k = ctx.w.show.cases.find((x) => x.victim === target.id && x.killer === c.id);
@@ -286,7 +315,7 @@ export function ambushArrive(ctx: Ctx, c: Contestant, a: Activity): void {
 /** Hourly: a planner asleep in their night may stir and lie awake, watching for the moment. */
 function stir(ctx: Ctx, c: Contestant): void {
   const plot = c.plot;
-  if (!plot || plot.via || plot.going || !c.asleep || ctx.w.t < plot.calm || !isNightFor(ctx, c, ctx.w.t) || mysteryOpen(ctx)) return;
+  if (!plot || plot.via || plot.going || !c.asleep || ctx.w.t < plot.calm || !isNightFor(ctx, c, ctx.w.t) || (mysteryOpen(ctx) && plot.motive !== 'survival')) return;
   if (!chance(ctx.w.rng, Math.min(1, ctx.data.plots.moment.stir * plot.strength))) return;
   endActivity(ctx, c, 'woke');
   log(ctx, 'lies_awake', [c.id, plot.target], c.room, { plotting: true });

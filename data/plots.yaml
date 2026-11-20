@@ -161,3 +161,15 @@ grudges:
 # from those seen near the victim first, then by lot). Everyone there suspects them `suspicion` more
 # over it, and someone may now dare to accuse. Once per murder.
 clue: { size: 3, suspicion: 35 }
+
+# Proposal (Nov 20, john: "if we announce a trial in advance that someone thinks they're going to
+# lose, what if they killed before then? ... I think it would be cool"). The last resort: an accused
+# who reads the room (as the accuser does, trials.yaml argue forecast) and expects at least
+# `expect` of it to vote them out gets a survival motive against the accuser at once, no brooding,
+# if their willingness reaches willing.at − `easier` (fear for their life makes it easier). Strength
+# `strength`. It waits for dark and an unseen moment like any plan, and isn't held back by the
+# trial itself (one mystery at a time). It's over once the trial is held or called off. If the
+# accuser dies, the trial is called off and the murder is a new case, with the accused the first
+# suspect (trials.yaml suspicion.accusing).
+lastResort: { expect: 0.6, easier: 1, strength: 1 }
+

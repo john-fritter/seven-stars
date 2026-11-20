@@ -155,6 +155,7 @@ describe('romance', () => {
     expect(interactionWeight(ctx, a, b, kissDef)).toBe(0);
     rel(a, b)!.flirts = 1;
     expect(interactionWeight(ctx, a, b, kissDef)).toBeGreaterThan(0);
+    Object.assign(a, { charisma: 5, traits: [] });
     expect(kissOdds(ctx, b, a)).toBeCloseTo(0.9);
   });
 
@@ -194,6 +195,7 @@ describe('romance', () => {
     Object.assign(rel(b, a)!, { attraction: 7, affection: 10 });
     expect(propositionOdds(ctx, b, a)).toBe(0);
     Object.assign(rel(b, a)!, { attraction: 7, affection: 30 });
+    Object.assign(a, { charisma: 5, traits: [] });
     expect(propositionOdds(ctx, b, a)).toBeCloseTo(0.7);
   });
 
