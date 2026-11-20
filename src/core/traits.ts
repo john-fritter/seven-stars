@@ -26,6 +26,7 @@ export interface TraitFx {
   partnerPull: number;
   crowd: { at: number; thought: string } | undefined;
   companyPoint: number;
+  charisma: number; // added to their rolled charisma (Charmer +2, Abrasive −2)
   watched: { events: string[]; thought: string }[];
   attraction: number;
   datingAfter: number | undefined;
@@ -70,6 +71,7 @@ export function mergeTraits(defs: TraitDef[]): TraitFx {
     partnerPull: 1,
     crowd: undefined,
     companyPoint: 0,
+    charisma: 0,
     watched: [],
     attraction: 1,
     datingAfter: undefined,
@@ -108,6 +110,7 @@ export function mergeTraits(defs: TraitDef[]): TraitFx {
     fx.partnerPull *= t.partnerPull;
     fx.crowd ??= t.crowd;
     fx.companyPoint += t.companyPoint;
+    fx.charisma += t.charisma;
     if (t.watched) fx.watched.push(t.watched);
     fx.attraction *= t.attraction;
     if (t.datingAfter !== undefined) fx.datingAfter = Math.min(fx.datingAfter ?? Infinity, t.datingAfter);

@@ -1,9 +1,16 @@
 import { traitFx } from './traits.js';
 // Rolling contestants and casting them. DESIGN.md Part two, Contestants, species and the generator.
 import { AXES, NEEDS, type GameData } from '../data/schema.js';
-import { between, chance, normal, pick, shuffle, weightedIndex, type Rng } from './rng.js';
+import { between, chance, createRng, normal, pick, shuffle, weightedIndex, type Rng } from './rng.js';
 import { rollTraits } from './traits.js';
 import type { Contestant, Needs, Personality } from './types.js';
+
+/** FNV-1a: a string to a 32-bit seed. */
+function hash(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193);
+  return h >>> 0;
+}
 
 const clamp10 = (x: number) => Math.round(Math.min(10, Math.max(0, x)) * 10) / 10;
 
@@ -44,6 +51,7 @@ export function rollContestant(data: GameData, rng: Rng, id: string, t: number, 
     strength: stat('strength'),
     stamina: stat('stamina'),
     beauty: stat('beauty'),
+    charisma: 0,
     personality: rollPersonality(data, rng),
     ideal: rollPersonality(data, rng),
     gender,
@@ -89,6 +97,10 @@ export function rollContestant(data: GameData, rng: Rng, id: string, t: number, 
     told: {},
     deathsSeen: 0,
   };
+  // Charisma (Nov 20) rolls from a stream of its own, seeded by what was already rolled, so adding
+  // it changed nobody's other rolls: every seed casts the same people it did before.
+  const side = createRng(hash(JSON.stringify([c.name, c.species, c.strength, c.stamina, c.beauty, c.personality, c.ideal, c.gender])));
+  c.charisma = clamp10(normal(side, g.stat.mean + (sp.statMean.charisma ?? 0), g.stat.sd) + (sp.statShift.charisma ?? 0));
   c.traits = rollTraits(data, rng, c);
   // How much company feels right: from outgoing, moved by traits (Loner).
   const cp = data.social.company;

@@ -512,3 +512,13 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Sleep keeps every good feeling lasting up to two days (catharsis, meals, comfort, fun, drinks), not just people, status and romance (`thoughts.yaml overnight`).
 - [ ] Footsteps in the hall: no planned-murder moment while anyone awake is walking within 3 minutes of the room (`plots.yaml moment.footsteps`).
 - [ ] Known, not fixed: a third of all conversations and provocations happen 07:00–11:00 (the whole cast wakes at 07:00 with nothing until breakfast at 09:00; meals and the evening are quiet), so about a third is the fair share for in-the-moment violence. Moving drama into the evening (dinner as a social hour) would be its own design change.
+
+**Proposed for charisma and argued trials (Nov 20).** john asked (Nov 18) for a charisma stat and for trials where each side makes its case (D-054); design doc "Charisma and argued trials", john's markup Nov 20 took all eight recommendations. DESIGN.md Part two, Charisma and argued trials.
+
+- [ ] Charisma: a rolled stat 0–10 (mean 5), no species modifier (john: none), Charmer +2, Abrasive −2, plus a small looks halo. Not built from personality (john: agreed).
+- [ ] Trials in four beats: pleas the night before (john: try it), the accuser's case, the accused's defense with alibis, the vote. Feelings first, then the case (by trust in the accuser), the alibi, the pleas, and the better speaker's edge × how open the voter is; a whim of ±10 per voter.
+- [ ] Lies (john: yes): honest 4 or below, made up when the case is thin; caught by anyone who was with the accused or accuser at the time; a liar reputation halves what they say at trials.
+- [ ] The vain overrate their own charm when reading the room (john: yes). Nerves cost an innocent accused a little (john: yes). Speeches pay by grade (john: yes). No character witnesses yet (john: not yet).
+- [ ] A low-charisma teller isn't always believed about a killer.
+- [ ] Open from john's notes (Nov 20): an accused who expects to lose killing the accuser before the trial ("a last resort"); charisma helping whoever starts a flirt; gender stays out of everything but pronouns and attraction (recommended).
+

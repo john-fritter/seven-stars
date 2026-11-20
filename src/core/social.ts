@@ -21,6 +21,7 @@ import { think } from './thoughts.js';
 import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
 import { inTrouble, trainedEdge } from './wants.js';
+import { canPlead, plead } from './trials.js';
 
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 
@@ -204,6 +205,7 @@ export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: I
   if (n.flirted && r.flirts === 0) return 0;
   if (n.inventory && c.inventory.length === 0) return 0;
   if ((n.stash && c.snacks <= 0) || (n.theirStash && o.snacks <= 0)) return 0;
+  if (n.trial && !canPlead(ctx, c, o)) return 0;
   if (!moveAllowed(ctx, c, o, def)) return 0;
   const [lo, hi] = ctx.data.social.factorRange;
   const spice = ctx.data.needs.boredom?.interactions[def.id];
@@ -308,6 +310,8 @@ export function interact(ctx: Ctx, c: Contestant, o: Contestant, def: Interactio
       return shareSnack(ctx, c, o);
     case 'swipe_snack':
       return swipeSnack(ctx, c, o);
+    case 'plead':
+      return plead(ctx, c, o);
   }
   const e = log(ctx, def.id, [c.id, o.id], c.room);
   if (ctx.data.plots.grudges.aired.includes(def.id)) aired(ctx, c, o, c.room);

@@ -4,7 +4,8 @@ import { dayOf } from '../src/core/context.js';
 import { createWorld, step } from '../src/core/index.js';
 import { meet, relation } from '../src/core/ledger.js';
 import { kill } from '../src/core/show.js';
-import { announceBodies, bestAccusation, evidence, findBodies, holdTrials, suspicion, voteOf, wouldDare } from '../src/core/trials.js';
+import { announceBodies, bestAccusation, canPlead, credibility, delivery, evidence, expectedVotes, findBodies, holdTrials, LIAR, plead, presence, stand, suspicion, voteOf, wouldDare } from '../src/core/trials.js';
+import { learnRep } from '../src/core/news.js';
 import type { Body, Contestant, Trial } from '../src/core/types.js';
 import { aboard, alone, data } from './helpers.js';
 
@@ -56,6 +57,22 @@ describe('bodies', () => {
   });
 });
 
+/** Nobody more convincing than anyone else, and nobody who'd lie (trials.yaml argue). */
+function even(cast: Contestant[]) {
+  for (const c of cast) {
+    Object.assign(c, { charisma: 5, beauty: 5, primped: 0, traits: [] });
+    c.personality.honest = 10;
+  }
+}
+
+/** Trials on feelings and evidence alone: no delivery gap, no whims. */
+const plain = (() => {
+  const d = structuredClone(data);
+  d.trials.argue.sway = 0;
+  d.trials.argue.noise = 0;
+  return d;
+})();
+
 describe('suspicion and accusations', () => {
   const body = (over: Partial<Body>): Body => ({ id: 'dead', name: 'Dead', room: 'spa', t: 0, killer: 'k', witnesses: [], near: [], feelings: {}, ...over });
 
@@ -84,6 +101,7 @@ describe('suspicion and accusations', () => {
     const { ctx, cast } = aboard();
     const [i, j, k] = cast as [Contestant, Contestant, Contestant];
     introduce(ctx, cast);
+    even(cast);
     for (const c of cast) c.personality.brave = 10;
     const s = data.trials.suspicion;
     relation(ctx, i, j).affection = -100;
@@ -151,6 +169,7 @@ describe('suspicion and accusations', () => {
     const [killer, victim] = cast as [Contestant, Contestant];
     alone(w);
     introduce(ctx, cast);
+    even(cast);
     kill(ctx, victim, 'murder', 'spa', [], killer.id); // nobody saw, nobody was near, nobody minds anyone
     announceBodies(ctx);
     expect(ctx.events.some((e) => e.type === 'no_accusation')).toBe(true);
@@ -159,8 +178,8 @@ describe('suspicion and accusations', () => {
 });
 
 describe('trials', () => {
-  function setup() {
-    const { w, ctx, cast } = aboard();
+  function setup(d = data) {
+    const { w, ctx, cast } = aboard(21, d);
     introduce(ctx, cast);
     const [accuser, accused, ...voters] = cast as [Contestant, Contestant, ...Contestant[]];
     for (const c of cast) Object.assign(c, { room: 'common', asleep: false, confined: null, breakdown: null, activity: { action: TRIAL, object: null, room: 'common', phase: 'do', startedAt: w.t, arriveAt: w.t, minutes: null, endAt: w.t + 30 } });
@@ -209,7 +228,7 @@ describe('trials', () => {
   });
 
   it('breaks a tied vote on the meter: the lower one loses', () => {
-    const { w, ctx, cast, accuser, accused, voters } = setup();
+    const { w, ctx, cast, accuser, accused, voters } = setup(plain);
     // Two voters each way.
     const [a, b, c, d, ...rest] = voters as [Contestant, Contestant, Contestant, Contestant, ...Contestant[]];
     for (const x of rest) Object.assign(x, { room: 'garden', activity: null, breakdown: { kind: 'mope', level: 'minor', source: 'fear', target: null, since: 0, follows: 0, next: 0 } });
@@ -251,6 +270,130 @@ describe('trials', () => {
     expect(trial.t % 1440).toBe(data.schedule.trials.at + data.schedule.trials.resolveAfter);
     // The newcomer voted.
     if (trial.type === 'trial') expect(Object.keys(trial.data!.votes as object)).toContain(arrive.actors[0]);
+  });
+});
+
+describe('argued trials', () => {
+  function setup(d = data) {
+    const { w, ctx, cast } = aboard(21, d);
+    introduce(ctx, cast);
+    even(cast);
+    const [accuser, accused, ...voters] = cast as [Contestant, Contestant, ...Contestant[]];
+    for (const c of cast) Object.assign(c, { room: 'common', asleep: false, confined: null, breakdown: null, thoughts: [], activity: { action: TRIAL, object: null, room: 'common', phase: 'do', startedAt: w.t, arriveAt: w.t, minutes: null, endAt: w.t + 30 } });
+    const trial: Trial = { day: dayOf(w.t), victim: 'gone', name: 'Gone', killer: 'nobody', accuser: accuser.id, accused: accused.id, witnesses: [], feelings: {}, said: 0 };
+    w.show.trials = [trial];
+    return { w, ctx, cast, accuser, accused, voters, trial };
+  }
+
+  it('charisma rolls for everyone, 0..10, and traits move it', () => {
+    const { ctx, cast } = aboard();
+    for (const c of cast) {
+      expect(c.charisma).toBeGreaterThanOrEqual(0);
+      expect(c.charisma).toBeLessThanOrEqual(10);
+    }
+    const c = cast[0]!;
+    Object.assign(c, { charisma: 5, traits: [] });
+    const base = presence(ctx, c);
+    c.traits = ['charmer'];
+    expect(presence(ctx, c)).toBeCloseTo(base + 2);
+    c.traits = ['abrasive'];
+    expect(presence(ctx, c)).toBeCloseTo(base - 2);
+  });
+
+  it('the case lands by trust; the better speaker sways the open, not the devoted', () => {
+    const { ctx, accuser, accused, voters, trial } = setup();
+    const [v] = voters as [Contestant];
+    const k = data.trials.argue;
+    relation(ctx, v, accuser).trust = 50;
+    const said = { ...trial, said: 40 };
+    expect(stand(ctx, said, v, accuser, accused).margin).toBeCloseTo(-k.said.k * 40 * (k.said.trustBase + 0.5));
+    // A delivery gap of 2 moves a voter with no feelings 2 × sway; one who loves the accused barely.
+    const hearing = { said: 0, gap: 2, alibi: [], caught: [] };
+    expect(stand(ctx, trial, v, accuser, accused, hearing).margin).toBeCloseTo(-2 * k.sway);
+    relation(ctx, v, accused).affection = 100;
+    expect(stand(ctx, trial, v, accuser, accused, hearing).margin).toBeCloseTo(100 - 2 * k.sway * k.openness.min);
+    // A known liar is believed at half.
+    const plain = credibility(ctx, v, accuser);
+    learnRep(ctx, v, accuser, LIAR);
+    expect(credibility(ctx, v, accuser)).toBeCloseTo(plain * data.news.reputation.liar.credibility);
+  });
+
+  it('whoever was with the accused when it happened votes for them, and so does anyone who caught a lie', () => {
+    const { ctx, accuser, accused, voters, trial } = setup();
+    const [v, u] = voters as [Contestant, Contestant];
+    relation(ctx, v, accused).affection = -100;
+    expect(voteOf(ctx, trial, v, accuser, accused, { said: 100, gap: 5, alibi: [v.id], caught: [] })).toBe(accuser);
+    expect(voteOf(ctx, trial, u, accuser, accused, { said: 100, gap: 5, alibi: [], caught: [u.id] })).toBe(accuser);
+  });
+
+  it('delivery: composure, a guilty conscience, nerves, a hangover, a lie', () => {
+    const quiet = structuredClone(data);
+    quiet.trials.argue.delivery.die = 0;
+    const { ctx, accuser, accused, trial } = setup(quiet);
+    const d = quiet.trials.argue.delivery;
+    for (const c of [accuser, accused]) c.personality.calm = 5;
+    const p = presence(ctx, accuser);
+    expect(delivery(ctx, trial, accuser, undefined)).toBeCloseTo(p);
+    accuser.personality.calm = 10;
+    expect(delivery(ctx, trial, accuser, undefined)).toBeCloseTo(p + d.calm);
+    // An innocent accused at calm 0 has the jitters.
+    accused.personality.calm = 0;
+    expect(delivery(ctx, trial, accused, undefined)).toBeCloseTo(presence(ctx, accused) - d.calm - d.nerves);
+    // A guilty one dreading it fidgets instead.
+    const k = { victim: 'gone', name: 'Gone', killer: accused.id, room: 'spa', t: ctx.w.t, feelings: {}, knew: [], accusers: [], kept: [], dread: 1, dreadAt: ctx.w.t };
+    expect(delivery(ctx, { ...trial, killer: accused.id }, accused, k)).toBeCloseTo(presence(ctx, accused) - d.calm - d.dread);
+    accuser.personality.calm = 5;
+    accuser.thoughts = [{ id: quiet.booze.hangover.thought, about: null, value: -10, until: ctx.w.t + 600 }];
+    expect(delivery(ctx, trial, accuser, undefined)).toBeCloseTo(p - d.hangoverMax);
+    accuser.thoughts = [];
+    accuser.personality.honest = 2;
+    expect(delivery(ctx, { ...trial, lie: true }, accuser, undefined)).toBeCloseTo(p - quiet.trials.argue.lie.base - quiet.trials.argue.lie.perHonest * 2);
+  });
+
+  it('the night before: pleas sway a voter up to a cap, and the disliked are turned away', () => {
+    const { ctx, accuser, accused, voters, trial } = setup();
+    const [v, u] = voters as [Contestant, Contestant];
+    const pl = data.trials.argue.plead;
+    expect(canPlead(ctx, accused, v)).toBe(true);
+    expect(canPlead(ctx, accused, accuser)).toBe(false); // not the other side
+    expect(canPlead(ctx, v, u)).toBe(false); // no trial of theirs
+    for (let i = 0; i < 5; i++) plead(ctx, accused, v);
+    expect(trial.pleas![v.id]!.accused).toBe(pl.max);
+    expect(canPlead(ctx, accused, v)).toBe(false);
+    relation(ctx, u, accuser).affection = pl.refuseBelow - 1;
+    plead(ctx, accuser, u);
+    expect(trial.pleas![u.id]).toBeUndefined();
+    expect(ctx.events.some((e) => e.type === 'plead_refused')).toBe(true);
+    // The pleas tip a voter with no feelings either way.
+    expect(stand(ctx, trial, v, accuser, accused).margin).toBeCloseTo(pl.max);
+  });
+
+  it('a held trial logs both speeches, and a caught lie makes a known liar', () => {
+    const { w, ctx, accuser, accused, voters, trial } = setup();
+    const [v] = voters as [Contestant];
+    w.show.cases.push({ victim: 'gone', name: 'Gone', killer: 'nobody', room: 'spa', t: w.t, feelings: {}, knew: [], accusers: [], kept: [], dread: 0, dreadAt: w.t, alibi: { [accused.id]: [v.id] } });
+    trial.lie = true;
+    trial.said = data.trials.argue.lie.claim;
+    holdTrials(ctx);
+    const speeches = ctx.events.filter((e) => e.type === 'trial_speech');
+    expect(speeches.map((e) => e.data!.role)).toEqual(['case', 'defense']);
+    expect(ctx.events.some((e) => e.type === 'lie_caught' && e.actors.includes(v.id))).toBe(true);
+    expect(v.news.some((n) => n.who === accuser.id && n.what === LIAR)).toBe(true);
+    const t = ctx.events.find((e) => e.type === 'trial')!;
+    expect((t.data!.votes as Record<string, string>)[v.id]).toBe(accuser.id);
+  });
+
+  it('reading the room: a convincing accuser expects more of it, and the vain expect more still', () => {
+    const { ctx, accuser, accused } = setup();
+    const body = { id: 'gone', name: 'Gone', killer: 'nobody', feelings: {} };
+    accuser.personality.vain = 5;
+    const even = expectedVotes(ctx, body, accuser, accused, [], 0);
+    expect(even).toBeCloseTo(0.5);
+    accuser.charisma = 6;
+    const better = expectedVotes(ctx, body, accuser, accused, [], 0);
+    expect(better).toBeGreaterThan(even);
+    accuser.personality.vain = 10;
+    expect(expectedVotes(ctx, body, accuser, accused, [], 0)).toBeGreaterThan(better);
   });
 });
 

@@ -163,7 +163,14 @@ export function kill(ctx: Ctx, c: Contestant, cause: string, room: string, witne
     const dread = ctx.data.trials.guilt.dread;
     // A murder on camera (the diary room) is on tape, and the killer knows it.
     const camera = ctx.st.room.get(room)?.camera ?? false;
-    ctx.w.show.cases.push({ victim: c.id, name: c.name, killer, room, t, feelings, near, knew: [...witnesses], accusers: [], kept: [], dread: witnesses.length || camera ? dread.seen : dread.unseen, dreadAt: t });
+    // Where everyone was: anyone awake in the same room as someone can vouch for them (trials.yaml argue alibi).
+    const alibi: Record<string, string[]> = {};
+    for (const o of ctx.w.contestants) {
+      if (o === c || o.id === killer) continue;
+      const with_ = ctx.w.contestants.filter((p) => p !== o && p !== c && p.id !== killer && p.room === o.room && !p.asleep).map((p) => p.id);
+      if (with_.length) alibi[o.id] = with_;
+    }
+    ctx.w.show.cases.push({ victim: c.id, name: c.name, killer, room, t, feelings, near, knew: [...witnesses], accusers: [], kept: [], dread: witnesses.length || camera ? dread.seen : dread.unseen, dreadAt: t, alibi });
     if (camera) caughtOnTape(ctx, killer, c.id);
     remove(ctx, c);
     if (witnesses.length) found(ctx, body, null);

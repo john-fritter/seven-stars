@@ -60,3 +60,6 @@ reputation:
   # lands at odds × 1 − kissK × monogamy/10 (the monogamous are put off), and a yes to exclusivity
   # at × exclusive.
   two_timer: { days: 7, kissK: 0.5, exclusive: 0.3 }
+  # Proposal (Nov 20, trials.yaml argue lie): a liar, caught lying at a trial. Anyone who knows
+  # gives what they say at a trial × credibility.
+  liar: { credibility: 0.5 }

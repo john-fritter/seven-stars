@@ -214,7 +214,7 @@ function renderSheet(): void {
     <h4>Needs</h4><table>${needs}</table>
     <h4>Sheet</h4>
     <table>
-      ${row('strength / stamina / beauty', `${c.strength} / ${c.stamina} / ${c.beauty}`)}
+      ${row('strength / stamina / beauty / charisma', `${c.strength} / ${c.stamina} / ${c.beauty} / ${c.charisma}`)}
       ${row('personality', esc(axes(c.personality)))}
       ${row('ideal partner', esc(axes(c.ideal)))}
       ${row('gender', `${c.gender} (0 feminine, 10 masculine)`)}

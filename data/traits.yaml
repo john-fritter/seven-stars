@@ -32,6 +32,7 @@ filthyBelow: 20
 #   fight:         the chance an insult aimed at them turns into a fight, × this
 #   fightOn:       other interactions aimed at them that can start a fight too, at the insult's odds
 #   charm:         affection the target gains from interactions they start, × this
+#   charisma:      points added to their rolled charisma (how convincing they are; trials.yaml argue)
 #   aura:          affection everyone sharing a room with them gains toward them each social round
 #   dislikeFade:   how fast their dislike (negative affection) fades, × this
 #   partnerPull:   the company pull of someone they're dating or exclusive with, × this
@@ -118,19 +119,21 @@ traits:
   charmer:
     label: Charmer
     group: social
-    rule: "Affection from interactions they start × 1.5"
+    rule: "Affection from interactions they start × 1.5; charisma +2"
     weight: 1
     lean: { by: outgoing }
     excludes: [abrasive]
     charm: 1.5
+    charisma: 2           # proposal (Nov 20): people believe them as well as like them
   abrasive:
     label: Abrasive
     group: social
-    rule: "Slights × 2; people sharing a room with them slowly like them less"
+    rule: "Slights × 2; people sharing a room with them slowly like them less; charisma −2"
     weight: 1
     lean: { by: kind, k: -0.8 }
     interactions: { slight: 2 }
     aura: -0.1            # a point every 100 minutes in the same room; fades like any affection
+    charisma: -2          # proposal (Nov 20)
   grudge_holder:
     label: Grudge-holder
     group: social

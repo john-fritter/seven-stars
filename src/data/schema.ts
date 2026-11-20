@@ -392,7 +392,7 @@ const dimMap = z.partialRecord(z.enum(DIMS), num);
 
 const scaleBy = z.union([axisEnum, z.enum(['affection', 'attraction', 'chemistry', 'privacy', 'monogamy', 'hungry', 'targetHungry'])]);
 
-export const MOVES = ['flirt', 'kiss', 'proposition', 'invite', 'exclusive', 'breakup', 'gift', 'share_snack', 'swipe_snack'] as const;
+export const MOVES = ['flirt', 'kiss', 'proposition', 'invite', 'exclusive', 'breakup', 'gift', 'share_snack', 'swipe_snack', 'plead'] as const;
 export type Move = (typeof MOVES)[number];
 export const LABELS = ['none', 'flirting', 'fling', 'dating', 'exclusive', 'ex'] as const;
 export type Label = (typeof LABELS)[number];
@@ -410,6 +410,7 @@ export const interactionSchema = z.object({
       inventory: z.boolean().optional(),
       stash: z.boolean().optional(), // they have a snack stashed
       theirStash: z.boolean().optional(), // the target has one
+      trial: z.boolean().optional(), // the actor is a side in a trial still to come and the target will vote (trials.yaml argue plead)
     })
     .default({}),
   move: z.enum(MOVES).optional(),
@@ -742,6 +743,7 @@ export const newsSchema = z.object({
   reputation: z.object({
     card_cheat: z.object({ refuse: unit, spot: num.min(0), wary: unit }),
     two_timer: z.object({ days: num.positive(), kissK: unit, exclusive: unit }),
+    liar: z.object({ credibility: unit }),
   }),
 });
 
@@ -815,11 +817,23 @@ export const trialsSchema = z.object({
   frame: z.object({ dread: unit, margin: num }).default({ dread: 1, margin: 1 }),
   accused: z.object({ thought: z.string(), affection: num }),
   fearNudge: num,
-  testimony: z.object({ base: num, trust: num }),
+  argue: z.object({
+    beauty: num,
+    said: z.object({ k: num.min(0), trustBase: num.min(0) }),
+    alibi: num.min(0),
+    delivery: z.object({ calm: num, nerves: num, nervesCalm: num, dread: num, hangover: num.min(0), hangoverMax: num.min(0), ready: num, die: num.min(0) }),
+    sway: num.min(0),
+    openness: z.object({ span: num.positive(), min: unit }),
+    noise: num.min(0),
+    lie: z.object({ honest: num, claim: num.min(0), base: num.min(0), perHonest: num.min(0), affection: num }),
+    forecast: z.object({ vain: num.min(0) }),
+    plead: z.object({ base: num.min(0), max: num.min(0), refuseBelow: num }),
+    grade: z.object({ strong: num, weak: num }),
+  }),
   survivedThought: z.string(),
   memory: z.object({ affection: num, fear: num, friend: num, floor: num, thought: z.string(), near: z.string() }),
   // Believing it on someone's word (news.yaml killer): smaller hits than seeing it.
-  hearsay: z.object({ affection: num, fear: num, doubt: z.object({ loyal: num }) }),
+  hearsay: z.object({ affection: num, fear: num, doubt: z.object({ loyal: num, charisma: unit.default(0) }) }),
   // Keeping a believed killer at arm's length: how far they shy from warm moves, either way.
   wary: z.object({ known: unit, fear: num.min(0), braveK: num, mine: unit, warm: z.array(z.string()), snub: z.string() }),
   guilt: z.object({
@@ -913,6 +927,8 @@ export const traitSchema = z.object({
   crowd: z.object({ at: z.number().int().positive(), thought: z.string() }).optional(),
   // Proposal (company, Oct 29): their comfortable company point moves this much (Loner −20).
   companyPoint: num.default(0),
+  // Proposal (Nov 20, charisma): points added to their rolled charisma.
+  charisma: num.default(0),
   watched: z.object({ events: z.array(z.string()), thought: z.string() }).optional(),
   attraction: num.min(0).default(1),
   datingAfter: z.number().int().positive().optional(),

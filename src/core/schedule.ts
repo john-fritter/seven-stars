@@ -161,7 +161,7 @@ function arrivals(ctx: Ctx): void {
     const c = cast(ctx.data, w.rng, w.contestants, `c${w.nextId++}`, w.t, w.show.names);
     w.contestants.push(c);
     w.show.names.push(c.name);
-    log(ctx, 'arrive', [c.id], c.room, { name: c.name, species: c.species, pronouns: c.pronouns, traits: c.traits });
+    log(ctx, 'arrive', [c.id], c.room, { name: c.name, species: c.species, pronouns: c.pronouns, traits: c.traits, charisma: c.charisma });
     trappedHere(ctx, c);
     for (const id of traitFx(ctx.data, c).arrival) think(ctx, c, id);
   }
