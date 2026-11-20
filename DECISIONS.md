@@ -505,3 +505,10 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Sober confiding to a close friend; kept secrets can slip out drunk, and a keeper who falls out with the killer turns.
 - [ ] The cameras' teaser: an unsolved murder nobody has accused anyone over gets one clue at the ceremony naming three, the killer among them.
 - [ ] Accusations need a reason (john asked, Nov 18): 45+ of evidence (seen 100, known bad blood 30, seen near 40, cellmate 60, camera clue 35, told this one did it 50), not dislike; and they accuse only if they expect 0.5 − 0.1 × (brave − 5) ÷ 5 of the room to side with them. Spite still allowed: without a reason they need 0.2 more of the room. A killer who dreads being caught (0.3+) frames whoever the room will condemn.
+
+**Proposed for the breakfast murders (Nov 18).** 45% of murders came 07:00–11:00 (4 of 16 waking hours). Trace and morning data in the thread "Fix the breakfast murder spike"; DESIGN.md Part two, Crimes of passion (In the moment), Yesterday carries into the morning, and Planned murders (The moment).
+
+- [ ] Crimes of passion happen in the moment (john: a crime of passion doesn't wait overnight). The hourly roll's extreme breaks collapse instead of attacking; a blow of 3+ from someone while under the extreme line makes them snap at that person at 60% (`breaks.yaml passion.moment`).
+- [ ] Sleep keeps every good feeling lasting up to two days (catharsis, meals, comfort, fun, drinks), not just people, status and romance (`thoughts.yaml overnight`).
+- [ ] Footsteps in the hall: no planned-murder moment while anyone awake is walking within 3 minutes of the room (`plots.yaml moment.footsteps`).
+- [ ] Known, not fixed: a third of all conversations and provocations happen 07:00–11:00 (the whole cast wakes at 07:00 with nothing until breakfast at 09:00; meals and the evening are quiet), so about a third is the fair share for in-the-moment violence. Moving drama into the evening (dinner as a social hour) would be its own design change.

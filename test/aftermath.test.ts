@@ -264,18 +264,21 @@ describe('the fishbowl and the diary room', () => {
 });
 
 describe('yesterday carries into the morning', () => {
-  it("kind words don't run out while asleep; grudges still fade", () => {
+  it("kind words and a meltdown's relief don't run out while asleep; grudges still fade", () => {
     const { w, ctx, cast } = aboard();
     const [a, b] = cast as [Contestant, Contestant];
     a.thoughts = [];
     think(ctx, a, 'kind_words', b.id);
     think(ctx, a, 'brushed_off', b.id);
+    think(ctx, a, 'catharsis');
+    const relief = has(a, 'catharsis')!.until;
     const kind = has(a, 'kind_words')!.until;
     const hurt = has(a, 'brushed_off')!.until;
     a.asleep = true;
     w.t += 10;
     expireThoughts(ctx, a, 10);
     expect(has(a, 'kind_words')!.until).toBe(kind + 10);
+    expect(has(a, 'catharsis')!.until).toBe(relief + 10);
     expect(has(a, 'brushed_off')!.until).toBe(hurt);
     a.asleep = false;
     expireThoughts(ctx, a, 10);

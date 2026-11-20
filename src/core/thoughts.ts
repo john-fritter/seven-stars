@@ -38,6 +38,9 @@ export function think(ctx: Ctx, c: Contestant, id: string, about: string | null 
     c.thoughts.splice(c.thoughts.indexOf(oldest), 1);
   }
   c.thoughts.push({ id, about, value, until: ctx.w.t + def.hours * 60 });
+  // A blow from someone, answered at the end of the minute (breaks.ts snapMinute).
+  const m = ctx.data.breaks.passion.moment;
+  if (m && about && value <= -m.blow && !c.asleep) c.provoked = { by: about, source: def.source };
   for (const n in def.needs) addNeed(c, n as Need, def.needs[n as Need]!);
   updateMood(ctx, c);
 }

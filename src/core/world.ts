@@ -5,7 +5,7 @@ import type { Ctx } from './context.js';
 import { drainNeeds, recover } from './needs.js';
 import { socialRound } from './social.js';
 import { soberMinute } from './booze.js';
-import { maybeBreak } from './breaks.js';
+import { maybeBreak, snapMinute } from './breaks.js';
 import { hammeredHour } from './booze.js';
 import { conditions, expireThoughts, trappedHere } from './thoughts.js';
 import { company, worries } from './people.js';
@@ -111,6 +111,8 @@ function tick(ctx: Ctx): void {
   // The operator calls people to the diary room after big moments.
   watchMoments(ctx, from);
   callSummons(ctx);
+  // Last: anyone pushed past the edge this minute snaps at whoever pushed them.
+  snapMinute(ctx);
 }
 
 export function save(world: World): string {

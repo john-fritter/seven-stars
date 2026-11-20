@@ -51,7 +51,30 @@ export function maybeBreak(ctx: Ctx, c: Contestant): void {
   if (!level || !chance(ctx.w.rng, ctx.data.breaks.chance[level])) return;
   const b = ctx.data.breaks;
   const g = grievance(ctx, c, b.sources, b.weights) ?? { source: 'fear', about: null };
-  startBreak(ctx, c, level, g.source, b.sources[g.source]?.[level] ?? b.fallback, g.about);
+  let kind = b.sources[g.source]?.[level] ?? b.fallback;
+  // In the moment or not at all: a bad hour on its own never turns violent. The rage comes out
+  // some other way (the same collapse as someone without the violence in them).
+  if (b.passion.moment && b.kinds[kind]?.attack) kind = b.passion.collapse[g.source] ?? b.passion.otherwise;
+  startBreak(ctx, c, level, g.source, kind, g.about);
+}
+
+/**
+ * End of every minute: anyone who just took a blow from someone (an insult, a rebuff, a betrayal)
+ * while under the extreme line may snap and go for them, then and there (breaks.yaml passion.moment).
+ */
+export function snapMinute(ctx: Ctx): void {
+  const m = ctx.data.breaks.passion.moment;
+  for (const c of ctx.w.contestants) {
+    const p = c.provoked;
+    if (!p) continue;
+    c.provoked = null;
+    if (!m || c.asleep || c.breakdown || !c.activity || c.activity.action === PASSED_OUT || c.activity.action === 'fight' || c.activity.action === 'lovin' || onToilet(ctx, c)) continue;
+    const by = ctx.w.contestants.find((o) => o.id === p.by);
+    if (!by || breakLevel(ctx, c) !== 'extreme') continue;
+    const kind = ctx.data.breaks.sources[p.source]?.extreme;
+    if (!kind || !ctx.data.breaks.kinds[kind]?.attack || !chance(ctx.w.rng, m.chance)) continue;
+    startBreak(ctx, c, 'extreme', p.source, kind, by.id, by);
+  }
 }
 
 /** Whoever outranks them most, whoever they fear most, or whoever the grievance is about. */
@@ -119,7 +142,8 @@ function roomFor(ctx: Ctx, c: Contestant, kind: Kind, target: Contestant | null)
 }
 
 /** Breaks down: logs it (the show pays for it) and sets off to do it. */
-export function startBreak(ctx: Ctx, c: Contestant, level: Level, source: string, kindId: string, about: string | null): void {
+/** `at`: snapping at whoever just provoked them (snapMinute), whoever the kind would aim at otherwise. */
+export function startBreak(ctx: Ctx, c: Contestant, level: Level, source: string, kindId: string, about: string | null, at?: Contestant): void {
   const b = ctx.data.breaks;
   let id = kindId;
   let kind = b.kinds[id]!;
@@ -136,7 +160,7 @@ export function startBreak(ctx: Ctx, c: Contestant, level: Level, source: string
       kind = b.kinds[id]!;
     }
   }
-  let target = targetFor(ctx, c, kind, about);
+  let target = at && kind.attack ? at : targetFor(ctx, c, kind, about);
   let room = roomFor(ctx, c, kind, target);
   // The fishbowl is locked from outside: an attack on a prisoner rages at them through the glass.
   const cell = target?.confined && !c.confined ? ctx.st.room.get(target.room)?.glass : undefined;

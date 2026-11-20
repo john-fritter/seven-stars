@@ -675,6 +675,10 @@ export const breaksSchema = z.object({
     witnessThought: z.string(),
     feared: num,
     glass: z.string(),
+    // Crimes of passion happen in the moment: only a blow that lands while they're under the
+    // extreme line (a bad thought about someone at least `blow` deep) can turn violent, at odds
+    // `chance`; the hourly roll's attacks collapse instead.
+    moment: z.object({ chance: unit, blow: num.positive() }).optional(),
   }),
 });
 
@@ -854,7 +858,7 @@ export const plotsSchema = z.object({
   letGo: z.object({ affection: num, meter: num, days: num.positive() }),
   watch: z.object({ pull: num.min(0) }),
   notice: z.object({ chance: unit, hide: z.record(z.string(), unit).default({}), thought: z.string(), fear: num, alone: num.min(0) }),
-  moment: z.object({ reach: num.nonnegative(), sneakBrave: num, stir: unit }),
+  moment: z.object({ reach: num.nonnegative(), sneakBrave: num, stir: unit, footsteps: num.nonnegative().optional() }),
   nerve: z.object({
     base: num,
     willing: num,

@@ -117,6 +117,15 @@ passion:
   weapons: { cafe: 4, spa: 3 }
   follow: 3
   witnessFear: 30         # proposal: witnesses' fear of a killer
+  # Proposal (breakfast murders, Nov 18; john: a crime of passion doesn't wait for morning).
+  # Crimes of passion happen in the moment. The hourly roll's extreme breaks never turn violent:
+  # their attacks become `collapse` by grievance. Instead, a blow from someone (a bad thought about
+  # them at least `blow` deep: an insult, a rebuff, a betrayal, a lost fight) that lands while
+  # they're under the extreme line makes them snap at odds `chance` and go for that person, then
+  # and there (the grievance's extreme break, aimed at whoever provoked it). Before this, 65% of
+  # morning crimes of passion were over something from before they slept: a bad night dropped them
+  # under the line and the break went for whoever their biggest old grievance was about.
+  moment: { chance: 0.6, blow: 3 }
   witnessThought: saw_murder
   feared: 10              # proposal: the least fear that makes someone "the feared person"
   # Proposal (Nov 18: 5 in 113 murders were an attacker walking into the robots-only fishbowl).

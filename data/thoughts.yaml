@@ -48,7 +48,12 @@ trapped: { thought: trapped, from: -5, to: -2, days: 7 }
 # clock stops on good feelings about people, status and romance that last half a day or less, so
 # kind words at dinner still warm you at breakfast. Without it these all ran out overnight and
 # 65% of murders came at breakfast.
-overnight: { sources: [person, status, romance], good: true, maxHours: 12 }
+# Proposal (breakfast murders, Nov 18): every good feeling that lasts up to two days keeps through
+# the night, not just people, status and romance: the relief of a meltdown (catharsis), a good meal,
+# comfort, fun, a drink. With only the three, mood still sank from 48 at bedtime to 44 on waking
+# and climbed all day to 57, so the cast's worst hour was always the first one; with all of them it
+# wakes at about 50.
+overnight: { sources: [person, status, romance, catharsis, hunger, discomfort, booze, temperament], good: true, maxHours: 48 }
 
 # Proposal: low needs reach mood through these, refreshed every ten minutes while the need is
 # below the line ("hungry, exhausted, filthy, lonely, bored").
