@@ -10,9 +10,13 @@ lightsDim: "23:00"       # bedtime isn't forced; sleeping is pulled harder until
 
 # Meals. Each contestant can eat once per meal `group`. `ranks` limits who is served there
 # (newcomers count as ranks.yaml newcomerRank). What they're served depends on rank (ranks.yaml).
+# Breakfast earlier (john, Nov 21: people are grumpy in the morning). Was 09:00–10:00: the cast woke
+# at 07:00 to two empty hours with hunger falling, a quarter of them peckish by 09:00. Proposal:
+# 07:30, half an hour after the chime, and lunch 12:30 (was 13:00) so the longer stretch to lunch
+# doesn't just move the peckish hour to late morning.
 meals:
-  - { id: breakfast, group: breakfast, from: "09:00", to: "10:00", room: cafe }
-  - { id: lunch, group: lunch, from: "13:00", to: "14:00", room: cafe }
+  - { id: breakfast, group: breakfast, from: "07:30", to: "08:30", room: cafe }
+  - { id: lunch, group: lunch, from: "12:30", to: "13:30", room: cafe }
   - { id: dinner, group: dinner, from: "19:00", to: "20:30", room: lounge, ranks: [1, 6] }
   - { id: leftovers, group: dinner, from: "20:30", to: "21:00", room: common, ranks: [7, 7] }
 mealMinutes: 30          # proposal: how long eating takes
@@ -42,8 +46,11 @@ event:
   wakeAbove: 20          # proposal: as the ceremony (was 40, then 30)
 
 # Pending trials (trials.yaml), held after the morning arrivals so newcomers can break ties.
+# Proposal (Nov 21): after breakfast (was 07:45, right after the arrivals). At 07:45 the trial
+# fell in the middle of the new breakfast and the summons took it away: on trial mornings only
+# 0.14 breakfasts per contestant (0.8 on other days).
 trials:
-  at: "07:45"
+  at: "08:45"
   minutes: 30            # proposal
   resolveAfter: 15       # proposal
   wakeAbove: 20          # proposal: as the ceremony (was 40)

@@ -512,3 +512,9 @@ Proposed defaults are in DESIGN.md; each needs John's confirmation or change.
 - [ ] Sleep keeps every good feeling lasting up to two days (catharsis, meals, comfort, fun, drinks), not just people, status and romance (`thoughts.yaml overnight`).
 - [ ] Footsteps in the hall: no planned-murder moment while anyone awake is walking within 3 minutes of the room (`plots.yaml moment.footsteps`).
 - [ ] Known, not fixed: a third of all conversations and provocations happen 07:00–11:00 (the whole cast wakes at 07:00 with nothing until breakfast at 09:00; meals and the evening are quiet), so about a third is the fair share for in-the-moment violence. Moving drama into the evening (dinner as a social hour) would be its own design change.
+
+**Proposed for an earlier breakfast (Nov 21).** john asked for breakfast earlier so people aren't so grumpy in the morning. DESIGN.md Part two, Clock and daily schedule (Breakfast earlier).
+
+- [ ] Breakfast 07:30–08:30 (was 09:00–10:00), half an hour after the wake chime.
+- [ ] Lunch 12:30–13:30 (was 13:00–14:00), so the late morning doesn't become the new hungry stretch.
+- [ ] Trials at 08:45, after breakfast (was 07:45). They are still after the arrivals, so the newcomer votes, but no longer "right after" them as the decided line under Murder and trials says; at 07:45 the trial ate trial mornings' breakfast. john to confirm.

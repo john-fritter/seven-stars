@@ -81,7 +81,7 @@ describe('sharing a bed', () => {
     alone(w, a, b);
     meet(ctx, a, b);
     Object.assign(rel(a, b)!, { attraction: 9, affection: 40 });
-    Object.assign(rel(b, a)!, { attraction: 1, affection: 40 });
+    Object.assign(rel(b, a)!, { attraction: 1, affection: 40, label: 'none' }); // whatever the day before made of them
     for (const c of [a, b]) {
       endActivity(ctx, c, 'interrupted');
       c.room = 'suite';

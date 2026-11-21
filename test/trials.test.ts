@@ -138,6 +138,7 @@ describe('suspicion and accusations', () => {
     alone(w);
     introduce(ctx, cast);
     witness.personality.brave = 8;
+    w.t = (dayOf(w.t) - 1) * 1440 + data.schedule.trials.at + 60; // after this morning's trial time
     kill(ctx, victim, 'murder', 'spa', [witness.id], killer.id);
     const acc = ctx.events.find((e) => e.type === 'accusation')!;
     expect(acc.actors).toEqual([witness.id, killer.id]);
@@ -234,7 +235,7 @@ describe('trials', () => {
     expect(ctx.events.some((e) => e.type === 'trial')).toBe(false);
   });
 
-  it('is held at 07:45, after the morning arrivals', () => {
+  it('is held after the morning arrivals', () => {
     const { w, ctx, cast } = aboard();
     const [killer, victim, witness] = cast as [Contestant, Contestant, Contestant];
     alone(w);
@@ -243,7 +244,7 @@ describe('trials', () => {
     kill(ctx, victim, 'murder', 'spa', [witness.id], killer.id);
     w.t = dayOf(w.t) * 1440 + data.schedule.wakeChime.at; // tomorrow's wake chime
     for (const c of w.contestants) Object.assign(c, { asleep: false, activity: null, room: 'common' });
-    const events = step(w, 61);
+    const events = step(w, data.schedule.trials.at + data.schedule.trials.resolveAfter - data.schedule.wakeChime.at + 1);
     const arrive = events.find((e) => e.type === 'arrive')!;
     const trial = events.find((e) => e.type === 'trial' || e.type === 'trial_cancelled')!;
     expect(trial).toBeDefined();

@@ -564,15 +564,17 @@ One tick is one station minute. In live running a station day is a real day; the
 | --- | --- | --- |
 | 07:00 | Wake chime | Sleepers with rest above 40 wake; others may keep sleeping |
 | 07:30 | Arrivals | Fill empty slots back to seven |
-| 07:45 | Pending trials | Held only if a murder needs answering |
-| 09:00–10:00 | Breakfast, cafe | Robots serve by rank; skipped when the Wheel says no breakfast |
-| 13:00–14:00 | Lunch, cafe | Same |
+| 07:30–08:30 | Breakfast, cafe | Robots serve by rank; skipped when the Wheel says no breakfast |
+| 08:45 | Pending trials | Held only if a murder needs answering |
+| 12:30–13:30 | Lunch, cafe | Same |
 | 15:00–16:00 | Daily event | A cage match, dance-off or The Button |
 | 19:00–20:30 | Dinner, lounge | The bottom rank gets leftovers in the common room at 20:30 |
 | 21:00 | Ceremony | Sentences, spacings, ranks, the Wheel, room moves |
 | 23:00 | Lights dim | Bedtime isn't forced |
 
 Schedule events override the action scoring: everyone attends ceremonies, trials and their meals unless broken down, sentenced or asleep through it. Missing a meal or event is a choice the sim can make, and skipping the ceremony is an infraction.
+
+**Breakfast earlier (proposed, Nov 21; john: people are grumpy in the morning).** Breakfast was 09:00–10:00, so the cast woke at 07:00 to two empty hours with hunger falling: a quarter were peckish by 09:00 (hunger 44, against 70 to 90 the rest of the day) and one in eight hungry. Now breakfast is 07:30–08:30, half an hour after the chime. Lunch moves to 12:30 (was 13:00) so the longer stretch to lunch doesn't just move the peckish hour to late morning, and trials move to 08:45, after breakfast: at 07:45 the trial landed in the middle of the meal, and on trial mornings almost nobody got to eat (0.14 breakfasts each against 0.8). The newcomer still arrives first and votes. What it did (40 seeds × 20 days, sampled on the hour): peckish at 09:00 26% → 5%, hungry 12% → 3%, hunger at 09:00 44 → 81; mood at 08:00 53.9 → 54.8 and at 09:00 54.8 → 56.4. The mood gain is small because waking mood was already only about two points under midday once sleep kept good feelings (Yesterday carries into the morning). The 07:00 hour gets a little calmer (slights, insults and rebuffs about a fifth fewer, since half of it is now breakfast), but over the whole day nothing moves: 200 seeds × 30 days hit all 11 targets either way, murders 0.44 → 0.47 a week and 37% → 35% of them 07:00–11:00 (60 seasons), within noise.
 
 ## Rooms, objects and access
 
@@ -1415,7 +1417,7 @@ A killer who accuses an innocent and wins walks free; the engine keeps the truth
 - **Seen near the victim:** in the murder room within the hour before. The station keeps when each contestant last left each room.
 - **Suspicion,** 0–100: a witness is certain (100) about the killer and suspects nobody else. Otherwise 0.3 × −affection (when negative) + 0.3 × fear, +30 if the suspect and victim were rivals either way, +40 if the suspector and the suspect were both seen near the victim. It tops out at 99.
 - **The accusation** comes as soon as the murder is known: the highest suspicion × brave ÷ 10, if it reaches 15. The killer weighs everyone else like anyone would, so they can accuse an innocent. The accused gets "accused of murder by {who}" (−15) and affection −30 toward the accuser. Below the line, nobody dares and there's no trial.
-- **The trial** is a gathering at 07:45 (after arrivals), resolved 15 minutes in. Voters are everyone there except the two. Witnesses vote against the killer if the killer is on trial. An accuser who witnessed the murder testifies: each voter holds the accused 20 + 0.5 × their trust in the accuser lower (tuning: without testimony about 40% of trials spaced the wrong person, mostly eyewitnesses the room happened to like less than the killer). Everyone else condemns the side with the lower affection − 0.5 × fear; a voter with no feelings either way condemns the lower meter. A tied vote goes against the lower meter, then lifetime points, then a coin. The loser is spaced on the spot unless they hold an immunity; the winner gets 15 and "survived a trial" (+10).
+- **The trial** is a gathering at 08:45 (after arrivals and breakfast), resolved 15 minutes in. Voters are everyone there except the two. Witnesses vote against the killer if the killer is on trial. An accuser who witnessed the murder testifies: each voter holds the accused 20 + 0.5 × their trust in the accuser lower (tuning: without testimony about 40% of trials spaced the wrong person, mostly eyewitnesses the room happened to like less than the killer). Everyone else condemns the side with the lower affection − 0.5 × fear; a voter with no feelings either way condemns the lower meter. A tied vote goes against the lower meter, then lifetime points, then a coin. The loser is spaced on the spot unless they hold an immunity; the winner gets 15 and "survived a trial" (+10).
 - **Remembering a killer** (proposed, Oct 23: after a killer walked free nobody treated them differently). Someone comes to believe a contestant is a killer when they witness the murder, or at a trial that contestant survives as the accused (cleared, or saved by an immunity): the accuser and everyone who voted to space them. It's a belief, so an innocent who survives an accusation can be shunned too. Each believer takes it once: affection −30 and fear +20 toward them, −30 more if the victim was their friend, down to −30 (a rival) at least, and "{who} is a killer and still here" (−8 fear, three days). That dislike never fades past −30, so it keeps feeding the cage, envy, attack breaks and the next trial's votes, and sharing a room with them is "in a room with a killer" (−5 fear). Logged as `killer_known`.
 - **Guilt and unsolved murders** (proposed, Nov 11): a killer's own remorse, scapegoats, confessions and reopened trials. See Guilt and unsolved murders.
 

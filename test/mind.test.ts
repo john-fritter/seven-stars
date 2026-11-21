@@ -9,7 +9,7 @@ import { ctxFor, data } from './helpers.js';
 
 function aboard(seed = 31, d = data) {
   const w = createWorld(d, seed);
-  step(w, 8 * 60);
+  step(w, 10 * 60); // mid-morning: breakfast is over and the cafe is quiet
   return { w, ctx: { ...ctxFor(w), data: d }, cast: w.contestants };
 }
 
@@ -167,6 +167,7 @@ describe('breaks', () => {
     d.breaks.chance.extreme = 1;
     d.breaks.lines.minorBase = 1000; // everyone is past the extreme line
     d.breaks.passion.moment = { chance: 1, blow: 3 };
+    Object.assign(d.breaks.passion, { base: 0, perStrength: 0 }); // the attack, not whether it kills (a death brings guilt, a fresh blow)
     const { w, ctx, cast } = aboard(31, d);
     const [a, b] = cast as [Contestant, Contestant];
     alone(w, a, b);
