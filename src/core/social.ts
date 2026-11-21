@@ -21,6 +21,7 @@ import { think } from './thoughts.js';
 import { traitFx } from './traits.js';
 import type { Contestant } from './types.js';
 import { inTrouble, trainedEdge } from './wants.js';
+import { canPlead, plead, smooth } from './trials.js';
 
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 
@@ -185,7 +186,9 @@ export function throughGlass(ctx: Ctx, a: Contestant, b: Contestant): boolean {
 
 /** Face to face, the ordinary interactions; through the glass, only the ones marked for it. */
 function interactionsFor(ctx: Ctx, c: Contestant, o: Contestant): InteractionDef[] {
-  const defs = ctx.data.social.interactions;
+  // Pleading only exists while there's a case to plead (not even as a zero weight, which would
+  // change the pick when every weight is zero).
+  const defs = ctx.data.social.interactions.filter((d) => !d.needs.trial || canPlead(ctx, c, o));
   if (o.room === c.room) return defs.filter((d) => !d.glass);
   const outside = !ctx.st.room.get(c.room)!.glass;
   return defs.filter((d) => d.glass === 'either' || (d.glass === 'outside' && outside));
@@ -204,6 +207,7 @@ export function interactionWeight(ctx: Ctx, c: Contestant, o: Contestant, def: I
   if (n.flirted && r.flirts === 0) return 0;
   if (n.inventory && c.inventory.length === 0) return 0;
   if ((n.stash && c.snacks <= 0) || (n.theirStash && o.snacks <= 0)) return 0;
+  if (n.trial && !canPlead(ctx, c, o)) return 0;
   if (!moveAllowed(ctx, c, o, def)) return 0;
   const [lo, hi] = ctx.data.social.factorRange;
   const spice = ctx.data.needs.boredom?.interactions[def.id];
@@ -308,6 +312,8 @@ export function interact(ctx: Ctx, c: Contestant, o: Contestant, def: Interactio
       return shareSnack(ctx, c, o);
     case 'swipe_snack':
       return swipeSnack(ctx, c, o);
+    case 'plead':
+      return plead(ctx, c, o);
   }
   const e = log(ctx, def.id, [c.id, o.id], c.room);
   if (ctx.data.plots.grudges.aired.includes(def.id)) aired(ctx, c, o, c.room);
@@ -335,7 +341,7 @@ function brokenUp(ctx: Ctx, a: Contestant, b: Contestant): boolean {
 
 /** Odds a flirt lands: the target's attraction back ÷ 10 × successScale. */
 export function flirtOdds(ctx: Ctx, target: Contestant, flirter: Contestant): number {
-  return clamp((((rel(target, flirter)?.attraction ?? 0) - grubbiness(ctx, flirter)) / 10) * ctx.data.social.flirt.successScale, 0, 1);
+  return clamp((((rel(target, flirter)?.attraction ?? 0) - grubbiness(ctx, flirter)) / 10) * ctx.data.social.flirt.successScale * smooth(ctx, flirter), 0, 1);
 }
 
 function flirt(ctx: Ctx, c: Contestant, o: Contestant): void {

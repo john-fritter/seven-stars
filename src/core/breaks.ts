@@ -280,11 +280,12 @@ export function endBreak(ctx: Ctx, c: Contestant): void {
  * A crime of passion: a fight where the attacker strikes first. If the attacker wins, the chance it
  * kills is (base + perStrength × their strength advantage) × the room's weapon.
  */
-export function attack(ctx: Ctx, c: Contestant, target: Contestant, opts: { firstBlow?: number; planned?: boolean; armed?: number } = {}): boolean {
+export function attack(ctx: Ctx, c: Contestant, target: Contestant, opts: { firstBlow?: number; planned?: boolean; armed?: number; lastResort?: boolean } = {}): boolean {
   const p = ctx.data.breaks.passion;
   const room = c.room;
   // One murder mystery at a time (D-050): while a body lies unfound or a trial is pending, nobody dies of it.
-  const open = p.oneAtATime && (ctx.w.show.bodies.length > 0 || ctx.w.show.trials.length > 0);
+  // The one exception: an accused killing their accuser before the trial (plots.yaml lastResort), which calls that trial off.
+  const open = p.oneAtATime && !opts.lastResort && (ctx.w.show.bodies.length > 0 || ctx.w.show.trials.length > 0);
   const before = c.ledger[target.id]?.affection ?? 0; // how they felt about them, before the blows
   const label = c.ledger[target.id]?.label ?? 'none';
   const killChance = open ? 0 : (p.base + p.perStrength * Math.max(0, c.strength - target.strength)) * (p.weapons[room] ?? 1) * (opts.armed ?? 1);

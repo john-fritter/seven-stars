@@ -10,6 +10,10 @@ gender:
   - { weight: 45, mean: 8, sd: 1.5 }
   - { weight: 10, mean: 5, sd: 1.5 }
 attraction: { mean: 5, sd: 3 }  # proposal: drawn to femininity / masculinity
+# Proposal (Nov 20, john: "give males a small strength boost and females a small beauty boost").
+# Added to a stat × (gender − 5) ÷ 5: at gender 10, strength +1 and beauty −1; at gender 0, the
+# reverse; in between, in proportion. Half a standard deviation at the ends, so plenty of overlap.
+genderShift: { strength: 1, beauty: -1 }
 
 pronouns:
   sheBelow: 3.5

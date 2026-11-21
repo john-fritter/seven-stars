@@ -40,6 +40,7 @@ export interface Contestant {
   strength: number;
   stamina: number;
   beauty: number;
+  charisma: number; // 0..10: how convincing they are when they argue to a room (trials.yaml argue)
   personality: Personality;
   ideal: Personality;
   gender: number; // 0 feminine .. 10 masculine
@@ -96,7 +97,7 @@ export interface Contestant {
 /** A planned murder (plots.yaml): who, why, how strongly, and how it's going. */
 export interface Plot {
   target: string;
-  motive: 'grudge' | 'desperate' | 'love';
+  motive: 'grudge' | 'desperate' | 'love' | 'survival'; // survival: accused, and expecting to lose (plots.yaml lastResort)
   for?: string; // love: whoever asked them to do it
   since: number;
   strength: number;
@@ -204,6 +205,8 @@ export interface Case {
   clued?: string[]; // the announcer's teaser: one of these did it (plots.yaml clue)
   dread: number; // 0..1: how sure the killer is they'll be caught, as of `dreadAt` (trials.yaml guilt.dread)
   dreadAt: number;
+  accusing?: string[]; // whoever the victim had accused, with the trial still to come: everyone knows they had a reason (trials.yaml suspicion.accusing)
+  alibi?: Record<string, string[]>; // who was awake in the same room as each contestant when it happened (trials.yaml argue alibi)
 }
 
 /** An accusation waiting for the morning trial. */
@@ -217,6 +220,9 @@ export interface Trial {
   witnesses: string[];
   feelings: Body['feelings']; // everyone's feelings for the victim when they died
   reopened?: boolean; // an old murder, brought back by someone who learned the truth
+  said?: number; // what the accuser has to put to the room, as a suspicion value (trials.yaml argue said)
+  lie?: boolean; // ...and it's made up (trials.yaml argue lie)
+  pleas?: Record<string, { accuser: number; accused: number }>; // the night before: how far each side has swayed each voter
 }
 
 /** The show's bookkeeping: the judge's boredom, repeat pairs, infractions awaiting sentence, and the

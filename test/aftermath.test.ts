@@ -163,6 +163,7 @@ describe('killer news', () => {
     alone(w);
     introduce(ctx, cast);
     traits(listener, { loyal: 3 });
+    Object.assign(witness, { charisma: 5, traits: [] }); // convincing enough to be believed (trials.yaml hearsay doubt.charisma)
     believe(ctx, killer, [witness.id], { id: victim.id, name: victim.name, feelings: {} }, 'witnessed');
     const n = witness.news.find((x) => x.who === killer.id && x.what === data.news.killer.what)!;
     expect(n.victim).toBe(victim.id);

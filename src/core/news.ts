@@ -13,7 +13,7 @@
 //   willing = Π over the people in it (1 − protect × loyal/10 × affection/100)   the odds they say it
 import { aired, confideMurder, slipSecret, tellGrudge } from './plots.js';
 import { drunkConfession } from './guilt.js';
-import { believe } from './trials.js';
+import { believe, presence } from './trials.js';
 import { axis, stageOf } from './booze.js';
 import { log, type Ctx } from './context.js';
 import { chance, weightedIndex } from './rng.js';
@@ -115,6 +115,12 @@ function hearKiller(ctx: Ctx, x: Contestant, who: Contestant, n: News, from?: Co
   if (axis(ctx, x, 'loyal') >= doubt.loyal && (x.ledger[who.id]?.affection ?? 0) >= ctx.data.social.ledger.friendAt) {
     log(ctx, 'disbelieved', [x.id, who.id, ...(from ? [from.id] : [])], x.room, { what: n.what });
     learnRep(ctx, x, who, n.what, n.t, n.victim); // they've heard the rumor; they just don't buy it
+    return false;
+  }
+  // An unconvincing teller isn't always believed (trials.yaml hearsay doubt.charisma).
+  if (from && doubt.charisma > 0 && chance(ctx.w.rng, (doubt.charisma * Math.max(0, 5 - presence(ctx, from))) / 5)) {
+    log(ctx, 'disbelieved', [x.id, who.id, from.id], x.room, { what: n.what, unconvincing: true });
+    learnRep(ctx, x, who, n.what, n.t, n.victim);
     return false;
   }
   const k = ctx.w.show.cases.find((c) => c.victim === n.victim);

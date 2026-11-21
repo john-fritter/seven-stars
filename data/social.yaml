@@ -82,6 +82,10 @@ interactions:
       scale: [{ by: kind, k: 1 }, { by: affection, k: 1 }, { by: targetHungry, k: 1 }] }
   - { id: swipe_snack, weight: 0.1, move: swipe_snack, needs: { theirStash: true },
       scale: [{ by: kind, k: -1 }, { by: honest, k: -1 }, { by: hungry, k: 1 }] }
+  # Proposal (Nov 20, trials.yaml argue plead): the night before a trial, the accuser and the
+  # accused plead their case to whoever will vote. Only between the accusation and the trial.
+  - { id: plead, weight: 1.5, move: plead, needs: { trial: true }, social: 2,
+      scale: [{ by: outgoing, k: 1 }] }
 # Gossip waits for rumors.
 
 # Flirting. Success odds = the target's attraction back ÷ 10 × successScale.

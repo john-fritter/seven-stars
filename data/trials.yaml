@@ -13,7 +13,9 @@ nearMinutes: 60         # proposal
 #   otherwise: dislike × −affection (if negative) + fear × fear + `enemy` if the suspect and the
 #   victim were rivals (either way; only if they know of it, plots.yaml grudges) + `near` if both
 #   were seen near the victim + `heard` if they've been told this one did it
-suspicion: { witnessed: 100, dislike: 0.3, fear: 0.3, enemy: 30, near: 40, locked: 60, heard: 50 }   # proposal
+suspicion: { witnessed: 100, dislike: 0.3, fear: 0.3, enemy: 30, near: 40, locked: 60, heard: 50, accusing: 40 }   # proposal
+# Proposal (Nov 20, the last resort, plots.yaml lastResort): `accusing` more on anyone the victim
+# had accused, with the trial still to come. The whole station heard the accusation.
 # Proposal (Nov 18): `locked` more on anyone who was locked in a glass cell with the victim (two
 # prisoners in the fishbowl): whoever finds the body sees who's in there with it. A body is found by
 # anyone awake who can see it (through glass or an arch), not only someone who walks in.
@@ -39,15 +41,65 @@ frame: { dread: 0.3, margin: 0.05 }
 
 accused: { thought: accused, affection: -30 }   # proposal: how the accused takes it
 
-# Voters (everyone there but the two) who witnessed the murder vote against the killer. Everyone
-# else condemns whichever side scores lower on affection − fearNudge × fear: the one they like
-# less, nudged toward someone they fear. Ties on votes break on the meter, then lifetime points.
+# Voters (everyone there but the two) who know the truth (saw it, heard a confession) vote against
+# the killer. Everyone else starts from how they feel: affection − fearNudge × fear for each side,
+# nudged toward condemning someone they fear, and then hears the two argue (argue, below). They
+# condemn whichever side ends up lower. Ties on votes break on the meter, then lifetime points.
 fearNudge: 0.5          # proposal
-# M8 tuning proposal: an accuser who witnessed the murder testifies. Voters hold the accused
-# `base` + `trust` × their trust in the accuser lower. Without it, 40% of trials spaced the
-# wrong person, mostly eyewitnesses whom the room happened to like less than the killer.
-testimony: { base: 20, trust: 0.5 }
 survivedThought: survived_trial
+
+# Proposals (Nov 20, john: "people should have the opportunity to make their case and charismatic
+# people should have an edge in trials"; D-054). Every contestant rolls charisma 0..10 (generator
+# stat; Charmer +2, Abrasive −2 in traits.yaml). A trial is argued: the night before both sides
+# plead with voters, then the accuser makes the case, the accused defends, and each voter weighs it.
+argue:
+  # Presence: charisma + `beauty` × their looks (0..1, ledger.ts looks): good-looking speakers get
+  # a little more of a hearing. Used for pleas, reading the room and delivery.
+  beauty: 1
+  # What the accuser says lands on each voter as `said.k` × what they have (the evidence they
+  # could put to the room: suspicion.witnessed for an eyewitness, near, enemy, the clue, being told,
+  # or a lie) × (`said.trustBase` + the voter's trust in them ÷ 100). An eyewitness trusted at 50
+  # lands 40 (M8's testimony was 20 + 0.5 × trust: without it 40% of trials spaced the wrong person).
+  said: { k: 0.4, trustBase: 0.5 }
+  # An alibi: someone awake was in the same room as the accused when the murder happened (the sim
+  # records where everyone was). The accused claims it: `alibi` × the same credibility, toward them.
+  # A voter who was that someone knows, and votes for the accused.
+  alibi: 15
+  # Delivery, on the day: presence, plus composure and how they're holding up, plus a roll.
+  #   calm:      ± this from calm 0 to 10
+  #   nerves:    an innocent accused loses this at calm 0, nothing at calm `nervesCalm` or more
+  #   dread:     a guilty accused loses this × their dread of being caught (guilt.dread)
+  #   hangover:  per point of hangover thought (−3..−10), up to `hangoverMax`
+  #   ready:     got ready that morning (activities.yaml ready)
+  #   die:       a roll of 0..die
+  delivery: { calm: 1.5, nerves: 1, nervesCalm: 6, dread: 3, hangover: 0.3, hangoverMax: 3, ready: 1, die: 3 }
+  # Each voter's openness: 1 when their feelings don't split the two, falling by the gap ÷ `span`
+  # to `min`. The better speaker moves them `sway` × the delivery gap × openness.
+  # Tuning (Nov 20): 3 in the design doc; 4 lets the speeches overturn about 1 in 6 trials without
+  # an eyewitness (3: 1 in 8; 5 no more than 4).
+  sway: 4
+  openness: { span: 100, min: 0.3 }
+  # Each voter takes it their own way: at the trial, a whim of up to ± `noise` on where they stand.
+  # Reading the room counts a voter that close to the line as the odds they fall each way.
+  noise: 10
+  # Lies (john: yes). An accuser with less than `reason` to say, honest `honest` or below, makes it
+  # up: they claim to have seen the accused near the victim (`claim`, a suspicion value). It lands
+  # like the real thing, but delivery loses `base` + `perHonest` × honest. Any voter who was with the
+  # accused or the accuser when it happened knows it's a lie: they vote against the liar, take
+  # `affection` toward them, and know them for a liar (news.yaml reputation.liar), which spreads.
+  lie: { honest: 4, claim: 40, base: 1, perHonest: 0.5, affection: -20 }
+  # Reading the room: the accuser expects to talk people round too. Their forecast counts what
+  # they'll say and the gap between their presence and the accused's (no roll), with `vain` × (vain
+  # − 5) ÷ 5 added to their own (john: yes, the vain overrate themselves); at vain 5 or below, none.
+  forecast: { vain: 2 }
+  # The night before (john: try it). From the accusation to the trial, both sides plead their case
+  # (social.yaml plead). A plea leaves the voter `base` × presence ÷ 5 leaning their way, up to `max`
+  # from each side, gone after the trial. Someone who dislikes them below `refuseBelow`, or believes
+  # they're a killer, won't hear it (logged as plead_refused).
+  plead: { base: 5, max: 10, refuseBelow: -30 }
+  # A speech that lands is good television (john: yes): trial_speech scores by grade (scoring.yaml),
+  # strong at delivery `strong` or more, weak under `weak`. Delivery averages about 6.
+  grade: { strong: 9, weak: 4 }
 
 # Proposal (season logs, Oct 23: after a killer walked free nobody treated them differently).
 # Someone comes to believe a contestant is a killer when they witness the murder, or at a trial
@@ -64,7 +116,9 @@ memory: { affection: -30, fear: 20, friend: -30, floor: -30, thought: knows_kill
 # killer). Believing it on someone's word lands softer than seeing it: these instead of
 # memory.affection and memory.fear (the friend hit and the floor still apply). A loyal friend of the
 # accused (loyal at least doubt.loyal, affection friendAt or more) doesn't believe it.
-hearsay: { affection: -15, fear: 10, doubt: { loyal: 7 } }
+hearsay: { affection: -15, fear: 10, doubt: { loyal: 7, charisma: 0.3 } }
+# Proposal (Nov 20): `doubt.charisma` × (5 − the teller's presence) ÷ 5: a rumor from someone with
+# little charisma isn't believed at those odds (charisma 0: 30%); from charisma 5 up, it always is.
 
 # Proposal (Nov 18, john: "people romance their partner's killer"). Someone who believes another
 # is a killer shies away from anything warm with them, both ways: they rarely start one of `warm`

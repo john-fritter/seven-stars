@@ -7,15 +7,19 @@
 import { TRIAL } from './actions.js';
 import { axis } from './booze.js';
 import { dayOf, log, timeOfDay, type Ctx } from './context.js';
-import { feel, relation } from './ledger.js';
+import { feel, looks, relation } from './ledger.js';
 import { canSee } from './station.js';
-import { shuffle } from './rng.js';
+import { between, shuffle } from './rng.js';
 import { alarm, dreadOf, ease, reopen, verdict } from './guilt.js';
-import { learnRep } from './news.js';
+import { knownFor, learnRep } from './news.js';
+import { traitFx } from './traits.js';
 import { mourn, rollCall, space } from './show.js';
 import { think } from './thoughts.js';
-import { knowsGrudge } from './plots.js';
-import type { Body, Contestant, Trial } from './types.js';
+import { knowsGrudge, lastResort } from './plots.js';
+import type { Body, Case, Contestant, Trial } from './types.js';
+
+/** The reputation for lying at a trial (news.yaml reputation.liar). */
+export const LIAR = 'liar';
 
 /** Every minute while there are bodies: anyone awake who walks in on one, or can see it (glass, an arch), finds it. The killer doesn't count. */
 export function findBodies(ctx: Ctx): void {
@@ -118,7 +122,10 @@ export function evidence(ctx: Ctx, body: Body, i: Contestant, j: Contestant): nu
   // Bad blood they know of between the suspect and the victim (plots.yaml grudges), either way.
   if (knowsGrudge(ctx, i, j.id, body.id)) v += s.enemy;
   // The cameras' teaser put them among a few (plots.yaml clue).
-  if (ctx.w.show.cases.find((k) => k.victim === body.id)?.clued?.includes(j.id)) v += ctx.data.plots.clue.suspicion;
+  const k = ctx.w.show.cases.find((x) => x.victim === body.id);
+  if (k?.clued?.includes(j.id)) v += ctx.data.plots.clue.suspicion;
+  // The victim had accused them, and the trial hadn't come yet: everyone heard it.
+  if (k?.accusing?.includes(j.id)) v += s.accusing;
   if (body.near.includes(i.id) && body.near.includes(j.id)) v += s.near;
   if (body.locked?.includes(j.id)) v += s.locked;
   // They've been told this one did it (news.yaml killer: on someone's word).
@@ -130,14 +137,21 @@ export function evidence(ctx: Ctx, body: Body, i: Contestant, j: Contestant): nu
  * How the accuser reads the room (trials.yaml convince): the share of the others aboard they expect
  * to vote against the accused, from how the room treats each of them. A tie counts as half.
  */
-export function expectedVotes(ctx: Ctx, body: Pick<Body, 'id' | 'name' | 'killer' | 'feelings'>, accuser: Contestant, accused: Contestant, witnesses: string[]): number {
-  const trial: Trial = { day: 0, victim: body.id, name: body.name, killer: body.killer, accuser: accuser.id, accused: accused.id, witnesses, feelings: body.feelings };
+export function expectedVotes(ctx: Ctx, body: Pick<Body, 'id' | 'name' | 'killer' | 'feelings'>, accuser: Contestant, accused: Contestant, witnesses: string[], said = saidBy(ctx, accuser, witnesses, body.killer, accused)): number {
+  const trial: Trial = { day: 0, victim: body.id, name: body.name, killer: body.killer, accuser: accuser.id, accused: accused.id, witnesses, feelings: body.feelings, said };
   const voters = ctx.w.contestants.filter((v) => v !== accuser && v !== accused);
   if (!voters.length) return 0.5;
+  // They expect to talk people round too, the vain more than they should (trials.yaml argue forecast).
+  const vain = ctx.data.trials.argue.forecast.vain * Math.max(0, axis(ctx, accuser, 'vain') - 5) / 5;
+  const hearing: Hearing = { said, gap: presence(ctx, accuser) + vain - presence(ctx, accused), alibi: [], caught: [] };
+  // Close calls are coin flips: a margin counts as the odds it survives the room's whims (argue.noise).
+  const noise = ctx.data.trials.argue.noise;
   let against = 0;
   for (const v of voters) {
-    const x = leaning(ctx, trial, v, accuser, accused);
-    against += x === accused ? 1 : x === null ? 0.5 : 0;
+    const x = stand(ctx, trial, v, accuser, accused, hearing);
+    if (x.knows) against += x.knows === accused ? 1 : 0;
+    else if (noise > 0) against += Math.min(1, Math.max(0, 0.5 - x.margin / (2 * noise)));
+    else against += x.margin < 0 ? 1 : x.margin === 0 ? 0.5 : 0;
   }
   return against / voters.length;
 }
@@ -149,14 +163,51 @@ function needed(ctx: Ctx, accuser: Contestant, reason: boolean): number {
 }
 
 /** Whether they'd risk it: the vote they expect against what their nerve needs (trials.yaml convince). */
-export function wouldDare(ctx: Ctx, body: Pick<Body, 'id' | 'name' | 'killer' | 'feelings'>, accuser: Contestant, accused: Contestant, witnesses: string[], reason = true): boolean {
-  return expectedVotes(ctx, body, accuser, accused, witnesses) >= needed(ctx, accuser, reason);
+export function wouldDare(ctx: Ctx, body: Pick<Body, 'id' | 'name' | 'killer' | 'feelings'>, accuser: Contestant, accused: Contestant, witnesses: string[], reason = true, said?: number): boolean {
+  return expectedVotes(ctx, body, accuser, accused, witnesses, said) >= needed(ctx, accuser, reason);
+}
+
+/** What an accuser has to say when nothing else is known: everything, if they saw the killer do it. */
+function saidBy(ctx: Ctx, accuser: Contestant, witnesses: string[], killer: string, accused: Contestant): number {
+  return witnesses.includes(accuser.id) && accused.id === killer ? ctx.data.trials.suspicion.witnessed : 0;
+}
+
+/** Whether they'd make something up for want of a real reason (trials.yaml argue lie). */
+export function wouldLie(ctx: Ctx, c: Contestant): boolean {
+  return axis(ctx, c, 'honest') <= ctx.data.trials.argue.lie.honest;
+}
+
+/** What they'd put to the room against `j`: the evidence, or a lie if it's thin and they're the lying kind. */
+function caseAgainst(ctx: Ctx, body: Body, i: Contestant, j: Contestant): { said: number; lie: boolean; reason: boolean } {
+  const tr = ctx.data.trials;
+  const ev = evidence(ctx, body, i, j);
+  const reason = ev >= tr.reason;
+  if (!reason && wouldLie(ctx, i) && tr.argue.lie.claim > ev) return { said: tr.argue.lie.claim, lie: true, reason };
+  return { said: ev, lie: false, reason };
+}
+
+/**
+ * How convincing they are to a room (trials.yaml argue): charisma (traits add or take some), and a
+ * little more of a hearing for looks.
+ */
+export function presence(ctx: Ctx, c: Contestant): number {
+  return charismaOf(ctx, c) + ctx.data.trials.argue.beauty * looks(ctx, c);
+}
+
+/** Their charisma, with what their traits add or take, 0..10. */
+export function charismaOf(ctx: Ctx, c: Contestant): number {
+  return Math.min(10, Math.max(0, c.charisma + traitFx(ctx.data, c).charisma));
+}
+
+/** How much a smooth line helps whoever makes the move (romance.yaml charisma): × 1 + k × (charisma − 5). */
+export function smooth(ctx: Ctx, c: Contestant): number {
+  return Math.max(0, 1 + ctx.data.romance.charisma * (charismaOf(ctx, c) - 5));
 }
 
 /** The best accusation anyone dares over this body: a real reason, the nerve, and a room they expect to win. */
-export function bestAccusation(ctx: Ctx, body: Body): { accuser: Contestant; accused: Contestant; suspicion: number } | null {
+export function bestAccusation(ctx: Ctx, body: Body): Accusation | null {
   const tr = ctx.data.trials;
-  let best: { accuser: Contestant; accused: Contestant; suspicion: number; score: number } | null = null;
+  let best: (Accusation & { score: number }) | null = null;
   for (const i of ctx.w.contestants) {
     for (const j of ctx.w.contestants) {
       if (i === j) continue;
@@ -164,8 +215,9 @@ export function bestAccusation(ctx: Ctx, body: Body): { accuser: Contestant; acc
       const score = (s * axis(ctx, i, 'brave')) / 10;
       if (score < tr.accuseAt || (best && score <= best.score)) continue;
       // Without a real reason it's spite: they go ahead only if they're sure the room is with them.
-      if (!wouldDare(ctx, body, i, j, body.witnesses, evidence(ctx, body, i, j) >= tr.reason)) continue;
-      best = { accuser: i, accused: j, suspicion: s, score };
+      const c = caseAgainst(ctx, body, i, j);
+      if (!wouldDare(ctx, body, i, j, body.witnesses, c.reason, c.said)) continue;
+      best = { accuser: i, accused: j, suspicion: s, score, said: c.said, lie: c.lie };
     }
   }
   // The killer, afraid of being caught, may get in first: whoever the room is likeliest to condemn.
@@ -174,26 +226,36 @@ export function bestAccusation(ctx: Ctx, body: Body): { accuser: Contestant; acc
   return best;
 }
 
+export interface Accusation {
+  accuser: Contestant;
+  accused: Contestant;
+  suspicion: number;
+  said: number; // what they'll put to the room (trials.yaml argue said)
+  lie: boolean;
+}
+
 /**
  * The killer's move (trials.yaml frame): if they're sure enough they'll be caught (`dread`), they
  * accuse whoever they expect the room to condemn most readily, if they expect to win by `margin`
  * over what spite needs. Their score is their dread × 100 × brave ÷ 10.
  */
-function framing(ctx: Ctx, body: Body): { accuser: Contestant; accused: Contestant; suspicion: number; score: number } | null {
+function framing(ctx: Ctx, body: Body): (Accusation & { score: number }) | null {
   const f = ctx.data.trials.frame;
   const killer = ctx.w.contestants.find((c) => c.id === body.killer);
   const k = ctx.w.show.cases.find((x) => x.victim === body.id && x.killer === body.killer);
   if (!killer || !k) return null;
   const dread = dreadOf(ctx, k);
   if (dread < f.dread) return null;
-  let pick: { accused: Contestant; votes: number } | null = null;
+  // Whoever would defend worst: disliked, unconvincing, nothing against them they could answer.
+  let pick: { accused: Contestant; votes: number; said: number; lie: boolean } | null = null;
   for (const j of ctx.w.contestants) {
     if (j === killer) continue;
-    const votes = expectedVotes(ctx, body, killer, j, body.witnesses);
-    if (!pick || votes > pick.votes) pick = { accused: j, votes };
+    const c = caseAgainst(ctx, body, killer, j);
+    const votes = expectedVotes(ctx, body, killer, j, body.witnesses, c.said);
+    if (!pick || votes > pick.votes) pick = { accused: j, votes, said: c.said, lie: c.lie };
   }
   if (!pick || pick.votes < needed(ctx, killer, false) + f.margin) return null;
-  return { accuser: killer, accused: pick.accused, suspicion: suspicion(ctx, body, killer, pick.accused), score: (dread * 100 * axis(ctx, killer, 'brave')) / 10 };
+  return { accuser: killer, accused: pick.accused, suspicion: suspicion(ctx, body, killer, pick.accused), score: (dread * 100 * axis(ctx, killer, 'brave')) / 10, said: pick.said, lie: pick.lie };
 }
 
 /** The contestant with the highest suspicion × brave ÷ 10 accuses their top suspect, if they dare. */
@@ -203,14 +265,15 @@ function accuse(ctx: Ctx, body: Body): void {
     log(ctx, 'no_accusation', [], body.room, { victim: body.id, name: body.name });
     return;
   }
-  schedule(ctx, body, best.accuser, best.accused, body.witnesses, best.suspicion, false);
+  schedule(ctx, body, best.accuser, best.accused, body.witnesses, best.suspicion, false, best);
 }
 
 /** An accusation, tried at the next morning's trial hour. Reopened: an old murder brought back (guilt.ts). */
-export function schedule(ctx: Ctx, body: Pick<Body, 'id' | 'name' | 'killer' | 'feelings'>, accuser: Contestant, accused: Contestant, witnesses: string[], suspicion: number, reopened: boolean): void {
+export function schedule(ctx: Ctx, body: Pick<Body, 'id' | 'name' | 'killer' | 'feelings'>, accuser: Contestant, accused: Contestant, witnesses: string[], suspicion: number, reopened: boolean, plan?: { said: number; lie: boolean }): void {
   const tr = ctx.data.trials;
   const day = dayOf(ctx.w.t) + (timeOfDay(ctx.w.t) < ctx.data.schedule.trials.at ? 0 : 1);
-  const trial: Trial = { day, victim: body.id, name: body.name, killer: body.killer, accuser: accuser.id, accused: accused.id, witnesses, feelings: body.feelings, ...(reopened ? { reopened } : {}) };
+  const said = plan?.said ?? saidBy(ctx, accuser, witnesses, body.killer, accused);
+  const trial: Trial = { day, victim: body.id, name: body.name, killer: body.killer, accuser: accuser.id, accused: accused.id, witnesses, feelings: body.feelings, said, ...(reopened ? { reopened } : {}), ...(plan?.lie ? { lie: true } : {}) };
   ctx.w.show.trials.push(trial);
   ctx.w.show.cases.find((k) => k.victim === body.id)?.accusers.push(accuser.id);
   // The killer feels the net tighten, or loosen when it's someone else in the dock.
@@ -220,9 +283,10 @@ export function schedule(ctx: Ctx, body: Pick<Body, 'id' | 'name' | 'killer' | '
     const k = ctx.w.show.cases.find((x) => x.victim === body.id && x.killer === body.killer);
     if (k) ease(ctx, k, d.otherAccused);
   }
-  log(ctx, 'accusation', [accuser.id, accused.id], accuser.room, { victim: body.id, name: body.name, suspicion: Math.round(suspicion), day, right: accused.id === body.killer, ...(reopened ? { reopened } : {}) });
+  log(ctx, 'accusation', [accuser.id, accused.id], accuser.room, { victim: body.id, name: body.name, suspicion: Math.round(suspicion), said: Math.round(said), day, right: accused.id === body.killer, ...(reopened ? { reopened } : {}), ...(plan?.lie ? { lie: true } : {}) });
   think(ctx, accused, tr.accused.thought, accuser.id);
   feel(ctx, accused, accuser, 'affection', tr.accused.affection, 'accused me of murder');
+  lastResort(ctx, body, accuser, accused, witnesses, said);
 }
 
 /** Trials waiting for this morning. */
@@ -241,29 +305,126 @@ export function holdTrials(ctx: Ctx): void {
   for (const trial of today) hold(ctx, trial, present.filter((c) => ctx.w.contestants.includes(c)));
 }
 
-/** Which side `v` votes to condemn. */
-export function voteOf(ctx: Ctx, trial: Trial, v: Contestant, accuser: Contestant, accused: Contestant): Contestant {
-  return leaning(ctx, trial, v, accuser, accused) ?? tieLoser(ctx, accuser, accused); // no feelings either way: the show's numbers decide
+/**
+ * What the room heard at a trial (trials.yaml argue): what the accuser had, the delivery gap
+ * (accuser − accused), who can vouch for the accused, and who caught the accuser lying.
+ */
+export interface Hearing {
+  said: number;
+  gap: number;
+  alibi: string[];
+  caught: string[];
 }
 
-/** Which side `v` leans to condemn, or null if their feelings don't split them. */
-function leaning(ctx: Ctx, trial: Trial, v: Contestant, accuser: Contestant, accused: Contestant): Contestant | null {
+/**
+ * Which side `v` votes to condemn. Without a hearing, only what was said counts, not how. At a
+ * hearing, each voter takes it their own way: a whim of up to ± argue.noise.
+ */
+export function voteOf(ctx: Ctx, trial: Trial, v: Contestant, accuser: Contestant, accused: Contestant, hearing?: Hearing): Contestant {
+  const x = stand(ctx, trial, v, accuser, accused, hearing);
+  if (x.knows) return x.knows;
+  const noise = ctx.data.trials.argue.noise;
+  const m = x.margin + (hearing && noise > 0 ? between(ctx.w.rng, -noise, noise) : 0);
+  if (m !== 0) return m > 0 ? accuser : accused;
+  return tieLoser(ctx, accuser, accused); // no feelings either way: the show's numbers decide
+}
+
+/** How far `v` believes what `x` says at a trial (trials.yaml argue said): trust, less for a known liar. */
+export function credibility(ctx: Ctx, v: Contestant, x: Contestant): number {
+  const ar = ctx.data.trials.argue;
+  const liar = knownFor(v, x.id, LIAR) ? ctx.data.news.reputation.liar.credibility : 1;
+  return (ar.said.trustBase + (v.ledger[x.id]?.trust ?? 0) / 100) * liar;
+}
+
+/**
+ * Where `v` stands: who they know did it, if they know, or the margin by which the accused stands
+ * better with them than the accuser (above 0: they'd condemn the accuser).
+ */
+export function stand(ctx: Ctx, trial: Trial, v: Contestant, accuser: Contestant, accused: Contestant, hearing?: Hearing): { knows?: Contestant; margin: number } {
   // A witness votes the truth, when the killer is on trial.
   if (trial.witnesses.includes(v.id)) {
-    if (trial.killer === accused.id) return accused;
-    if (trial.killer === accuser.id) return accuser;
+    if (trial.killer === accused.id) return { knows: accused, margin: 0 };
+    if (trial.killer === accuser.id) return { knows: accuser, margin: 0 };
   }
+  // They know better: they were with the accused when it happened, or caught the accuser lying.
+  if (hearing && (hearing.alibi.includes(v.id) || hearing.caught.includes(v.id))) return { knows: accuser, margin: 0 };
+  const ar = ctx.data.trials.argue;
   const k = ctx.data.trials.fearNudge;
   const score = (x: Contestant) => (v.ledger[x.id]?.affection ?? 0) - k * (v.ledger[x.id]?.fear ?? 0);
   const a = score(accuser);
-  let b = score(accused);
-  // An accuser who saw it happen testifies, and voters believe them as far as they trust them.
-  if (trial.witnesses.includes(accuser.id)) {
-    const t = ctx.data.trials.testimony;
-    b -= t.base + t.trust * (v.ledger[accuser.id]?.trust ?? 0);
+  const b0 = score(accused);
+  let b = b0;
+  // The case, believed as far as they trust the accuser.
+  const said = hearing ? hearing.said : (trial.said ?? saidBy(ctx, accuser, trial.witnesses, trial.killer, accused));
+  b -= ar.said.k * said * credibility(ctx, v, accuser);
+  if (hearing) {
+    if (hearing.alibi.length) b += ar.alibi * credibility(ctx, v, accused);
+    // The better speaker sways them, as far as their feelings leave them open to it.
+    const open = Math.max(ar.openness.min, 1 - Math.abs(a - b0) / ar.openness.span);
+    b -= ar.sway * hearing.gap * open;
   }
-  if (a !== b) return a < b ? accuser : accused;
-  return null;
+  // The night before.
+  const p = trial.pleas?.[v.id];
+  if (p) b += p.accused - p.accuser;
+  return { margin: b - a };
+}
+
+/**
+ * How well they put it on the day (trials.yaml argue delivery): presence, composure, a guilty
+ * conscience or plain nerves in the dock, a hangover, having got ready, a lie, and a roll.
+ */
+export function delivery(ctx: Ctx, trial: Trial, c: Contestant, k: Case | undefined): number {
+  const ar = ctx.data.trials.argue;
+  const d = ar.delivery;
+  const calm = axis(ctx, c, 'calm');
+  let v = presence(ctx, c) + (d.calm * (calm - 5)) / 5;
+  if (c.id === trial.accused) {
+    if (c.id === trial.killer && k) v -= d.dread * dreadOf(ctx, k);
+    else v -= (d.nerves * Math.max(0, d.nervesCalm - calm)) / d.nervesCalm;
+  }
+  const hang = c.thoughts.find((x) => x.id === ctx.data.booze.hangover.thought);
+  if (hang) v -= Math.min(d.hangoverMax, d.hangover * Math.abs(hang.value));
+  if (ctx.w.t < c.primped) v += d.ready;
+  if (c.id === trial.accuser && trial.lie) v -= ar.lie.base + ar.lie.perHonest * axis(ctx, c, 'honest');
+  return v + between(ctx.w.rng, 0, d.die);
+}
+
+/** Speech grades for the log and the meter (scoring.yaml trial_speech). */
+function grade(ctx: Ctx, d: number): string {
+  const g = ctx.data.trials.argue.grade;
+  return d >= g.strong ? 'strong' : d < g.weak ? 'weak' : 'fair';
+}
+
+// ---------------------------------------------------------------------------------------------
+// The night before (trials.yaml argue plead)
+
+/** The trial `c` is a side in that `o` will vote at, if any. */
+function pleaTrial(ctx: Ctx, c: Contestant, o: Contestant): Trial | undefined {
+  return ctx.w.show.trials.find((t) => (t.accuser === c.id || t.accused === c.id) && t.accuser !== o.id && t.accused !== o.id);
+}
+
+/** Whether `c` has a case to plead to `o` tonight, and room left to sway them. */
+export function canPlead(ctx: Ctx, c: Contestant, o: Contestant): boolean {
+  const t = pleaTrial(ctx, c, o);
+  if (!t) return false;
+  const side = t.accuser === c.id ? 'accuser' : 'accused';
+  return (t.pleas?.[o.id]?.[side] ?? 0) < ctx.data.trials.argue.plead.max;
+}
+
+/** `c` pleads their case to `o`, who hears them out unless they dislike them or think them a killer. */
+export function plead(ctx: Ctx, c: Contestant, o: Contestant): void {
+  const t = pleaTrial(ctx, c, o);
+  if (!t) return;
+  const pl = ctx.data.trials.argue.plead;
+  const side = t.accuser === c.id ? 'accuser' : 'accused';
+  const r = o.ledger[c.id];
+  if ((r?.affection ?? 0) < pl.refuseBelow || r?.killer) {
+    log(ctx, 'plead_refused', [c.id, o.id], c.room, { victim: t.victim, side });
+    return;
+  }
+  const p = ((t.pleas ??= {})[o.id] ??= { accuser: 0, accused: 0 });
+  p[side] = Math.min(pl.max, p[side] + (pl.base * presence(ctx, c)) / 5);
+  log(ctx, 'plead', [c.id, o.id], c.room, { victim: t.victim, side, lean: Math.round(p[side] * 10) / 10 });
 }
 
 /** A tie breaks on the meter, then lifetime points: the lower one loses. Then a coin. */
@@ -283,12 +444,34 @@ function hold(ctx: Ctx, trial: Trial, present: Contestant[]): void {
     if (k) reopen(ctx, k);
     return;
   }
+  // The case and the defense (trials.yaml argue).
+  const k = ctx.w.show.cases.find((x) => x.victim === trial.victim);
+  const here = (ids: string[] | undefined) => (ids ?? []).filter((id) => present.some((c) => c.id === id));
+  const vouch = (who: Contestant) => (k?.alibi?.[who.id] ?? []).filter((id) => ctx.w.contestants.some((c) => c.id === id));
+  const alibi = vouch(accused);
+  const dA = delivery(ctx, trial, accuser, k);
+  const dB = delivery(ctx, trial, accused, k);
+  const said = trial.said ?? saidBy(ctx, accuser, trial.witnesses, trial.killer, accused);
+  log(ctx, 'trial_speech', [accuser.id], room, { victim: trial.victim, role: 'case', grade: grade(ctx, dA), delivery: Math.round(dA * 10) / 10, presence: Math.round(presence(ctx, accuser) * 10) / 10, said: Math.round(said), ...(trial.lie ? { lie: true } : {}) });
+  log(ctx, 'trial_speech', [accused.id], room, { victim: trial.victim, role: 'defense', grade: grade(ctx, dB), delivery: Math.round(dB * 10) / 10, presence: Math.round(presence(ctx, accused) * 10) / 10, ...(alibi.length ? { alibi: alibi.length } : {}) });
+  // A lie, seen through by anyone who was with either of them when it happened.
+  const caught = trial.lie ? here([...new Set([...alibi, ...vouch(accuser)])]).filter((id) => id !== accuser.id && id !== accused.id) : [];
+  if (caught.length) {
+    const lie = ctx.data.trials.argue.lie;
+    log(ctx, 'lie_caught', [accuser.id, ...caught], room, { victim: trial.victim, name: trial.name });
+    for (const id of caught) {
+      const v = present.find((c) => c.id === id)!;
+      feel(ctx, v, accuser, 'affection', lie.affection, 'lied at the trial');
+      learnRep(ctx, v, accuser, LIAR);
+    }
+  }
+  const hearing: Hearing = { said, gap: dA - dB, alibi: here(alibi), caught };
   // Proposal: the accuser and accused don't vote.
   const votes: Record<string, string> = {};
   let against = 0;
   for (const v of present) {
     if (v === accuser || v === accused) continue;
-    const x = voteOf(ctx, trial, v, accuser, accused);
+    const x = voteOf(ctx, trial, v, accuser, accused, hearing);
     votes[v.id] = x.id;
     if (x === accused) against++;
   }
@@ -304,6 +487,17 @@ function hold(ctx: Ctx, trial: Trial, present: Contestant[]): void {
     loser: loser.id,
     killer: trial.killer,
     right: loser.id === trial.killer,
+    delivery: [Math.round(dA * 10) / 10, Math.round(dB * 10) / 10],
+    said: Math.round(said),
+    ...(alibi.length ? { alibi: alibi.length } : {}),
+    ...(trial.lie ? { lie: true, caught: caught.length } : {}),
+    ...(trial.pleas ? { pleaded: Object.keys(trial.pleas).length } : {}),
+    // How the room would have gone on feelings and evidence alone, for the harness.
+    feelingsAlone: present.filter((v) => {
+      if (v === accuser || v === accused) return false;
+      const x = stand(ctx, { ...trial, pleas: {} }, v, accuser, accused, { ...hearing, gap: 0 });
+      return x.knows ? x.knows === accused : x.margin < 0;
+    }).length,
     ...(trial.reopened ? { reopened: true } : {}),
   });
   think(ctx, winner, ctx.data.trials.survivedThought);

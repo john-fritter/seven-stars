@@ -53,6 +53,9 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
   // Jealousy (and betrayal) in the last two days: did the jealous one turn on the rival, or go after the partner?
   const jealousy: { a: string; b: string; c: string; t: number; rival: boolean; back: boolean; won: boolean }[] = [];
   const breakers = new Map<string, number>();
+  const charisma = new Map<string, number>(); // contestant -> rolled charisma
+  const speech = new Map<string, number>(); // the accused's presence at today's trial
+  const bin = (p: number) => (p < 4.5 ? 'Low' : p < 6.5 ? 'Mid' : 'High');
   for (let d = 0; d < days; d++) {
     const events: SimEvent[] = step(world, MINUTES_PER_DAY);
     const today = new Set<string>();
@@ -82,6 +85,8 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
           const name = data.name as string;
           names.set(name, (names.get(name) ?? 0) + 1);
           n.arrivals = (n.arrivals ?? 0) + 1;
+          if (typeof data.charisma === 'number') charisma.set(a!, data.charisma);
+          if (typeof data.charisma === 'number') add(n, `cast${bin(data.charisma + 0.5)}`);
           break;
         }
         case 'infraction':
@@ -107,6 +112,11 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
           const cause = data.cause as string;
           add(n, 'deaths');
           add(s.deathCauses, cause);
+          if (charisma.has(a!)) {
+            const b = bin(charisma.get(a!)!);
+            add(n, `stay${b}`, (data.stay as number) / MINUTES_PER_DAY);
+            add(n, `died${b}`);
+          }
           today.add('death');
           const rules = sentenced.get(a!);
           if (cause === 'meter' && rules) {
@@ -203,6 +213,7 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
           break;
         case 'ambush':
           add(n, data.killed ? 'ambushKilled' : 'ambushFailed');
+          if (data.killed && data.motive === 'survival') add(n, 'survivalKills');
           if (data.asleep) add(n, 'ambushAsleep');
           break;
         case 'creeped_out':
@@ -268,11 +279,51 @@ export function storySeed(data: GameData, seed: number, days: number): StorySeed
         case 'accusation':
           if (data.reopened) add(n, 'reopenedAccusations');
           break;
-        case 'trial':
+        case 'trial_speech':
+          add(n, `speech_${data.grade}`);
+          if (data.role === 'defense') speech.set(a!, data.presence as number);
+          break;
+        case 'plead':
+          add(n, 'pleas');
+          break;
+        case 'plead_refused':
+          add(n, 'pleasRefused');
+          break;
+        case 'lie_caught':
+          add(n, 'liesCaught');
+          break;
+        case 'trial': {
           add(n, 'trials');
           if (!data.right) add(n, 'wrongVerdicts');
           if (data.reopened) add(n, data.right ? 'reopenedRight' : 'reopenedWrong');
+          const voters = Object.keys(data.votes as object).length;
+          const accusedLost = data.loser === b;
+          // Who the room would have spaced on feelings and evidence alone.
+          const fa = data.feelingsAlone as number;
+          const alone = fa * 2 > voters ? 'accused' : fa * 2 < voters ? 'accuser' : null;
+          if (alone && (alone === 'accused') !== accusedLost) add(n, 'flipped');
+          const said = data.said as number;
+          const kind = said >= 100 ? 'Eye' : data.lie ? 'Lie' : said >= 45 ? 'Ev' : 'Spite';
+          add(n, `accuse${kind}`);
+          if (accusedLost) add(n, `accuse${kind}Won`);
+          if (data.lie && data.caught) add(n, 'lieTrialsCaught');
+          if (data.alibi) {
+            add(n, 'alibis');
+            if (!accusedLost) add(n, 'alibiSaved');
+          }
+          const [dA, dB] = data.delivery as [number, number];
+          if (kind !== 'Eye' && dA !== dB) {
+            add(n, 'argued');
+            if ((dA > dB) === accusedLost) add(n, 'betterWon');
+          }
+          const p = speech.get(b!);
+          if (p !== undefined && kind !== 'Eye') {
+            add(n, `accused${bin(p)}`);
+            if (!accusedLost) add(n, `accused${bin(p)}Walked`);
+          }
+          if (data.pleaded) add(n, 'trialsPleaded');
           break;
+        }
         case 'immunity_spent':
           if (data.cause === 'trial') add(n, 'trialImmunities');
           break;
@@ -514,9 +565,23 @@ export function storyReport(seeds: StorySeed[]): string[] {
   line(`  confessions: ${n('diaryMurder')} to the diary camera, ${n('murderConfession_playback')} aired at dinner, ${n('murderConfession_drunk')} drunk to a friend (${n('murderConfessionKept')} more kept by a loyal friend), ${n('murderConfession_breakdown')} blurted out in a breakdown; ${n('blurted')} cheaters blurted out their cheating`);
   line(`  killers found out: ${n('killersFoundOut')} of ${n('killers')} (${pct(n('killersFoundOut'), n('killers'))}), ${n('foundOutByConfession')} through their own confession; planned killers ${n('plannedFoundOut')} of ${n('murdersPlanned')} (${pct(n('plannedFoundOut'), n('murdersPlanned'))})`);
   line(`  ${pct(n('murdersPlanned'), mu)} planned, ${pct(n('murdersUnseen'), mu)} unseen, ${pct(n('murdersMorning'), mu)} between 07:00 and 11:00`);
-  line(`  plans formed: ${n('plans_grudge')} over a grudge, ${n('plans_desperate')} for ratings, ${n('plans_love')} for a lover (${n('askedYes')} yes, ${n('askedNo')} no of ${n('plans_via')} who meant to ask); ${n('letGo')} let go, ${n('nerveLost')} lost nerves (${n('gaveUp')} gave up)`);
+  line(`  plans formed: ${n('plans_grudge')} over a grudge, ${n('plans_desperate')} for ratings, ${n('plans_survival')} by the accused before their trial (${n('survivalKills')} carried out), ${n('plans_love')} for a lover (${n('askedYes')} yes, ${n('askedNo')} no of ${n('plans_via')} who meant to ask); ${n('letGo')} let go, ${n('nerveLost')} lost nerves (${n('gaveUp')} gave up)`);
   line(`  ambushes: ${n('ambushKilled')} killed, ${n('ambushFailed')} survived (${n('ambushAsleep')} of all ambushes on a sleeper); ${n('creepedOut')} targets felt watched`);
   line(`  confided to a friend: ${n('murderConfession_confided')} told, ${n('secretsSlipped')} kept secrets slipped out drunk, ${n('secretsTurned')} keepers turned on the killer; ${n('clues')} camera teasers; ${per(n('grudgesTold') * 7, days, 1)} grudges gossiped a week`);
+  line('  trials, argued (trials.yaml argue):');
+  const tr = n('trials');
+  line(`    speeches: ${n('speech_strong')} strong, ${n('speech_fair')} fair, ${n('speech_weak')} weak; the speeches overturned the vote feelings and evidence alone would give in ${n('flipped')} of ${tr} (${pct(n('flipped'), tr)}; ${pct(n('flipped'), n('argued'))} of those without an eyewitness)`);
+  const won = (k: string) => `${n(`accuse${k}Won`)} of ${n(`accuse${k}`)} (${pct(n(`accuse${k}Won`), n(`accuse${k}`))})`;
+  line(`    the accuser won: eyewitness ${won('Eye')}, evidence ${won('Ev')}, spite ${won('Spite')}, a lie ${won('Lie')}; lies caught at ${n('lieTrialsCaught')} trials`);
+  const walked = (k: string) => `${pct(n(`accused${k}Walked`), n(`accused${k}`))} of ${n(`accused${k}`)}`;
+  line(`    without an eyewitness, the better speaker won ${n('betterWon')} of ${n('argued')} (${pct(n('betterWon'), n('argued'))})`);
+  line(`    the accused walked free (no eyewitness): charisma low (under 4.5) ${walked('Low')}, middling ${walked('Mid')}, high (6.5+) ${walked('High')}; with an alibi ${n('alibiSaved')} of ${n('alibis')}`);
+  const ac = n('accusedLow') + n('accusedMid') + n('accusedHigh');
+  const cast = n('castLow') + n('castMid') + n('castHigh');
+  line(`    who stood accused without an eyewitness: charisma low ${pct(n('accusedLow'), ac)}, middling ${pct(n('accusedMid'), ac)}, high ${pct(n('accusedHigh'), ac)} (of arrivals: ${pct(n('castLow'), cast)}, ${pct(n('castMid'), cast)}, ${pct(n('castHigh'), cast)})`);
+  line(`    the night before: ${n('pleas')} pleas heard, ${n('pleasRefused')} refused, at ${n('trialsPleaded')} of ${tr} trials`);
+  const stay = (k: string) => `${per(n(`stay${k}`), n(`died${k}`) * 7, 2)} wk`;
+  line(`    average stay of those who died: charisma low ${stay('Low')}, middling ${stay('Mid')}, high ${stay('High')}`);
   line(`  reopened: ${n('reopenedAccusations')} accusations of an old murder; at trial ${n('reopenedRight')} spaced the killer, ${n('reopenedWrong')} the accuser`);
   line(`  aimed at a known killer afterwards: ${n('killerSnubbed')} insults or slights, ${n('killerTargeted')} breaks, ${n('killerCaged')} cage matches, ${n('killerFights')} brawls`);
   line();

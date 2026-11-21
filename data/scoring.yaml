@@ -59,6 +59,7 @@ awards:
   cage_match:  { winner: 25, loser: 10, witnessed: false }
   dance_off:   { each: 5, winner: 15, witnessed: false }  # 20 to the winner, 5 to each other dancer
   trial:       { winner: 15, witnessed: false }           # "trial survived (accuser or accused)"
+  trial_speech: { by: grade, witnessed: false, cases: { strong: { actor: 8 }, fair: { actor: 3 }, weak: { actor: 0 } } }   # proposal (Nov 20)
 
 modifiers:
   witnessEach: 0.15        # × 1 + 0.15 per witness

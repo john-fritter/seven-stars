@@ -6,6 +6,11 @@
 # Labels are beliefs: each contestant holds their own label for every relationship, one of
 # none, flirting, fling, dating, exclusive or ex.
 
+# Proposal (Nov 20, john: yes, charisma should help whoever makes the move). A flirt's, kiss's
+# and proposition's odds of a yes × 1 + `charisma` × (the mover's charisma − 5): ±25% from charisma
+# 0 to 10. The target's attraction still decides most of it; charisma is the line, not the face.
+charisma: 0.05
+
 kiss:
   # Odds = the target's attraction back ÷ 10 × (1 + their affection ÷ 100) × successScale.
   successScale: 1

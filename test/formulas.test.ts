@@ -77,7 +77,9 @@ describe('ceremony order', () => {
     const w = createWorld(data, 6);
     step(w, 22 * 60);
     const ranks = w.contestants.map((c) => c.rank).sort();
-    expect(ranks).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    // Everyone left after the ceremony holds a rank, one each (the Wheel may space someone after).
+    expect(ranks).toEqual(Array.from({ length: w.contestants.length }, (_, i) => i + 1));
+    expect(w.contestants.length).toBeGreaterThanOrEqual(6);
     // The Wheel's suite night swaps two beds until the wake chime.
     for (const c of w.contestants) if (!w.show.bedSwap?.includes(c.id)) expect(c.bed).toBe(data.ranks.ranks[String(c.rank) as '1']!.bed);
   });

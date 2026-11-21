@@ -7,6 +7,7 @@ import type { Contestant, Plot } from '../src/core/types.js';
 import type { GameData } from '../src/data/schema.js';
 import { canSee, walkMinutes } from '../src/core/station.js';
 import { aboard, alone, data } from './helpers.js';
+import { evidence, schedule } from '../src/core/trials.js';
 
 function introduce(ctx: Parameters<typeof meet>[0], cast: Contestant[]): void {
   for (const a of cast) a.ledger = {};
@@ -226,5 +227,48 @@ describe('secrets and the cameras', () => {
     const before = ctx.events.filter((e) => e.type === 'clue').length;
     airClues(ctx);
     expect(ctx.events.filter((e) => e.type === 'clue').length).toBe(before); // once per murder
+  });
+});
+
+describe('the last resort', () => {
+  it('an accused who expects to lose means to kill the accuser that night, and lets it go after the trial', () => {
+    const { w, ctx, cast } = aboard();
+    const [accuser, accused, victim] = cast as [Contestant, Contestant, Contestant];
+    introduce(ctx, cast);
+    killerish(accused);
+    accused.plot = null;
+    accuser.personality.brave = 10;
+    // The whole room can't stand the accused.
+    for (const v of cast) if (v !== accused) relation(ctx, v, accused).affection = -80;
+    const body = { id: victim.id, name: victim.name, killer: 'nobody', feelings: {} };
+    schedule(ctx, body, accuser, accused, [], 0, false);
+    expect(accused.plot).toMatchObject({ target: accuser.id, motive: 'survival' });
+    expect(ctx.events.some((e) => e.type === 'intent' && e.data!.motive === 'survival')).toBe(true);
+    // The trial came and went: it's over.
+    w.show.trials = [];
+    plotMinute(ctx);
+    expect(accused.plot).toBeNull();
+  });
+
+  it('a kind accused never would', () => {
+    const { ctx, cast } = aboard();
+    const [accuser, accused, victim] = cast as [Contestant, Contestant, Contestant];
+    introduce(ctx, cast);
+    Object.assign(accused.personality, { kind: 9 });
+    accused.plot = null;
+    for (const v of cast) if (v !== accused) relation(ctx, v, accused).affection = -80;
+    schedule(ctx, { id: victim.id, name: victim.name, killer: 'nobody', feelings: {} }, accuser, accused, [], 0, false);
+    expect(accused.plot).toBeNull();
+  });
+
+  it("the victim's pending accusation is evidence against the accused", () => {
+    const { w, ctx, cast } = aboard();
+    const [accuser, accused, i, k] = cast as [Contestant, Contestant, Contestant, Contestant];
+    alone(w);
+    introduce(ctx, cast);
+    w.show.trials = [{ day: 99, victim: 'x', name: 'X', killer: k.id, accuser: accuser.id, accused: accused.id, witnesses: [], feelings: {} }];
+    kill(ctx, accuser, 'murder', 'spa', [], k.id);
+    const body = w.show.bodies[0]!;
+    expect(evidence(ctx, body, i, accused)).toBe(data.trials.suspicion.accusing);
   });
 });
