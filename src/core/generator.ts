@@ -26,7 +26,6 @@ export function rollContestant(data: GameData, rng: Rng, id: string, t: number, 
   const speciesIds = Object.keys(data.species.species);
   const species = speciesIds[weightedIndex(rng, speciesIds.map((s) => data.species.species[s]!.weight))]!;
   const sp = data.species.species[species]!;
-  const stat = (name: string) => clamp10(normal(rng, g.stat.mean + (sp.statMean[name] ?? 0), g.stat.sd) + (sp.statShift[name] ?? 0));
 
   const free = g.names.filter((n) => !takenNames.has(n));
   const name = pick(rng, free.length ? free : g.names);
@@ -35,6 +34,8 @@ export function rollContestant(data: GameData, rng: Rng, id: string, t: number, 
   const gender = clamp10(normal(rng, band.mean, band.sd));
   const [she, he, they] = g.pronouns.options as [string, string, string];
   let pronouns = gender < g.pronouns.sheBelow ? she : gender > g.pronouns.heAbove ? he : they;
+  // Species shift a stat, and so does gender a little (generator.yaml genderShift), × (gender − 5) ÷ 5.
+  const stat = (name: string) => clamp10(normal(rng, g.stat.mean + (sp.statMean[name] ?? 0), g.stat.sd) + (sp.statShift[name] ?? 0) + ((g.genderShift[name] ?? 0) * (gender - 5)) / 5);
   if (chance(rng, g.pronouns.randomChance)) pronouns = pick(rng, g.pronouns.options);
 
   const needs = {} as Needs;

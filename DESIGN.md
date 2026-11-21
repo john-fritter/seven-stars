@@ -705,7 +705,7 @@ The parts that would make shapes differ more aren't built: seen going in togethe
 | --- | --- | --- |
 | Name, pronouns | Generated | Pronouns follow gender with some randomness |
 | Species | One of six | See below |
-| Strength, stamina, beauty | 0–10 | Rolled, then species modifiers |
+| Strength, stamina, beauty | 0–10 | Rolled, then species modifiers; gender shifts strength and beauty a little (proposed Nov 20: × (gender − 5) ÷ 5, strength +1 and beauty −1 at gender 10, the reverse at 0) |
 | Charisma (proposed, Nov 20) | 0–10 | Rolled (no species modifier); how convincing they are arguing to a room. Charmer +2, Abrasive −2. See Charisma and argued trials |
 | Personality | Eight axes, 0–10 | Outgoing, kind, honest, calm, loyal, brave, vain, playful |
 | Ideal personality | Eight axes, 0–10 | Their type |
@@ -1435,7 +1435,7 @@ john (Nov 18): "It shouldn't all be evidence and who likes who, people should ha
 - **Rumors.** Someone told a contestant is a killer doesn't believe it at odds of 0.3 × (5 − the teller's presence) ÷ 5 (charisma 0: 30%; 5 and up: always believed).
 - **The last resort** (john, Nov 20: "what if they killed before then? ... I think it would be cool"). An accused who reads the room as the accuser does and expects at least 60% of it against them gets a survival motive against the accuser at once, if their willingness to kill in cold blood reaches 1.5 (one less than a planned murder needs). It waits for dark and an unseen moment like any plan, isn't held back by the trial itself (the one exception to one mystery at a time, D-050), and ends when the trial is held or called off. If the accuser dies, the trial is called off and the murder is a new case; anyone the victim had accused is suspected +40, since the whole station heard it (`plots.yaml lastResort`, `trials.yaml suspicion.accusing`).
 - **A smooth line** (john, Nov 20: charisma should help whoever makes the move). A flirt's, kiss's or proposition's odds of a yes × 1 + 0.05 × (the mover's charisma − 5), ±25% across the range (`romance.yaml charisma`).
-- **Gender** stays out of it: it sets pronouns and attraction only (recommended Nov 20, no built-in tendencies).
+- **Gender** (john, Nov 20: "give males a small strength boost and females a small beauty boost"): strength + 1 × (gender − 5) ÷ 5 and beauty − 1 × (gender − 5) ÷ 5 (`generator.yaml genderShift`), half a standard deviation at the ends. Nothing else differs by gender.
 
 ## Data files and the core API
 

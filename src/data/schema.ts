@@ -269,6 +269,7 @@ const bell = z.object({ mean: num, sd: num.nonnegative() });
 
 export const generatorSchema = z.object({
   stat: bell,
+  genderShift: z.record(z.string(), num).default({}), // added to a stat × (gender − 5) ÷ 5
   candidatesPerSlot: z.number().int().positive(),
   gender: z.array(bell.extend({ weight: num.positive() })).min(1),
   attraction: bell,
